@@ -24,47 +24,47 @@ def load_json(path):
         return json.load(f)
 
 
-def iterate(data, take_n=None, sample_ratio=1.0, sample_seed=None, silent=False):
+def iterate(data, take_n=None, sample_ratio=1.0, sample_seed=None, progress=False):
     '''
     base iterator handler
     :param data: iterator
     :param take_n: stop the iterator after taking the first n items
     :param sample_ratio: probability of keep an item
     :param sample_seed: seed for sampling
-    :param silent: should use tqdm or not
+    :param progress: should use tqdm or not
     :return: iteraotr
     '''
     if sample_seed is not None:
         random.seed(sample_seed)
     if take_n is not None:
         assert take_n >= 1, 'take_n should be >= 1'
-    for d in tqdm(itertools.islice(data, 0, take_n), disable=silent):
+    for d in tqdm(itertools.islice(data, 0, take_n), disable=not progress):
         if random.random() <= sample_ratio:
             yield d
 
 
-def load_jsonl(path, encoding="utf-8", take_n=None, sample_ratio=1.0, sample_seed=None, silent=False):
+def load_jsonl(path, encoding="utf-8", take_n=None, sample_ratio=1.0, sample_seed=None, progress=False):
     with open(path, 'r', encoding=encoding) as f:
-        for line in iterate(f, take_n, sample_ratio, sample_seed, silent):
+        for line in iterate(f, take_n, sample_ratio, sample_seed, progress):
             yield json.loads(line)
 
 
-def load_txt(path, encoding="utf-8", take_n=None, sample_ratio=1.0, sample_seed=None, silent=False):
+def load_txt(path, encoding="utf-8", take_n=None, sample_ratio=1.0, sample_seed=None, progress=False):
     with open(path, 'r', encoding=encoding) as f:
-        for line in iterate(f, take_n, sample_ratio, sample_seed, silent):
+        for line in iterate(f, take_n, sample_ratio, sample_seed, progress):
             yield line.rstrip()
 
 
-def load_csv(path, encoding="utf-8", delimiter=',', take_n=None, sample_ratio=1.0, sample_seed=None, silent=False):
+def load_csv(path, encoding="utf-8", delimiter=',', take_n=None, sample_ratio=1.0, sample_seed=None, progress=False):
     csv.field_size_limit(10000000)
     with open(path, 'r', encoding=encoding) as f:
-        for d in iterate(csv.reader(f, delimiter=delimiter), take_n, sample_ratio, sample_seed, silent):
+        for d in iterate(csv.reader(f, delimiter=delimiter), take_n, sample_ratio, sample_seed, progress):
             yield d
 
 
-def load_tsv(path, encoding="utf-8", take_n=None, sample_ratio=1.0, sample_seed=None, silent=False):
+def load_tsv(path, encoding="utf-8", take_n=None, sample_ratio=1.0, sample_seed=None, progress=False):
     csv.field_size_limit(10000000)
-    for d in load_csv(path, encoding, '/t', take_n, sample_ratio, sample_seed, silent):
+    for d in load_csv(path, encoding, '/t', take_n, sample_ratio, sample_seed, progress):
         yield d
 
 
