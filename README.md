@@ -1,2 +1,2 @@
 # AbsolutelyEssentialToolKit
-absolutely essential tools that are missing in python
+useful tools that are not included in python
