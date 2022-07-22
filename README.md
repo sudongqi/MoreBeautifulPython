@@ -12,7 +12,7 @@ light-weight essential tools that are not included in Python standard library
 ## Examples
 
     from aetk import *
-    
+
     # use context manager timer() to get execution time
     with timer():
         d = {i: i for i in range(100000)}
@@ -24,7 +24,7 @@ light-weight essential tools that are not included in Python standard library
     '''
     
     # aetk_dir() inspect the location of the package
-    file_path = os.path.join(aetk_dir(), 'aetk_test.jsonl')
+    file_path = 'example_data.jsonl'
     
     # load_jsonl()
     data = [d for d in load_jsonl(file_path)]
@@ -88,6 +88,3 @@ light-weight essential tools that are not included in Python standard library
     
     # directory of the file that call this function
     dir_of(__file__)
-
-
-

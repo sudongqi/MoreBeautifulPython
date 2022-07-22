@@ -154,11 +154,5 @@ def running_dir():
     return os.getcwd()
 
 
-def show_examples():
-    with text_block('aetk_examples', char='=', y_gap_size=2):
-        for line in load_txt(os.path.join(aetk_dir(), 'aetk_examples.py'), silent=True):
-            print(line)
-
-
 if __name__ == '__main__':
-    show_examples()
+    print('see https://github.com/sudongqi/AbsolutelyEssentialToolKit for usages')

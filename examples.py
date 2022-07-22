@@ -11,7 +11,7 @@ took 0.018950223922729492 seconds
 '''
 
 # aetk_dir() inspect the location of the package
-file_path = os.path.join(aetk_dir(), 'aetk_test.jsonl')
+file_path = 'example_data.jsonl'
 
 # load_jsonl()
 data = [d for d in load_jsonl(file_path)]
