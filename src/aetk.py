@@ -4,6 +4,7 @@ import random
 import json
 import time
 import gzip
+import bz2
 import itertools
 import traceback
 from multiprocessing import Process, Queue
@@ -107,8 +108,21 @@ def open_file(path, encoding='utf-8', compression=None):
         return open(path, 'r', encoding=encoding)
     elif compression == 'gz':
         return gzip.open(path, 'rt', encoding=encoding)
+    elif compression == 'bz2':
+        return bz2.open(path, 'rb')
     else:
         assert False, '{} not supported'.format(compression)
+
+
+def save_json(data, path, encoding='utf-8'):
+    with open(path, 'w', encoding=encoding) as f:
+        return json.dump(data, f)
+
+
+def save_jsonl(data, path, encoding='utf-8'):
+    with open(path, 'w', encoding=encoding) as f:
+        for d in data:
+            f.write(json.dumps(d, ensure_ascii=False) + '\n')
 
 
 def load_json(path, encoding='utf-8', compression=None):
