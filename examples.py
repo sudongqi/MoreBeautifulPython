@@ -10,10 +10,11 @@ with timer():
 took 0.018950223922729492 seconds
 '''
 
-# aetk_dir() inspect the location of the package
-file_path = 'example_data.jsonl'
+# modules_dir() quickly tell you where your python modules live
+print(modules_dir())
 
 # load_jsonl()
+file_path = 'example_data.jsonl'
 data = [d for d in load_jsonl(file_path)]
 
 # print_list() print items in list in separate lines
@@ -26,7 +27,7 @@ print_list(data)
 '''
 
 # load_jsonl() can customize loading procedures; sample 50% from the first 2 items
-for d in load_jsonl(file_path, take_n=2, sample_ratio=0.5, sample_seed=1234):
+for d in load_jsonl(file_path, take_n=2, sample_ratio=0.5, sample_seed=1234, progress=True, compression=None):
     print(d)
 
 '''
@@ -46,7 +47,7 @@ id   name      age
 '''
 
 # one-liner seperator with default character '-' and wing size of 10
-sep('text')
+sep('text', size=10, char='-')
 
 '''
 ----------text----------
@@ -68,10 +69,10 @@ id   name      age
 '''
 
 # get statistics of a int/float list in one for-loop
-_min, _max, avg = min_max_avg([1, 2, 3, 4, 5])
+print(min_max_avg([1, 2, 3, 4, 5]))
 
 # the current execution directory
-running_dir()
+print(running_dir())
 
 # directory of the file that call this function
-dir_of(__file__)
+print(dir_of(__file__))

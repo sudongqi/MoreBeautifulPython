@@ -1,17 +1,23 @@
 # AbsolutelyEssentialToolKit
 light-weight essential tools that are not included in Python standard library
 * execution timer
+  * timer()
 * files loading
+  * load_jsonl(), load_json(), load_csv(), load_tsv(), load_txt(), iterate(), file_opener()
 * summarization
+  * print_list(), build_table(), print_table(), text_box(), sep()
+* paths
+  * dir_of(), running_dir(), modules_dir()
+* statistics
+  * min_max_avg() 
 
 ## Setup
 
     pip install aetk
-    python -m src.aetk (print examples)
 
 ## Examples
 
-    from aetk import *
+    from src.aetk import *
 
     # use context manager timer() to get execution time
     with timer():
@@ -23,10 +29,11 @@ light-weight essential tools that are not included in Python standard library
     took 0.018950223922729492 seconds
     '''
     
-    # aetk_dir() inspect the location of the package
-    file_path = 'example_data.jsonl'
+    # modules_dir() quickly tell you where your python modules live
+    print(modules_dir())
     
     # load_jsonl()
+    file_path = 'example_data.jsonl'
     data = [d for d in load_jsonl(file_path)]
     
     # print_list() print items in list in separate lines
@@ -39,7 +46,7 @@ light-weight essential tools that are not included in Python standard library
     '''
     
     # load_jsonl() can customize loading procedures; sample 50% from the first 2 items
-    for d in load_jsonl(file_path, take_n=2, sample_ratio=0.5, sample_seed=1234):
+    for d in load_jsonl(file_path, take_n=2, sample_ratio=0.5, sample_seed=1234, progress=True, compression=None):
         print(d)
     
     '''
@@ -59,7 +66,7 @@ light-weight essential tools that are not included in Python standard library
     '''
     
     # one-liner seperator with default character '-' and wing size of 10
-    sep('text')
+    sep('text', size=10, char='-')
     
     '''
     ----------text----------
@@ -81,10 +88,11 @@ light-weight essential tools that are not included in Python standard library
     '''
     
     # get statistics of a int/float list in one for-loop
-    _min, _max, avg = min_max_avg([1, 2, 3, 4, 5])
+    print(min_max_avg([1, 2, 3, 4, 5]))
     
     # the current execution directory
-    running_dir()
+    print(running_dir())
     
     # directory of the file that call this function
-    dir_of(__file__)
+    print(dir_of(__file__))
+

@@ -3,6 +3,7 @@ import csv
 import random
 import json
 import time
+import gzip
 import itertools
 from pathlib import Path
 from tqdm import tqdm
@@ -17,11 +18,6 @@ class timer(object):
 
     def __exit__(self, type, value, traceback):
         print('took {} seconds'.format(time.time() - self.start))
-
-
-def load_json(path):
-    with open(path, 'r', encoding="utf-8") as f:
-        return json.load(f)
 
 
 def iterate(data, take_n=None, sample_ratio=1.0, sample_seed=None, progress=False):
@@ -43,28 +39,44 @@ def iterate(data, take_n=None, sample_ratio=1.0, sample_seed=None, progress=Fals
             yield d
 
 
-def load_jsonl(path, encoding="utf-8", take_n=None, sample_ratio=1.0, sample_seed=None, progress=False):
-    with open(path, 'r', encoding=encoding) as f:
+def open_file(path, encoding='utf-8', compression=None):
+    if compression is None:
+        return open(path, 'r', encoding=encoding)
+    elif compression == 'gz':
+        return gzip.open(path, 'rt', encoding=encoding)
+    else:
+        assert False, '{} not supported'.format(compression)
+
+
+def load_json(path, encoding='utf-8', compression=None):
+    with open_file(path, encoding, compression) as f:
+        return json.load(f)
+
+
+def load_jsonl(path, encoding="utf-8", take_n=None, sample_ratio=1.0, sample_seed=None, progress=False,
+               compression=None):
+    with open_file(path, encoding, compression) as f:
         for line in iterate(f, take_n, sample_ratio, sample_seed, progress):
             yield json.loads(line)
 
 
-def load_txt(path, encoding="utf-8", take_n=None, sample_ratio=1.0, sample_seed=None, progress=False):
-    with open(path, 'r', encoding=encoding) as f:
+def load_txt(path, encoding="utf-8", take_n=None, sample_ratio=1.0, sample_seed=None, progress=False,
+             compression=None):
+    with open_file(path, encoding, compression) as f:
         for line in iterate(f, take_n, sample_ratio, sample_seed, progress):
             yield line.rstrip()
 
 
-def load_csv(path, encoding="utf-8", delimiter=',', take_n=None, sample_ratio=1.0, sample_seed=None, progress=False):
+def load_csv(path, encoding="utf-8", delimiter=',', take_n=None, sample_ratio=1.0, sample_seed=None, progress=False,
+             compression=None):
     csv.field_size_limit(10000000)
-    with open(path, 'r', encoding=encoding) as f:
+    with open_file(path, encoding, compression) as f:
         for d in iterate(csv.reader(f, delimiter=delimiter), take_n, sample_ratio, sample_seed, progress):
             yield d
 
 
-def load_tsv(path, encoding="utf-8", take_n=None, sample_ratio=1.0, sample_seed=None, progress=False):
-    csv.field_size_limit(10000000)
-    for d in load_csv(path, encoding, '/t', take_n, sample_ratio, sample_seed, progress):
+def load_tsv(path, encoding="utf-8", take_n=None, sample_ratio=1.0, sample_seed=None, progress=False, compression=None):
+    for d in load_csv(path, encoding, '/t', take_n, sample_ratio, sample_seed, progress, compression):
         yield d
 
 
@@ -138,12 +150,8 @@ class text_block(object):
         print('\n' * self.y_gap_size, end="")
 
 
-def aetk_path():
-    return __file__
-
-
-def aetk_dir():
-    return dir_of(aetk_path())
+def modules_dir():
+    return dir_of(__file__)
 
 
 def dir_of(file):
@@ -155,4 +163,4 @@ def running_dir():
 
 
 if __name__ == '__main__':
-    print('see https://github.com/sudongqi/AbsolutelyEssentialToolKit for usages')
+    print('see https://github.com/sudongqi/AbsolutelyEssentialToolKit for examples')
