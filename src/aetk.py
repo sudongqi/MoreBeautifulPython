@@ -5,8 +5,71 @@ import json
 import time
 import gzip
 import itertools
+import traceback
+from multiprocessing import Process, Queue
 from pathlib import Path
 from tqdm import tqdm
+
+
+def test_f(x, fail_rate=0, exec_time=0):
+    assert random.random() > fail_rate, "simulated failure"
+    time.sleep(exec_time)
+    return x + 1
+
+
+def error_msg(e, detailed=True):
+    return repr(e) + '\n' + repr(traceback.format_exc()) if detailed else repr(e)
+
+
+class Worker(Process):
+    def __init__(self, inp, out, f, worker_id=None, progress=True, detailed_error=False):
+        super(Worker, self).__init__()
+        self.worker_id = worker_id
+        self.inp = inp
+        self.out = out
+        self.f = f
+        self.detailed_error = detailed_error
+        if progress and worker_id is not None:
+            print('worker-{} started'.format(worker_id))
+
+    def run(self):
+        while True:
+            args = self.inp.get()
+            try:
+                res = self.f(*args)
+                self.out.put({'worker_id': self.worker_id, 'res': res})
+            except Exception as e:
+                self.out.put({'worker_id': self.worker_id, 'res': None, 'error': error_msg(e, self.detailed_error)})
+
+
+class Workers:
+    def __init__(self, f, num_workers, progress=True, detailed_error=False):
+        self.inp = Queue()
+        self.out = Queue()
+        self.f = f
+        self.workers = []
+        self.progress = progress
+        for i in range(num_workers):
+            worker = Worker(inp=self.inp, out=self.out, f=f, worker_id=i, progress=progress,
+                            detailed_error=detailed_error)
+            worker.start()
+            self.workers.append(worker)
+
+    def add_task(self, inp):
+        self.inp.put(inp)
+
+    def get_res(self):
+        res = self.out.get()
+        if self.progress:
+            if 'error' in res:
+                print('worker-{} failed: {}'.format(res['worker_id'], res['error']))
+            else:
+                print('worker-{} completed'.format(res['worker_id']))
+        return res
+
+    def terminate(self):
+        for w in self.workers:
+            w.terminate()
 
 
 class timer(object):
@@ -16,7 +79,7 @@ class timer(object):
     def __enter__(self):
         self.start = time.time()
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, _type, value, _traceback):
         print('took {} seconds'.format(time.time() - self.start))
 
 
@@ -111,6 +174,10 @@ def build_table(rows, column_names=None, columns_gap_size=3):
     return res
 
 
+def print2(data, indent=4):
+    print(json.dumps(data, indent=indent))
+
+
 def print_list(data):
     for item in data:
         print(item)
@@ -145,12 +212,16 @@ class text_block(object):
         print('\n' * self.y_gap_size, end="")
         sep(self.text, self.size, self.char)
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, _type, value, _traceback):
         print(self.char * (self.size * 2 + len(self.text)))
         print('\n' * self.y_gap_size, end="")
 
 
-def modules_dir():
+def path_join(path, paths):
+    return os.path.join(path, paths)
+
+
+def lib_dir():
     return dir_of(__file__)
 
 
@@ -158,9 +229,9 @@ def dir_of(file):
     return str(Path(file).parent.absolute())
 
 
-def running_dir():
+def exec_dir():
     return os.getcwd()
 
 
 if __name__ == '__main__':
-    print('see https://github.com/sudongqi/AbsolutelyEssentialToolKit for examples')
+    print('see https://github.com/sudongqi/AbsolutelyEssentialToolKit for references')

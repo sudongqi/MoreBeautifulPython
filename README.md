@@ -1,98 +1,26 @@
 # AbsolutelyEssentialToolKit
-light-weight essential tools that are not included in Python standard library
-* execution timer
-  * timer()
-* files loading
-  * load_jsonl(), load_json(), load_csv(), load_tsv(), load_txt(), iterate(), file_opener()
-* summarization
-  * print_list(), build_table(), print_table(), text_box(), sep()
-* paths
-  * dir_of(), running_dir(), modules_dir()
-* statistics
-  * min_max_avg() 
+Tools that you wish are in the standard Python library. Make Python more beautiful :)
 
-## Setup
+### Setup
 
     pip install aetk
 
-## Examples
+### [Examples Script](https://github.com/sudongqi/AbsolutelyEssentialToolKit/blob/main/examples.py)
 
-    from src.aetk import *
+* multi processing
+  * Worker, Workers
+* files loading
+  * load_jsonl, load_json, load_csv, load_tsv, load_txt, iterate, open_file
+* summarization
+  * timer, print2, print_list, build_table, print_table, text_box, sep
+* paths
+  * path_join, dir_of, exec_dir, lib_dir
+* statistics
+  * min_max_avg 
+  
 
-    # use context manager timer() to get execution time
-    with timer():
-        d = {i: i for i in range(100000)}
-        for i in range(200000):
-            x = d.get(i, None)
-    
-    '''
-    took 0.018950223922729492 seconds
-    '''
-    
-    # modules_dir() quickly tell you where your python modules live
-    print(modules_dir())
-    
-    # load_jsonl()
-    file_path = 'example_data.jsonl'
-    data = [d for d in load_jsonl(file_path)]
-    
-    # print_list() print items in list in separate lines
-    print_list(data)
-    
-    '''
-    {'id': 1, 'name': 'Jackson', 'age': 43}
-    {'id': 2, 'name': 'Zunaira', 'age': 24}
-    {'id': 3, 'name': 'Lorelei', 'age': 72}
-    '''
-    
-    # load_jsonl() can customize loading procedures; sample 50% from the first 2 items
-    for d in load_jsonl(file_path, take_n=2, sample_ratio=0.5, sample_seed=1234, progress=True, compression=None):
-        print(d)
-    
-    '''
-    {'id': 2, 'name': 'Zunaira', 'age': 24}
-    '''
-    
-    # print table with dynamic column width
-    rows = [d.values() for d in data]
-    column_names = list(data[0].keys())
-    print_table(rows, column_names, columns_gap_size=3)
-    
-    '''
-    id   name      age
-    1    Jackson   43
-    2    Zunaira   24
-    3    Lorelei   72
-    '''
-    
-    # one-liner seperator with default character '-' and wing size of 10
-    sep('text', size=10, char='-')
-    
-    '''
-    ----------text----------
-    '''
-    
-    # text block that enclose the execution
-    with text_block(text='table', size=7, char='=', y_gap_size=1):
-        print_table(rows, column_names, columns_gap_size=3)
-    
-    '''
-    
-    =======table=======
-    id   name      age
-    1    Jackson   43
-    2    Zunaira   24
-    3    Lorelei   72
-    ===================
-    
-    '''
-    
-    # get statistics of a int/float list in one for-loop
-    print(min_max_avg([1, 2, 3, 4, 5]))
-    
-    # the current execution directory
-    print(running_dir())
-    
-    # directory of the file that call this function
-    print(dir_of(__file__))
+
+
+
+
 
