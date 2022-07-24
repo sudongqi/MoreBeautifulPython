@@ -13,17 +13,17 @@ from tqdm import tqdm
 
 
 def test_f(x, fail_rate=0, exec_time=0):
-    assert random.random() > fail_rate, "simulated failure"
+    assert random.random() > fail_rate, "simulated failure ({}%)".format(fail_rate * 100)
     time.sleep(exec_time)
     return x + 1
 
 
-def error_msg(e, detailed=True):
-    return repr(e) + '\n' + repr(traceback.format_exc()) if detailed else repr(e)
+def error_msg(e, detailed=True, seperator='\n'):
+    return repr(e) + seperator + repr(traceback.format_exc()) if detailed else repr(e)
 
 
 class Worker(Process):
-    def __init__(self, inp, out, f, worker_id=None, progress=True, detailed_error=False):
+    def __init__(self, f, inp, out, worker_id=None, progress=True, detailed_error=False):
         super(Worker, self).__init__()
         self.worker_id = worker_id
         self.inp = inp
@@ -31,41 +31,43 @@ class Worker(Process):
         self.f = f
         self.detailed_error = detailed_error
         if progress and worker_id is not None:
-            print('worker-{} started'.format(worker_id))
+            print('started worker-{}'.format(worker_id))
 
     def run(self):
         while True:
-            args = self.inp.get()
+            task_id, args = self.inp.get()
             try:
                 res = self.f(*args)
-                self.out.put({'worker_id': self.worker_id, 'res': res})
+                self.out.put({'worker_id': self.worker_id, 'task_id': task_id, 'res': res})
             except Exception as e:
-                self.out.put({'worker_id': self.worker_id, 'res': None, 'error': error_msg(e, self.detailed_error)})
+                self.out.put({'worker_id': self.worker_id, 'task_id': task_id, 'res': None,
+                              'error': error_msg(e, self.detailed_error)})
 
 
 class Workers:
     def __init__(self, f, num_workers, progress=True, detailed_error=False):
         self.inp = Queue()
         self.out = Queue()
-        self.f = f
         self.workers = []
         self.progress = progress
+        self.task_id = 0
         for i in range(num_workers):
-            worker = Worker(inp=self.inp, out=self.out, f=f, worker_id=i, progress=progress,
+            worker = Worker(f, self.inp, out=self.out, worker_id=i, progress=progress,
                             detailed_error=detailed_error)
             worker.start()
             self.workers.append(worker)
 
     def add_task(self, inp):
-        self.inp.put(inp)
+        self.inp.put((self.task_id, inp))
+        self.task_id += 1
 
     def get_res(self):
         res = self.out.get()
         if self.progress:
             if 'error' in res:
-                print('worker-{} failed: {}'.format(res['worker_id'], res['error']))
+                print('worker-{} failed task-{} : {}'.format(res['worker_id'], res['task_id'], res['error']))
             else:
-                print('worker-{} completed'.format(res['worker_id']))
+                print('worker-{} completed task-{}'.format(res['worker_id'], res['task_id']))
         return res
 
     def terminate(self):
@@ -201,13 +203,22 @@ def print_table(rows, column_names=None, columns_gap_size=3):
     print_list(build_table(rows, column_names, columns_gap_size))
 
 
-def min_max_avg(vec):
+def n_min_max_avg(data, key_f=None, take_n=None, sample_ratio=1.0, sample_seed=None):
     res_min, res_max, res_sum = float('inf'), -float('inf'), 0
-    for num in vec:
+    iterator = iterate(data, take_n=take_n, sample_ratio=sample_ratio, sample_seed=sample_seed, progress=False)
+    if key_f is not None:
+        iterator = map(key_f, iterator)
+    counter = 0
+    for num in iterator:
         res_min = min(res_min, num)
         res_max = max(res_max, num)
         res_sum += num
-    return res_min, res_max, res_sum / len(vec)
+        counter += 1
+    return counter, res_min, res_max, res_sum / counter
+
+
+def min_max_avg(data, key_f=None, take_n=None, sample_ratio=1.0, sample_seed=None):
+    return tuple(n_min_max_avg(data, key_f, take_n, sample_ratio, sample_seed)[1:])
 
 
 def sep(text, size=10, char='-'):
@@ -231,16 +242,19 @@ class text_block(object):
         print('\n' * self.y_gap_size, end="")
 
 
-def path_join(path, paths):
-    return os.path.join(path, paths)
+def path_join(path, *paths):
+    return os.path.join(path, *paths)
 
 
-def lib_dir():
-    return dir_of(__file__)
+def lib_path():
+    return str(Path(__file__).absolute())
 
 
-def dir_of(file):
-    return str(Path(file).parent.absolute())
+def dir_of(file, level=1):
+    curr_path_obj = Path(file)
+    for i in range(level):
+        curr_path_obj = curr_path_obj.parent
+    return str(curr_path_obj.absolute())
 
 
 def exec_dir():
@@ -248,4 +262,5 @@ def exec_dir():
 
 
 if __name__ == '__main__':
-    print('see https://github.com/sudongqi/AbsolutelyEssentialToolKit for references')
+    with text_block('examples', 29, '=', 2):
+        print('https://github.com/sudongqi/AbsolutelyEssentialToolKit/examples.py')
