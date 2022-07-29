@@ -1,6 +1,6 @@
 from aetk import timer, Workers, test_f, min_max_avg, \
     print2, print_list, print_table, sep, text_block, \
-    load_jsonl, load_json, dir_of, lib_path, exec_dir, path_join
+    load_jsonl, load_json, dir_of, lib_path, exec_dir, path_join, get_only_file
 
 
 def main():
@@ -53,6 +53,9 @@ def main():
     # lib_dir() return the path of this python library
     print(lib_path())
     '''C:\\Users\\usr\\miniconda3\\Lib\\site-packages\\aetk.py'''
+
+    print(get_only_file(path_join(dir_of(__file__, 2), 'data')))
+    '''C:\\Users\\usr\\data\\file.txt'''
 
     # get example data from the same directory
     jsonl_file_path = path_join(this_dir, 'data.jsonl')

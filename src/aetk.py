@@ -257,6 +257,14 @@ def dir_of(file, level=1):
     return str(curr_path_obj.absolute())
 
 
+def get_only_file(path):
+    if os.path.isdir(path):
+        sub_paths = os.listdir(path)
+        assert len(sub_paths) == 1, 'there are more than one files/dirs in {}'.format(path)
+        return path_join(path, sub_paths[0])
+    return path
+
+
 def exec_dir():
     return os.getcwd()
 
