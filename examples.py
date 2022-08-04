@@ -7,11 +7,12 @@ def main():
 
     # similar to logging, we can create an independent logger that replace the global logger
     log2 = Logger(file=sys.stdout)
-    log2('this is from an independent logger')
+    # log() is the same as print()
+    log2('this is from an independent logger', end='\n\n')
 
     # logger() context manager create a temporarily logger that replace the global logger
     with logger(level=DEBUG, file=sys.stderr, prefix='===> ', log_time=True, log_module=True):
-        # log() is the same as print(), this message will be redirected to sys.stderr
+        # this message will be redirected to sys.stderr
         log('this is from context manager logger', level=CRITICAL)
         '''
         in sys.stderr:
