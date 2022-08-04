@@ -2,7 +2,7 @@ from aetk import *
 
 
 def main():
-    # all log() in this script will print to "./log"
+    # all log() in this script will print to file at path "./log"
     set_global_logger(file='./log')
 
     # similar to logging, we can create an independent logger that replace the global logger
@@ -12,10 +12,10 @@ def main():
     # logger() context manager create a temporarily logger that replace the global logger
     with logger(level=DEBUG, file=sys.stderr, prefix='===> ', log_time=True, log_module=True):
         # log() is the same as print(), this message will be redirected to sys.stderr
-        log('this will not be included in "./log"', level=CRITICAL)
+        log('this is from context manager logger', level=CRITICAL)
         '''
         in sys.stderr:
-        2022-08-04 02:06:31  __main__  ===> this will not be included in "./log"
+        2022-08-04 02:06:31  __main__  ===> this is from context manager logger
         '''
 
     # suppress all log by specifying level=SILENT

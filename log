@@ -1,17 +1,17 @@
-took 0.007949113845825195 seconds
+took 0.00897526741027832 seconds
 started worker-0
 started worker-1
 started worker-2
 started worker-3
-worker-2 failed task-3 : AssertionError('simulated failure (30.0%)')
-worker-2 completed task-4
-worker-3 completed task-2
-worker-1 completed task-1
-worker-0 completed task-0
+worker-0 failed task-1 : AssertionError('simulated failure (30.0%)')
+worker-0 failed task-2 : AssertionError('simulated failure (30.0%)')
+worker-0 failed task-3 : AssertionError('simulated failure (30.0%)')
+worker-0 completed task-4
 worker-0 failed task-7 : AssertionError('simulated failure (30.0%)')
 worker-3 completed task-6
 worker-2 completed task-5
-took 0.5166900157928467 seconds
+worker-1 completed task-0
+took 0.3071162700653076 seconds
 C:\Users\sudon\miniconda3\lib
 C:\Users\sudon\AbsolutelyEssentialToolKit\a\b\c.file
 C:\Users\sudon\AbsolutelyEssentialToolKit
@@ -36,12 +36,18 @@ C:\Users\sudon\data\file.txt
 {'id': 1, 'name': 'Jackson', 'age': 43}
 {'id': 2, 'name': 'Zunaira', 'age': 24}
 {'id': 3, 'name': 'Lorelei', 'age': 72}
-43
-53
-78
+1
+13
+18
 3/100
-83
-98
+21
+39
+49
+6/100
+60
+63
+91
+9/100
 id   name      age
 1    Jackson   43
 2    Zunaira   24
