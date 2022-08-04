@@ -1,3 +1,4 @@
+import sys
 import os
 import csv
 import random
@@ -5,11 +6,78 @@ import json
 import time
 import gzip
 import bz2
+import inspect
 import itertools
 import traceback
+from datetime import datetime, timezone
 from multiprocessing import Process, Queue
 from pathlib import Path
-from tqdm import tqdm
+
+NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, SILENT = 0, 10, 20, 30, 40, 50, 100
+
+
+class Logger:
+    def __init__(self, file=sys.stdout, level=INFO, prefix='', log_time=False, log_module=False, sep='  '):
+        self.level = level
+        self.file = None
+        self.prefix = prefix
+        self.log_time = log_time
+        self.log_module = log_module
+        self.sep = sep
+        self.direct_to(file)
+
+    def direct_to(self, path):
+        self.file = path
+        if isinstance(path, str):
+            build_dir(path)
+            self.file = open(path, 'w', encoding='utf-8')
+
+    def __call__(self, msg, file=None, end=None, level=INFO, caller=None):
+        if self.level <= level:
+            _file = self.file if file is None else file
+            if self.log_time:
+                print(curr_time(), file=_file, end=self.sep)
+            if self.log_module:
+                print(caller, file=_file, end=self.sep)
+            if self.prefix:
+                print(self.prefix, file=_file, end='')
+            print(msg, file=_file, end=end)
+
+
+LOGGER = Logger()
+
+
+def curr_time():
+    return str(datetime.now(timezone.utc))[:19]
+
+
+def log(msg, file=None, end=None, level=INFO):
+    caller_module = inspect.getmodule(inspect.stack()[1][0])
+    LOGGER(msg, file, end, level, caller=caller_module.__name__)
+
+
+def set_global_logger(file=sys.stdout, level=INFO, prefix='', log_time=False, log_module=False):
+    global LOGGER
+    LOGGER = Logger(file, level, prefix, log_time, log_module)
+
+
+class logger(object):
+    def __init__(self, file=sys.stdout, level=INFO, prefix='', log_time=False, log_module=False):
+        global LOGGER
+        self.org_logger = LOGGER
+        LOGGER = Logger(file, level, prefix, log_time, log_module)
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, _type, value, _traceback):
+        global LOGGER
+        LOGGER = self.org_logger
+
+
+def build_dir(path):
+    os.makedirs(dir_of(path), exist_ok=True)
+    return path
 
 
 def test_f(x, fail_rate=0, exec_time=0):
@@ -18,20 +86,19 @@ def test_f(x, fail_rate=0, exec_time=0):
     return x + 1
 
 
-def error_msg(e, detailed=True, seperator='\n'):
-    return repr(e) + seperator + repr(traceback.format_exc()) if detailed else repr(e)
+def error_msg(e, detailed=True, seperator='\n\n'):
+    return repr(e) + seperator + traceback.format_exc() if detailed else repr(e)
 
 
 class Worker(Process):
-    def __init__(self, f, inp, out, worker_id=None, progress=True, detailed_error=False):
+    def __init__(self, f, inp, out, worker_id=None, detailed_error=False):
         super(Worker, self).__init__()
         self.worker_id = worker_id
         self.inp = inp
         self.out = out
         self.f = f
         self.detailed_error = detailed_error
-        if progress and worker_id is not None:
-            print('started worker-{}'.format(worker_id))
+        log('started worker-{}'.format(na(worker_id)))
 
     def run(self):
         while True:
@@ -45,15 +112,13 @@ class Worker(Process):
 
 
 class Workers:
-    def __init__(self, f, num_workers, progress=True, detailed_error=False):
+    def __init__(self, f, num_workers, detailed_error=False):
         self.inp = Queue()
         self.out = Queue()
         self.workers = []
-        self.progress = progress
         self.task_id = 0
         for i in range(num_workers):
-            worker = Worker(f, self.inp, out=self.out, worker_id=i, progress=progress,
-                            detailed_error=detailed_error)
+            worker = Worker(f, self.inp, out=self.out, worker_id=i, detailed_error=detailed_error)
             worker.start()
             self.workers.append(worker)
 
@@ -63,11 +128,10 @@ class Workers:
 
     def get_res(self):
         res = self.out.get()
-        if self.progress:
-            if 'error' in res:
-                print('worker-{} failed task-{} : {}'.format(res['worker_id'], res['task_id'], res['error']))
-            else:
-                print('worker-{} completed task-{}'.format(res['worker_id'], res['task_id']))
+        if 'error' in res:
+            log('worker-{} failed task-{} : {}'.format(res['worker_id'], res['task_id'], res['error']))
+        else:
+            log('worker-{} completed task-{}'.format(res['worker_id'], res['task_id']))
         return res
 
     def terminate(self):
@@ -83,26 +147,26 @@ class timer(object):
         self.start = time.time()
 
     def __exit__(self, _type, value, _traceback):
-        print('took {} seconds'.format(time.time() - self.start))
+        log('took {} seconds'.format(time.time() - self.start))
 
 
-def iterate(data, take_n=None, sample_ratio=1.0, sample_seed=None, progress=False):
-    '''
-    base iterator handler
-    :param data: iterator
-    :param take_n: stop the iterator after taking the first n items
-    :param sample_ratio: probability of keep an item
-    :param sample_seed: seed for sampling
-    :param progress: should use tqdm or not
-    :return: iteraotr
-    '''
+def iterate(data, take_n=None, sample_ratio=1.0, sample_seed=None, progress_interval=None):
     if sample_seed is not None:
         random.seed(sample_seed)
     if take_n is not None:
         assert take_n >= 1, 'take_n should be >= 1'
-    for d in tqdm(itertools.islice(data, 0, take_n), disable=not progress):
+    counter = 0
+    total = '?'
+    try:
+        total = len(data)
+    except:
+        pass
+    for d in itertools.islice(data, 0, take_n):
         if random.random() <= sample_ratio:
+            counter += 1
             yield d
+            if progress_interval is not None and counter % progress_interval == 0:
+                log('{}/{}'.format(counter, total))
 
 
 def open_file(path, encoding='utf-8', compression=None):
@@ -132,30 +196,31 @@ def load_json(path, encoding='utf-8', compression=None):
         return json.load(f)
 
 
-def load_jsonl(path, encoding="utf-8", take_n=None, sample_ratio=1.0, sample_seed=None, progress=False,
+def load_jsonl(path, encoding="utf-8", take_n=None, sample_ratio=1.0, sample_seed=None, progress_interval=None,
                compression=None):
     with open_file(path, encoding, compression) as f:
-        for line in iterate(f, take_n, sample_ratio, sample_seed, progress):
+        for line in iterate(f, take_n, sample_ratio, sample_seed, progress_interval):
             yield json.loads(line)
 
 
-def load_txt(path, encoding="utf-8", take_n=None, sample_ratio=1.0, sample_seed=None, progress=False,
+def load_txt(path, encoding="utf-8", take_n=None, sample_ratio=1.0, sample_seed=None, progress_interval=None,
              compression=None):
     with open_file(path, encoding, compression) as f:
-        for line in iterate(f, take_n, sample_ratio, sample_seed, progress):
+        for line in iterate(f, take_n, sample_ratio, sample_seed, progress_interval):
             yield line.rstrip()
 
 
-def load_csv(path, encoding="utf-8", delimiter=',', take_n=None, sample_ratio=1.0, sample_seed=None, progress=False,
-             compression=None):
+def load_csv(path, encoding="utf-8", delimiter=',', take_n=None, sample_ratio=1.0, sample_seed=None,
+             progress_interval=False, compression=None):
     csv.field_size_limit(10000000)
     with open_file(path, encoding, compression) as f:
-        for d in iterate(csv.reader(f, delimiter=delimiter), take_n, sample_ratio, sample_seed, progress):
+        for d in iterate(csv.reader(f, delimiter=delimiter), take_n, sample_ratio, sample_seed, progress_interval):
             yield d
 
 
-def load_tsv(path, encoding="utf-8", take_n=None, sample_ratio=1.0, sample_seed=None, progress=False, compression=None):
-    for d in load_csv(path, encoding, '/t', take_n, sample_ratio, sample_seed, progress, compression):
+def load_tsv(path, encoding="utf-8", take_n=None, sample_ratio=1.0, sample_seed=None, progress_interval=None,
+             compression=None):
+    for d in load_csv(path, encoding, '/t', take_n, sample_ratio, sample_seed, progress_interval, compression):
         yield d
 
 
@@ -191,12 +256,12 @@ def build_table(rows, column_names=None, columns_gap_size=3):
 
 
 def print2(data, indent=4):
-    print(json.dumps(data, indent=indent))
+    log(json.dumps(data, indent=indent))
 
 
 def print_list(data):
     for item in data:
-        print(item)
+        log(item)
 
 
 def print_table(rows, column_names=None, columns_gap_size=3):
@@ -205,7 +270,7 @@ def print_table(rows, column_names=None, columns_gap_size=3):
 
 def n_min_max_avg(data, key_f=None, take_n=None, sample_ratio=1.0, sample_seed=None):
     res_min, res_max, res_sum = float('inf'), -float('inf'), 0
-    iterator = iterate(data, take_n=take_n, sample_ratio=sample_ratio, sample_seed=sample_seed, progress=False)
+    iterator = iterate(data, take_n=take_n, sample_ratio=sample_ratio, sample_seed=sample_seed)
     if key_f is not None:
         iterator = map(key_f, iterator)
     counter = 0
@@ -221,9 +286,13 @@ def min_max_avg(data, key_f=None, take_n=None, sample_ratio=1.0, sample_seed=Non
     return tuple(n_min_max_avg(data, key_f, take_n, sample_ratio, sample_seed)[1:])
 
 
+def na(item, na_str='?'):
+    return na_str if item is None else item
+
+
 def sep(text, size=10, char='-'):
     wing = char * size
-    print(wing + text + wing)
+    log(wing + text + wing)
 
 
 class text_block(object):
@@ -234,12 +303,12 @@ class text_block(object):
         self.y_gap_size = y_gap_size
 
     def __enter__(self):
-        print('\n' * self.y_gap_size, end="")
+        log('\n' * self.y_gap_size)
         sep(self.text, self.size, self.char)
 
     def __exit__(self, _type, value, _traceback):
-        print(self.char * (self.size * 2 + len(self.text)))
-        print('\n' * self.y_gap_size, end="")
+        log(self.char * (self.size * 2 + len(self.text)))
+        log('\n' * self.y_gap_size)
 
 
 def path_join(path, *paths):

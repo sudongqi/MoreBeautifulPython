@@ -1,0 +1,60 @@
+took 0.007949113845825195 seconds
+started worker-0
+started worker-1
+started worker-2
+started worker-3
+worker-2 failed task-3 : AssertionError('simulated failure (30.0%)')
+worker-2 completed task-4
+worker-3 completed task-2
+worker-1 completed task-1
+worker-0 completed task-0
+worker-0 failed task-7 : AssertionError('simulated failure (30.0%)')
+worker-3 completed task-6
+worker-2 completed task-5
+took 0.5166900157928467 seconds
+C:\Users\sudon\miniconda3\lib
+C:\Users\sudon\AbsolutelyEssentialToolKit\a\b\c.file
+C:\Users\sudon\AbsolutelyEssentialToolKit
+C:\Users\sudon\miniconda3\lib\site-packages\aetk.py
+C:\Users\sudon\data\file.txt
+{
+    "quiz": {
+        "maths": {
+            "q1": {
+                "question": "5 + 7 = ?",
+                "options": [
+                    "10",
+                    "11",
+                    "12",
+                    "13"
+                ],
+                "answer": "12"
+            }
+        }
+    }
+}
+{'id': 1, 'name': 'Jackson', 'age': 43}
+{'id': 2, 'name': 'Zunaira', 'age': 24}
+{'id': 3, 'name': 'Lorelei', 'age': 72}
+43
+53
+78
+3/100
+83
+98
+id   name      age
+1    Jackson   43
+2    Zunaira   24
+3    Lorelei   72
+----------my text----------
+
+
+=======table=======
+id   name      age
+1    Jackson   43
+2    Zunaira   24
+3    Lorelei   72
+===================
+
+
+(24, 72, 46.333333333333336)

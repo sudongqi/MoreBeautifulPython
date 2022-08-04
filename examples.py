@@ -1,9 +1,29 @@
-from aetk import timer, Workers, test_f, min_max_avg, \
-    print2, print_list, print_table, sep, text_block, \
-    load_jsonl, load_json, dir_of, lib_path, exec_dir, path_join, get_only_file
+from aetk import *
 
 
 def main():
+    # all log() in this script will print to "./log"
+    set_global_logger(file='./log')
+
+    # similar to logging, we can create an independent logger that replace the global logger
+    ind_log = Logger(file=sys.stdout)
+    ind_log('this is from an independent logger')
+
+    # logger() context manager create a temporarily logger that replace the global logger
+    with logger(level=DEBUG, file=sys.stderr, prefix='===> ', log_time=True, log_module=True):
+        # log() is the same as print(), this message will be redirected to sys.stderr
+        log('this will not be included in "./log"', level=CRITICAL)
+        '''
+        in sys.stderr:
+        2022-08-04 02:06:31  __main__  ===> this will not be included in "./log"
+        '''
+
+    # suppress all log by specifying level=SILENT
+    with logger(level=SILENT):
+        for i in range(1000):
+            # no printing happens here
+            log(i)
+
     # use timer() context manager to get execution time
     with timer():
         d = {i: i for i in range(100)}
@@ -39,22 +59,22 @@ def main():
     '''C:\\Users\\usr\\AbsolutelyEssentialToolKit'''
 
     # dir_of() can go up multiple levels
-    print(dir_of(lib_path(), level=2))
+    log(dir_of(lib_path(), level=2))
     '''C:\\Users\\usr\\miniconda3'''
 
     # path_join() is the same as os.path.join()
-    print(path_join(this_dir, 'a', 'b', 'c.file'))
+    log(path_join(this_dir, 'a', 'b', 'c.file'))
     '''C:\\Users\\usr\\AbsolutelyEssentialToolKit\\a\\b\\c.file'''
 
     # exec_dir() return the directory you run your python command at
-    print(exec_dir())
+    log(exec_dir())
     '''C:\\Users\\usr\\AbsolutelyEssentialToolKit'''
 
     # lib_dir() return the path of this python library
-    print(lib_path())
+    log(lib_path())
     '''C:\\Users\\usr\\miniconda3\\Lib\\site-packages\\aetk.py'''
 
-    print(get_only_file(path_join(dir_of(__file__, 2), 'data')))
+    log(get_only_file(path_join(dir_of(__file__, 2), 'data')))
     '''C:\\Users\\usr\\data\\file.txt'''
 
     # get example data from the same directory
@@ -93,12 +113,24 @@ def main():
     {'id': 3, 'name': 'Lorelei', 'age': 72}
     '''
 
-    # load_jsonl() can customize loading procedures
-    # for example, sample 50% using seed 1234 from the first 2 items
-    for d in load_jsonl(jsonl_file_path, take_n=2, sample_ratio=0.5, sample_seed=1234, progress=True, compression=None):
-        print(d)
+    # iterate() can customize iteration procedures
+    # for example, sample 10% and report every 3 yield
+    vec = [i for i in range(100)]
+    for d in iterate(vec, sample_ratio=0.1, progress_interval=3):
+        log(d)
     '''
-    {'id': 2, 'name': 'Zunaira', 'age': 24}
+    6
+    8
+    12
+    3/100
+    24
+    26
+    28
+    6/100
+    40
+    85
+    94
+    9/100
     '''
 
     # print_table() can adjust column width automatically
@@ -134,7 +166,7 @@ def main():
     '''
 
     # get 3 key statistics from an iterator at once
-    print(min_max_avg(load_jsonl(jsonl_file_path), key_f=lambda x: x['age']))
+    log(min_max_avg(load_jsonl(jsonl_file_path), key_f=lambda x: x['age']))
     '''(24, 72, 46.333333333333336)'''
 
 
