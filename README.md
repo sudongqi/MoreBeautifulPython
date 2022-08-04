@@ -1,5 +1,5 @@
 ## AbsolutelyEssentialToolKit
-Make Python more beautiful :) This package includes syntax sugar & tool that you wish were in the standard library.
+Make Python more beautiful :) This package includes syntax sugar & tools that you wish were in the standard library.
 
 ### Setup
 
