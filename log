@@ -1,27 +1,92 @@
 ==========first line==========
-took 0.00898122787475586 seconds
+took 0.006983757019042969 seconds
 =====box=====
 content
 =============
 
 ====================
+3
 10
-16
-47
+21
 3/1000
-49
-68
-69
+35
+38
+51
 6/1000
-81
+59
+72
+73
+9/1000
+77
+93
 ====================
-took 0.001996755599975586 seconds
+took 0.0029914379119873047 seconds
 
 ==========Workers()==========
 started worker-0
 started worker-1
 started worker-2
 started worker-3
+worker-3 completed task-3
+worker-1 completed task-1
+worker-2 failed task-2 : AssertionError('simulated failure (30.0%)')
+worker-0 completed task-0
+worker-1 completed task-4
+worker-3 completed task-6
+worker-2 completed task-5
+worker-0 failed task-7 : AssertionError('simulated failure (30.0%)')
+terminated 4 workers
 =============================
-took 141.1609127521515 seconds
+took 0.5046517848968506 seconds
 
+==========work()==========
+{'worker_id': 3, 'task_id': 3, 'res': 6}
+{'worker_id': 1, 'task_id': 0, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+{'worker_id': 0, 'task_id': 1, 'res': 2}
+{'worker_id': 6, 'task_id': 5, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+{'worker_id': 4, 'task_id': 4, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+{'worker_id': 2, 'task_id': 2, 'res': 4}
+{'worker_id': 7, 'task_id': 7, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+{'worker_id': 5, 'task_id': 6, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+==========================
+took 0.34497833251953125 seconds
+
+==========path==========
+C:\Users\sudon\AbsolutelyEssentialToolKit
+C:\Users\sudon
+C:\Users\sudon\AbsolutelyEssentialToolKit\a\b\c.file
+C:\Users\sudon\AbsolutelyEssentialToolKit
+C:\Users\sudon\AppData\Local\Programs\Python\Python310\lib\site-packages\aetk.py
+C:\Users\sudon\AbsolutelyEssentialToolKit\data
+========================
+
+{
+    "quiz": {
+        "maths": {
+            "q1": {
+                "question": "5 + 7 = ?",
+                "options": [
+                    "10",
+                    "11",
+                    "12",
+                    "13"
+                ],
+                "answer": "12"
+            }
+        }
+    }
+}
+==========print_list()==========
+{'id': 1, 'name': 'Jackson', 'age': 43}
+{'id': 2, 'name': 'Zunaira', 'age': 24}
+{'id': 3, 'name': 'Lorelei', 'age': 72}
+================================
+
+==========print_table()==========
+id   name      age
+1    Jackson   43
+2    Zunaira   24
+3    Lorelei   72
+=================================
+
+(24, 72, 46.333333333333336)
