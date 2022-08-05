@@ -1,102 +1,27 @@
 ==========first line==========
-took 0.006993293762207031 seconds
+took 0.00898122787475586 seconds
 =====box=====
 content
 =============
 
 ====================
-14
-26
-66
+10
+16
+47
 3/1000
+49
 68
-70
-73
+69
 6/1000
-79
-80
 81
-9/1000
-93
 ====================
-took 0.002993345260620117 seconds
+took 0.001996755599975586 seconds
 
 ==========Workers()==========
 started worker-0
 started worker-1
 started worker-2
 started worker-3
-worker-2 completed task-1
-worker-0 completed task-0
-worker-3 completed task-3
-worker-1 completed task-2
-worker-0 failed task-5 : AssertionError('simulated failure (30.0%)')
-worker-3 completed task-6
-worker-2 completed task-4
-worker-1 completed task-7
 =============================
-took 0.5175662040710449 seconds
+took 141.1609127521515 seconds
 
-==========Workers(f, num_worker).map==========
-started worker-0
-started worker-1
-started worker-2
-started worker-3
-worker-3 failed task-3 : AssertionError('simulated failure (30.0%)')
-{'worker_id': 3, 'task_id': 3, 'res': None, 'error': "AssertionError('simulated failure (30.0%)')"}
-worker-3 completed task-4
-{'worker_id': 3, 'task_id': 4, 'res': 5}
-worker-0 completed task-1
-{'worker_id': 0, 'task_id': 1, 'res': 2}
-worker-1 completed task-0
-{'worker_id': 1, 'task_id': 0, 'res': 1}
-worker-2 completed task-2
-{'worker_id': 2, 'task_id': 2, 'res': 3}
-worker-0 completed task-6
-{'worker_id': 0, 'task_id': 6, 'res': 7}
-worker-1 completed task-7
-{'worker_id': 1, 'task_id': 7, 'res': 8}
-worker-3 completed task-5
-{'worker_id': 3, 'task_id': 5, 'res': 6}
-==============================================
-took 0.49637532234191895 seconds
-
-==========path==========
-C:\Users\sudon\AbsolutelyEssentialToolKit
-C:\Users\sudon
-C:\Users\sudon\AbsolutelyEssentialToolKit\a\b\c.file
-C:\Users\sudon\AbsolutelyEssentialToolKit
-C:\Users\sudon\AbsolutelyEssentialToolKit\src\aetk.py
-C:\Users\sudon\data\file.txt
-========================
-
-{
-    "quiz": {
-        "maths": {
-            "q1": {
-                "question": "5 + 7 = ?",
-                "options": [
-                    "10",
-                    "11",
-                    "12",
-                    "13"
-                ],
-                "answer": "12"
-            }
-        }
-    }
-}
-==========print_list()==========
-{'id': 1, 'name': 'Jackson', 'age': 43}
-{'id': 2, 'name': 'Zunaira', 'age': 24}
-{'id': 3, 'name': 'Lorelei', 'age': 72}
-================================
-
-==========print_table()==========
-id   name      age
-1    Jackson   43
-2    Zunaira   24
-3    Lorelei   72
-=================================
-
-(24, 72, 46.333333333333336)

@@ -1,4 +1,4 @@
-from src.aetk import *
+from aetk import *
 
 
 def main():
@@ -71,11 +71,11 @@ def main():
     '''
 
     # Workers() is more flexible than multiprocessing.Pool()
-    num_workers, num_tasks, fail_rate, exec_time = 4, 8, 0.3, 0.2
+    n_task = 8
     with timer_enclose('Workers()'):
-        workers = Workers(f=test_f, num_workers=num_workers)
-        [workers.add_task((i, fail_rate, exec_time)) for _ in range(num_tasks)]
-        [workers.get_res() for _ in range(num_tasks)]
+        workers = Workers(f=test_f, num_workers=4, progress=True)
+        [workers.add_task({'x': i, 'fail_rate': 0.3, 'running_time': 0.2}) for _ in range(n_task)]
+        [workers.get_res() for _ in range(n_task)]
         workers.terminate()
     '''
     ==========Workers()==========
@@ -83,48 +83,35 @@ def main():
     started worker-1
     started worker-2
     started worker-3
-    worker-2 failed task-2 : AssertionError('simulated failure (30.0%)')
-    worker-2 completed task-4
     worker-1 completed task-1
-    worker-3 completed task-3
     worker-0 completed task-0
-    worker-1 failed task-7 : AssertionError('simulated failure (30.0%)')
+    worker-3 completed task-3
+    worker-2 failed task-2 : AssertionError('simulated failure (30.0%)')
+    worker-3 completed task-7
     worker-2 completed task-5
-    worker-0 completed task-6
+    worker-0 failed task-6 : AssertionError('simulated failure (30.0%)')
+    worker-1 completed task-4
+    terminated 4 workers
     =============================
-    took 0.5289952754974365 seconds
+    took 0.5016000270843506 seconds
     '''
 
     # similarly, we can use Workers(f, num_worker).map to deal with an iterator of tasks
-    with timer_enclose('Workers(f, num_worker).map'):
-        tasks = [(i, fail_rate, exec_time) for i in range(num_tasks)]
-        for r in Workers(f=test_f, num_workers=num_workers).map(tasks):
+    with timer_enclose('work()'):
+        for r in work(f=test_f, tasks=iter([{'x': i, 'fail_rate': 0.5, 'running_time': 0.2} for i in range(n_task)])):
             log(r)
-
     '''
-    ==========Workers(f, num_worker).map==========
-    started worker-0
-    started worker-1
-    started worker-2
-    started worker-3
-    worker-0 completed task-0
-    {'worker_id': 0, 'task_id': 0, 'res': 1}
-    worker-3 completed task-3
-    {'worker_id': 3, 'task_id': 3, 'res': 4}
-    worker-1 completed task-1
-    {'worker_id': 1, 'task_id': 1, 'res': 2}
-    worker-2 completed task-2
-    {'worker_id': 2, 'task_id': 2, 'res': 3}
-    worker-0 failed task-4 : AssertionError('simulated failure (30.0%)')
-    {'worker_id': 0, 'task_id': 4, 'res': None, 'error': "AssertionError('simulated failure (30.0%)')"}
-    worker-2 completed task-7
-    {'worker_id': 2, 'task_id': 7, 'res': 8}
-    worker-1 completed task-6
-    {'worker_id': 1, 'task_id': 6, 'res': 7}
-    worker-3 completed task-5
-    {'worker_id': 3, 'task_id': 5, 'res': 6}
-    ==============================================
-    took 0.4985983371734619 seconds
+    ==========work()==========
+    {'worker_id': 2, 'task_id': 3, 'res': 6}
+    {'worker_id': 4, 'task_id': 4, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+    {'worker_id': 1, 'task_id': 0, 'res': 0}
+    {'worker_id': 0, 'task_id': 1, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+    {'worker_id': 3, 'task_id': 2, 'res': 4}
+    {'worker_id': 5, 'task_id': 5, 'res': 10}
+    {'worker_id': 6, 'task_id': 6, 'res': 12}
+    {'worker_id': 7, 'task_id': 7, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+    ==========================
+    took 0.3453397750854492 seconds
     '''
 
     with enclose('path'):
@@ -181,11 +168,11 @@ def main():
     # load_jsonl() return an iterator of dictionary
     data = list(load_jsonl(jsonl_file_path))
 
-    # print_list() print items of a list in separate lines
+    # print_iter() print items of a list in separate lines
     with enclose('print_list()'):
-        print_list(data)
+        print_iter(data)
     '''
-    ==========print_list()==========
+    ==========print_iter()==========
     {'id': 1, 'name': 'Jackson', 'age': 43}
     {'id': 2, 'name': 'Zunaira', 'age': 24}
     {'id': 3, 'name': 'Lorelei', 'age': 72}

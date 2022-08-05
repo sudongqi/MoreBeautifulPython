@@ -1,24 +1,30 @@
 ## AbsolutelyEssentialToolKit
+
 Make Python more beautiful :) This package includes syntax sugar & tools that you wish were in the standard library.
 
 ### Setup
 
     pip install aetk
 
+### Quick Test
+
+    >>> from aetk import *
+    >>> print_iter(work(f=test_f, tasks=iter({'x': i} for i in range(32))))
+
 ### [examples.py](https://github.com/sudongqi/AbsolutelyEssentialToolKit/blob/main/examples.py)
 
 * multi processes
-  * Worker, Workers, test_f
+    * work, Worker, Workers
 * logging
-  * log, log2, logger, Logger, SET_GLOBAL_LOGGER, curr_time
+    * log, log2, logger, Logger, set_global_logger
 * paths
-  * path_join, dir_of, exec_dir, lib_dir, build_dir
+    * dir_of, path_join, make_dir, this_dir, exec_dir, lib_dir
 * files
-  * load_jsonl, load_json, load_csv, load_tsv, load_txt, save_json, save_jsonl, iterate, open_file
+    * iterate, load_jsonl, load_json, load_csv, load_tsv, load_txt, save_json, save_jsonl, open_file
 * summarization
-  * timer, print2, print_list, error_msg, build_table, print_table, enclose, timer_enclose, sep, na
+    * print2, print_table, print_iter, error_msg, build_table, enclose, timer_enclose, sep, na
 * statistics
-  * min_max_avg, n_min_max_avg 
+    * timer, curr_time, min_max_avg, n_min_max_avg 
   
 
 

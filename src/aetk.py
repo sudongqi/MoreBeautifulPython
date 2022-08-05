@@ -10,7 +10,7 @@ import inspect
 import itertools
 import traceback
 from datetime import datetime, timezone
-from multiprocessing import Process, Queue
+from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
 NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, SILENT = 0, 10, 20, 30, 40, 50, 100
@@ -29,7 +29,7 @@ class Logger:
     def direct_to(self, path):
         self.file = path
         if isinstance(path, str):
-            build_dir(path)
+            make_dir(path)
             self.file = open(path, 'w', encoding='utf-8')
 
     def __call__(self, msg, file=None, end=None, level=INFO, caller=None):
@@ -45,6 +45,7 @@ class Logger:
 
 
 LOGGER = Logger()
+CPU_COUNT = cpu_count()
 
 
 def curr_time():
@@ -53,7 +54,8 @@ def curr_time():
 
 def log(msg, file=None, end=None, level=INFO):
     caller_module = inspect.getmodule(inspect.stack()[1][0])
-    LOGGER(msg, file, end, level, caller=caller_module.__name__)
+    caller = caller_module.__name__ if caller_module is not None else ''
+    LOGGER(msg, file, end, level, caller=caller)
 
 
 def set_global_logger(file=sys.stdout, level=INFO, prefix='', log_time=False, log_module=False):
@@ -75,15 +77,15 @@ class logger(object):
         LOGGER = self.org_logger
 
 
-def build_dir(path):
+def make_dir(path):
     os.makedirs(dir_of(path), exist_ok=True)
     return path
 
 
-def test_f(x, fail_rate=0, exec_time=0):
+def test_f(x, fail_rate=0, running_time=0.2):
+    time.sleep(running_time)
     assert random.random() > fail_rate, "simulated failure ({}%)".format(fail_rate * 100)
-    time.sleep(exec_time)
-    return x + 1
+    return x * 2
 
 
 def error_msg(e, detailed=True, seperator='\n\n'):
@@ -91,20 +93,21 @@ def error_msg(e, detailed=True, seperator='\n\n'):
 
 
 class Worker(Process):
-    def __init__(self, f, inp, out, worker_id=None, detailed_error=False):
+    def __init__(self, f, inp, out, worker_id=None, detailed_error=False, progress=True):
         super(Worker, self).__init__()
         self.worker_id = worker_id
         self.inp = inp
         self.out = out
         self.f = f
         self.detailed_error = detailed_error
-        log('started worker-{}'.format(na(worker_id)))
+        if progress:
+            log('started worker-{}'.format(na(worker_id)))
 
     def run(self):
         while True:
-            task_id, args = self.inp.get()
+            task_id, kwargs = self.inp.get()
             try:
-                res = self.f(*args)
+                res = self.f(**kwargs)
                 self.out.put({'worker_id': self.worker_id, 'task_id': task_id, 'res': res})
             except Exception as e:
                 self.out.put({'worker_id': self.worker_id, 'task_id': task_id, 'res': None,
@@ -112,18 +115,19 @@ class Worker(Process):
 
 
 class Workers:
-    def __init__(self, f, num_workers, detailed_error=False):
+    def __init__(self, f, num_workers=CPU_COUNT, detailed_error=False, progress=True):
         self.inp = Queue()
         self.out = Queue()
         self.workers = []
         self.task_id = 0
+        self.progress = progress
         for i in range(num_workers):
-            worker = Worker(f, self.inp, out=self.out, worker_id=i, detailed_error=detailed_error)
+            worker = Worker(f, self.inp, self.out, i, detailed_error, progress)
             worker.start()
             self.workers.append(worker)
 
     def map(self, data):
-        it = iter(data) if isinstance(data, list) else data
+        it = iter(data)
         running_task_num = 0
         try:
             while True:
@@ -144,15 +148,33 @@ class Workers:
 
     def get_res(self):
         res = self.out.get()
-        if 'error' in res:
-            log('worker-{} failed task-{} : {}'.format(res['worker_id'], res['task_id'], res['error']))
-        else:
-            log('worker-{} completed task-{}'.format(res['worker_id'], res['task_id']))
+        if self.progress:
+            if 'error' in res:
+                log('worker-{} failed task-{} : {}'.format(res['worker_id'], res['task_id'], res['error']))
+            else:
+                log('worker-{} completed task-{}'.format(res['worker_id'], res['task_id']))
         return res
 
     def terminate(self):
         for w in self.workers:
             w.terminate()
+        if self.progress:
+            log('terminated {} workers'.format(len(self.workers)))
+
+
+def work(f, tasks, num_workers=CPU_COUNT, progress=False, ordered=False):
+    if ordered:
+        saved = {}
+        id_task_waiting_for = 0
+        for d in Workers(f, num_workers, progress=progress).map(tasks):
+            saved[d['task_id']] = d
+            while id_task_waiting_for in saved:
+                yield saved[id_task_waiting_for]
+                saved.pop(id_task_waiting_for)
+                id_task_waiting_for += 1
+    else:
+        for d in Workers(f, num_workers, progress=progress).map(tasks):
+            yield d
 
 
 class timer(object):
@@ -172,11 +194,7 @@ def iterate(data, take_n=None, sample_ratio=1.0, sample_seed=None, progress_inte
     if take_n is not None:
         assert take_n >= 1, 'take_n should be >= 1'
     counter = 0
-    total = '?'
-    try:
-        total = len(data)
-    except:
-        pass
+    total = len(data) if hasattr(data, '__len__') else '?'
     for d in itertools.islice(data, 0, take_n):
         if random.random() <= sample_ratio:
             counter += 1
@@ -279,13 +297,13 @@ def print2(data, indent=4):
     print(json.dumps(data, indent=indent))
 
 
-def print_list(data):
+def print_iter(data):
     for item in data:
         log(item)
 
 
 def print_table(rows, column_names=None, space=3):
-    print_list(build_table(rows, column_names, space))
+    print_iter(build_table(rows, column_names, space))
 
 
 def n_min_max_avg(data, key_f=None, take_n=None, sample_ratio=1.0, sample_seed=None):
@@ -350,7 +368,8 @@ def lib_path():
 
 def this_dir(level=1):
     caller_module = inspect.getmodule(inspect.stack()[1][0])
-    return dir_of(caller_module.__file__, level=level)
+    caller = caller_module.__name__ if caller_module is not None else ''
+    return dir_of(caller, level=level)
 
 
 def dir_of(file, level=1):
