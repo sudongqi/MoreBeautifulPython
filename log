@@ -1,51 +1,53 @@
-==========first line==========
-took 0.006988048553466797 seconds
-=====box=====
+took 0.0069811344146728516 seconds
+==========box==========
 content
-=============
+=======================
 
 ====================
-4
-13
-22
+37
+40
+44
 3/1000
-36
-59
-64
+51
+56
+58
 6/1000
-65
-77
+60
+61
+73
+9/1000
+86
 ====================
-took 0.0019941329956054688 seconds
+took 0.0029921531677246094 seconds
 
 ==========Workers()==========
 started worker-0
 started worker-1
 started worker-2
 started worker-3
+worker-1 completed task-0
+worker-3 completed task-3
 worker-0 failed task-1 : AssertionError('simulated failure (30.0%)')
 worker-2 completed task-2
-worker-1 failed task-0 : AssertionError('simulated failure (30.0%)')
-worker-3 failed task-3 : AssertionError('simulated failure (30.0%)')
-worker-2 completed task-4
-worker-0 completed task-5
-worker-1 failed task-6 : AssertionError('simulated failure (30.0%)')
-worker-3 failed task-7 : AssertionError('simulated failure (30.0%)')
+worker-0 completed task-6
+worker-2 completed task-7
+worker-3 completed task-5
+worker-1 completed task-4
 terminated 4 workers
 =============================
-took 0.4963092803955078 seconds
+took 0.5065417289733887 seconds
 
 ==========work()==========
-{'worker_id': 2, 'task_id': 0, 'res': 0}
-{'worker_id': 0, 'task_id': 1, 'res': 2}
-{'worker_id': 1, 'task_id': 2, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+{'worker_id': 1, 'task_id': 0, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+{'worker_id': 2, 'task_id': 1, 'res': 2}
+{'worker_id': 0, 'task_id': 2, 'res': 4}
 {'worker_id': 3, 'task_id': 3, 'res': 6}
 {'worker_id': 4, 'task_id': 4, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
 {'worker_id': 5, 'task_id': 5, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
-{'worker_id': 6, 'task_id': 6, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+{'worker_id': 6, 'task_id': 6, 'res': 12}
 {'worker_id': 7, 'task_id': 7, 'res': 14}
 ==========================
-took 0.3321056365966797 seconds
+took 0.34281253814697266 seconds
 
 ==========path==========
 C:\Users\sudon\AbsolutelyEssentialToolKit

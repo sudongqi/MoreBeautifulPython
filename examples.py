@@ -24,12 +24,6 @@ def main():
             # all loggings are suppressed
             log(i)
 
-    # sep() print a one-liner seperator with default characters '-' that extend on both sides of the text
-    sep('first line', size=10, char='=')
-    '''
-    ==========first line==========
-    '''
-
     # use timer() context manager to get execution time
     with timer():
         d = {i: i for i in range(100)}
@@ -38,12 +32,12 @@ def main():
     '''took 0.012994766235351562 seconds'''
 
     # enclose() generate two text separators that enclose the execution
-    with enclose(text='box', size_x=5, size_y=1, char='=', timer=False):
+    with enclose(text='box', size_x=10, size_y=1, char='=', timer=False):
         log('content')
     '''
-    ===box===
+    ==========box==========
     content
-    =========
+    =======================
     '''
 
     # timer_enclose() == enclose(timer=True)
@@ -54,20 +48,18 @@ def main():
             log(d)
     '''
     ====================
-    5
+    4
     13
-    14
-    3/1000000
-    28
-    47
-    50
-    6/1000000
+    22
+    3/1000
+    36
+    59
+    64
+    6/1000
+    65
     77
-    80
-    90
-    9/1000000
     ====================
-    took 0.0029921531677246094 seconds
+    took 0.0019941329956054688 seconds
     '''
 
     # Workers() is more flexible than multiprocessing.Pool()
