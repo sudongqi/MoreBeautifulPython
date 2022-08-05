@@ -1,22 +1,75 @@
-took 0.00897526741027832 seconds
+==========first line==========
+took 0.006993293762207031 seconds
+=====box=====
+content
+=============
+
+====================
+14
+26
+66
+3/1000
+68
+70
+73
+6/1000
+79
+80
+81
+9/1000
+93
+====================
+took 0.002993345260620117 seconds
+
+==========Workers()==========
 started worker-0
 started worker-1
 started worker-2
 started worker-3
-worker-0 failed task-1 : AssertionError('simulated failure (30.0%)')
-worker-0 failed task-2 : AssertionError('simulated failure (30.0%)')
-worker-0 failed task-3 : AssertionError('simulated failure (30.0%)')
-worker-0 completed task-4
-worker-0 failed task-7 : AssertionError('simulated failure (30.0%)')
+worker-2 completed task-1
+worker-0 completed task-0
+worker-3 completed task-3
+worker-1 completed task-2
+worker-0 failed task-5 : AssertionError('simulated failure (30.0%)')
 worker-3 completed task-6
-worker-2 completed task-5
+worker-2 completed task-4
+worker-1 completed task-7
+=============================
+took 0.5175662040710449 seconds
+
+==========Workers(f, num_worker).map==========
+started worker-0
+started worker-1
+started worker-2
+started worker-3
+worker-3 failed task-3 : AssertionError('simulated failure (30.0%)')
+{'worker_id': 3, 'task_id': 3, 'res': None, 'error': "AssertionError('simulated failure (30.0%)')"}
+worker-3 completed task-4
+{'worker_id': 3, 'task_id': 4, 'res': 5}
+worker-0 completed task-1
+{'worker_id': 0, 'task_id': 1, 'res': 2}
 worker-1 completed task-0
-took 0.3071162700653076 seconds
-C:\Users\sudon\miniconda3\lib
+{'worker_id': 1, 'task_id': 0, 'res': 1}
+worker-2 completed task-2
+{'worker_id': 2, 'task_id': 2, 'res': 3}
+worker-0 completed task-6
+{'worker_id': 0, 'task_id': 6, 'res': 7}
+worker-1 completed task-7
+{'worker_id': 1, 'task_id': 7, 'res': 8}
+worker-3 completed task-5
+{'worker_id': 3, 'task_id': 5, 'res': 6}
+==============================================
+took 0.49637532234191895 seconds
+
+==========path==========
+C:\Users\sudon\AbsolutelyEssentialToolKit
+C:\Users\sudon
 C:\Users\sudon\AbsolutelyEssentialToolKit\a\b\c.file
 C:\Users\sudon\AbsolutelyEssentialToolKit
-C:\Users\sudon\miniconda3\lib\site-packages\aetk.py
+C:\Users\sudon\AbsolutelyEssentialToolKit\src\aetk.py
 C:\Users\sudon\data\file.txt
+========================
+
 {
     "quiz": {
         "maths": {
@@ -33,34 +86,17 @@ C:\Users\sudon\data\file.txt
         }
     }
 }
+==========print_list()==========
 {'id': 1, 'name': 'Jackson', 'age': 43}
 {'id': 2, 'name': 'Zunaira', 'age': 24}
 {'id': 3, 'name': 'Lorelei', 'age': 72}
-1
-13
-18
-3/100
-21
-39
-49
-6/100
-60
-63
-91
-9/100
+================================
+
+==========print_table()==========
 id   name      age
 1    Jackson   43
 2    Zunaira   24
 3    Lorelei   72
-----------my text----------
-
-
-=======table=======
-id   name      age
-1    Jackson   43
-2    Zunaira   24
-3    Lorelei   72
-===================
-
+=================================
 
 (24, 72, 46.333333333333336)

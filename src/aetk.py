@@ -122,6 +122,22 @@ class Workers:
             worker.start()
             self.workers.append(worker)
 
+    def map(self, data):
+        it = iter(data) if isinstance(data, list) else data
+        running_task_num = 0
+        try:
+            while True:
+                while running_task_num < len(self.workers):
+                    task = next(it)
+                    self.add_task(task)
+                    running_task_num += 1
+                yield self.get_res()
+                running_task_num -= 1
+        except StopIteration:
+            for i in range(running_task_num):
+                yield self.get_res()
+            self.terminate()
+
     def add_task(self, inp):
         self.inp.put((self.task_id, inp))
         self.task_id += 1
@@ -224,8 +240,8 @@ def load_tsv(path, encoding="utf-8", take_n=None, sample_ratio=1.0, sample_seed=
         yield d
 
 
-def build_table(rows, column_names=None, columns_gap_size=3):
-    assert columns_gap_size >= 1, 'column_gap_size must be >= 1'
+def build_table(rows, column_names=None, gap_size=3):
+    assert gap_size >= 1, 'column_gap_size must be >= 1'
 
     num_col = None
     for row in rows:
@@ -248,15 +264,19 @@ def build_table(rows, column_names=None, columns_gap_size=3):
         stuff = []
         for i in range(num_col - 1):
             stuff.append(row[i])
-            stuff.append(' ' * (columns_gap_size + sizes[i] - len(row[i])))
+            stuff.append(' ' * (gap_size + sizes[i] - len(row[i])))
         stuff.append(row[-1])
         line = ''.join(stuff)
         res.append(line)
     return res
 
 
+def log2(data, indent=4, **kwargs):
+    log(json.dumps(data, indent=indent), **kwargs)
+
+
 def print2(data, indent=4):
-    log(json.dumps(data, indent=indent))
+    print(json.dumps(data, indent=indent))
 
 
 def print_list(data):
@@ -264,8 +284,8 @@ def print_list(data):
         log(item)
 
 
-def print_table(rows, column_names=None, columns_gap_size=3):
-    print_list(build_table(rows, column_names, columns_gap_size))
+def print_table(rows, column_names=None, space=3):
+    print_list(build_table(rows, column_names, space))
 
 
 def n_min_max_avg(data, key_f=None, take_n=None, sample_ratio=1.0, sample_seed=None):
@@ -290,25 +310,34 @@ def na(item, na_str='?'):
     return na_str if item is None else item
 
 
-def sep(text, size=10, char='-'):
+def sep(text='', size=10, char='='):
     wing = char * size
     log(wing + text + wing)
 
 
-class text_block(object):
-    def __init__(self, text, size=10, char='-', y_gap_size=1):
+class enclose(object):
+    def __init__(self, text='', size_x=10, size_y=1, char='=', timer=False):
         self.text = text
-        self.size = size
+        self.size_x = size_x
+        self.size_y = size_y
         self.char = char
-        self.y_gap_size = y_gap_size
+        self.start = None
+        self.timer = timer
 
     def __enter__(self):
-        log('\n' * self.y_gap_size)
-        sep(self.text, self.size, self.char)
+        sep(self.text, self.size_x, self.char)
+        self.start = time.time()
 
     def __exit__(self, _type, value, _traceback):
-        log(self.char * (self.size * 2 + len(self.text)))
-        log('\n' * self.y_gap_size)
+        log(self.char * (self.size_x * 2 + len(self.text)))
+        if self.timer:
+            log('took {} seconds'.format(time.time() - self.start))
+        log('\n' * self.size_y, end='')
+
+
+class timer_enclose(enclose):
+    def __init__(self, text='', size_x=10, size_y=1, char='='):
+        super().__init__(text, size_x, size_y, char, True)
 
 
 def path_join(path, *paths):
@@ -317,6 +346,11 @@ def path_join(path, *paths):
 
 def lib_path():
     return str(Path(__file__).absolute())
+
+
+def this_dir(level=1):
+    caller_module = inspect.getmodule(inspect.stack()[1][0])
+    return dir_of(caller_module.__file__, level=level)
 
 
 def dir_of(file, level=1):
@@ -339,5 +373,5 @@ def exec_dir():
 
 
 if __name__ == '__main__':
-    with text_block('examples', 29, '=', 2):
+    with enclose('examples', 29, 2):
         print('https://github.com/sudongqi/AbsolutelyEssentialToolKit/examples.py')
