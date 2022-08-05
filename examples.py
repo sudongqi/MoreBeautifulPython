@@ -10,21 +10,21 @@ def main():
     # log() include all functionality of print()
     my_log('this is from an independent logger', end='\n')
 
-    # logger() context manager create a temporarily logger that replace the global logger
+    # logger() context manager create a temporary logger that replace the global logger
     with logger(level=DEBUG, file=sys.stderr, prefix='===> ', log_time=True, log_module=True):
         # this message will be redirected to sys.stderr
-        log('this is from context manager logger', level=CRITICAL)
+        log('this is from a temporary logger', level=CRITICAL)
     '''
-    2022-08-05 01:27:34  __main__  ===> this is from context manager logger
+    2022-08-05 01:27:34  __main__  ===> this is from a temporary logger
     '''
 
-    # suppress all log by specifying level=SILENT
+    # suppress all logs by specifying level=SILENT
     with logger(level=SILENT):
         for i in range(1000):
             # all loggings are suppressed
             log(i)
 
-    # sep() print a one-line seperator with default characters '-' that extend on both side of the text
+    # sep() print a one-liner seperator with default characters '-' that extend on both sides of the text
     sep('first line', size=10, char='=')
     '''
     ==========first line==========
@@ -37,7 +37,7 @@ def main():
             d.get(i, None)
     '''took 0.012994766235351562 seconds'''
 
-    # enclose() generate two separators that enclose the execution
+    # enclose() generate two text separators that enclose the execution
     with enclose(text='box', size_x=5, size_y=1, char='=', timer=False):
         log('content')
     '''
@@ -74,7 +74,7 @@ def main():
     n_task = 8
     with timer_enclose('Workers()'):
         workers = Workers(f=test_f, num_workers=4, progress=True)
-        [workers.add_task({'x': i, 'fail_rate': 0.3, 'running_time': 0.2}) for _ in range(n_task)]
+        [workers.add_task({'x': i, 'fail_rate': 0.3}) for _ in range(n_task)]
         [workers.get_res() for _ in range(n_task)]
         workers.terminate()
     '''
@@ -96,36 +96,36 @@ def main():
     took 0.5016000270843506 seconds
     '''
 
-    # similarly, we can use Workers(f, num_worker).map to deal with an iterator of tasks
+    # similarly, we can use work() to process tasks from an iterator
     with timer_enclose('work()'):
-        for r in work(f=test_f, tasks=iter([{'x': i, 'fail_rate': 0.5, 'running_time': 0.2} for i in range(n_task)])):
+        for r in work(f=test_f, tasks=iter([{'x': i, 'fail_rate': 0.5} for i in range(n_task)]), ordered=True):
             log(r)
     '''
     ==========work()==========
-    {'worker_id': 2, 'task_id': 3, 'res': 6}
+    {'worker_id': 2, 'task_id': 0, 'res': 0}
+    {'worker_id': 0, 'task_id': 1, 'res': 2}
+    {'worker_id': 1, 'task_id': 2, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+    {'worker_id': 3, 'task_id': 3, 'res': 6}
     {'worker_id': 4, 'task_id': 4, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
-    {'worker_id': 1, 'task_id': 0, 'res': 0}
-    {'worker_id': 0, 'task_id': 1, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
-    {'worker_id': 3, 'task_id': 2, 'res': 4}
-    {'worker_id': 5, 'task_id': 5, 'res': 10}
-    {'worker_id': 6, 'task_id': 6, 'res': 12}
-    {'worker_id': 7, 'task_id': 7, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+    {'worker_id': 5, 'task_id': 5, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+    {'worker_id': 6, 'task_id': 6, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+    {'worker_id': 7, 'task_id': 7, 'res': 14}
     ==========================
-    took 0.3453397750854492 seconds
+    took 0.3321056365966797 seconds
     '''
 
     with enclose('path'):
         # this_dir() return the directory of the current file
         log(this_dir())
-        # dir_of() can go up multiple levels
+        # dir_of() can move up multiple directories
         log(dir_of(__file__, level=2))
-        # path_join() is the same as os.path.join()
+        # path_join() == os.path.join()
         log(path_join(this_dir(), 'a', 'b', 'c.file'))
-        # exec_dir() return the directory you run your python command at
+        # exec_dir() return the directory where you run your python command
         log(exec_dir())
-        # lib_dir() return the path of this python library
+        # lib_dir() return the path of the aetk library
         log(lib_path())
-        # get_only_file return the location of the only file in a folder
+        # get_only_file() return the path of the only file in a folder
         log(get_only_file(path_join(this_dir(2), 'data')))
     '''
     ==========path==========
@@ -138,13 +138,13 @@ def main():
     ========================
     '''
 
-    # get example data from the same directory
+    # get data.jsonl & data.json from the current directory
     jsonl_file_path = path_join(this_dir(), 'data.jsonl')
     json_file_path = path_join(this_dir(), 'data.json')
 
-    # print2() is a better pprint.pprint()
+    # print2() is a superior pprint.pprint()
     print2(load_json(json_file_path), indent=4)
-    # log2 is the log version of the print2()
+    # log2() is the logging version of the print2()
     log2(load_json(json_file_path), indent=4)
     '''
     {
@@ -168,7 +168,7 @@ def main():
     # load_jsonl() return an iterator of dictionary
     data = list(load_jsonl(jsonl_file_path))
 
-    # print_iter() print items of a list in separate lines
+    # print_iter() print items from an iterator one by one
     with enclose('print_list()'):
         print_iter(data)
     '''
@@ -180,7 +180,7 @@ def main():
     '''
 
     # print_table() can adjust column width automatically
-    # print_table(rows) == print_list(build_table(rows))
+    # print_table(rows) == print_iter(build_table(rows))
     with enclose('print_table()'):
         rows = [d.values() for d in data]
         column_names = list(data[0].keys())
