@@ -261,6 +261,8 @@ def load_tsv(path, encoding="utf-8", take_n=None, sample_ratio=1.0, sample_seed=
 def build_table(rows, column_names=None, gap_size=3):
     assert gap_size >= 1, 'column_gap_size must be >= 1'
 
+    rows = [[str(r) for r in row] for row in rows]
+
     num_col = None
     for row in rows:
         if num_col is None:
@@ -392,5 +394,11 @@ def exec_dir():
 
 
 if __name__ == '__main__':
-    with enclose('examples', 29, 2):
-        print('https://github.com/sudongqi/AbsolutelyEssentialToolKit/examples.py')
+    with enclose('More Beautiful Python', 30):
+        _rows = [
+            ['example', 'https://github.com/sudongqi/MoreBeautifulPython/examples.py'],
+            ['execution directory', exec_dir()],
+            ['library path', lib_path()],
+            ['cpu count', CPU_COUNT],
+        ]
+        print_table(_rows)
