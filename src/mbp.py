@@ -258,8 +258,8 @@ def load_tsv(path, encoding="utf-8", take_n=None, sample_ratio=1.0, sample_seed=
         yield d
 
 
-def build_table(rows, column_names=None, gap_size=3):
-    assert gap_size >= 1, 'column_gap_size must be >= 1'
+def build_table(rows, column_names=None, space=3):
+    assert space >= 1, 'column_gap_size must be >= 1'
 
     rows = [[str(r) for r in row] for row in rows]
 
@@ -284,11 +284,15 @@ def build_table(rows, column_names=None, gap_size=3):
         stuff = []
         for i in range(num_col - 1):
             stuff.append(row[i])
-            stuff.append(' ' * (gap_size + sizes[i] - len(row[i])))
+            stuff.append(' ' * (space + sizes[i] - len(row[i])))
         stuff.append(row[-1])
         line = ''.join(stuff)
         res.append(line)
     return res
+
+
+def print_table(rows, column_names=None, space=3):
+    print_iter(build_table(rows, column_names, space))
 
 
 def log2(data, indent=4, **kwargs):
@@ -302,10 +306,6 @@ def print2(data, indent=4):
 def print_iter(data):
     for item in data:
         log(item)
-
-
-def print_table(rows, column_names=None, space=3):
-    print_iter(build_table(rows, column_names, space))
 
 
 def n_min_max_avg(data, key_f=None, take_n=None, sample_ratio=1.0, sample_seed=None):
@@ -326,6 +326,10 @@ def min_max_avg(data, key_f=None, take_n=None, sample_ratio=1.0, sample_seed=Non
     return tuple(n_min_max_avg(data, key_f, take_n, sample_ratio, sample_seed)[1:])
 
 
+def avg(data, key_f=None, take_n=None, sample_ratio=1.0, sample_seed=None):
+    return n_min_max_avg(data, key_f, take_n, sample_ratio, sample_seed)[3]
+
+
 def na(item, na_str='?'):
     return na_str if item is None else item
 
@@ -336,28 +340,28 @@ def sep(text='', size=10, char='='):
 
 
 class enclose(object):
-    def __init__(self, text='', size_x=10, size_y=1, char='=', timer=False):
+    def __init__(self, text='', size=10, margin=1, char='=', timer=False):
         self.text = text
-        self.size_x = size_x
-        self.size_y = size_y
+        self.size = size
+        self.size_y = margin
         self.char = char
         self.start = None
         self.timer = timer
 
     def __enter__(self):
-        sep(self.text, self.size_x, self.char)
+        sep(self.text, self.size, self.char)
         self.start = time.time()
 
     def __exit__(self, _type, value, _traceback):
-        log(self.char * (self.size_x * 2 + len(self.text)))
+        log(self.char * (self.size * 2 + len(self.text)))
         if self.timer:
             log('took {} seconds'.format(time.time() - self.start))
         log('\n' * self.size_y, end='')
 
 
-class timer_enclose(enclose):
-    def __init__(self, text='', size_x=10, size_y=1, char='='):
-        super().__init__(text, size_x, size_y, char, True)
+class enclose_timer(enclose):
+    def __init__(self, text='', size=10, margin=1, char='='):
+        super().__init__(text, size, margin, char, True)
 
 
 def path_join(path, *paths):
@@ -368,15 +372,15 @@ def lib_path():
     return str(Path(__file__).absolute())
 
 
-def this_dir(level=1):
+def this_dir(go_up=0):
     caller_module = inspect.getmodule(inspect.stack()[1][0])
     caller = caller_module.__name__ if caller_module is not None else ''
-    return dir_of(caller, level=level)
+    return dir_of(caller, go_up=go_up)
 
 
-def dir_of(file, level=1):
+def dir_of(file, go_up=0):
     curr_path_obj = Path(file)
-    for i in range(level):
+    for i in range(go_up + 1):
         curr_path_obj = curr_path_obj.parent
     return str(curr_path_obj.absolute())
 

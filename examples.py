@@ -4,10 +4,11 @@ from mbp import *
 def main():
     # all log() in this script will print to file at path "./log"
     set_global_logger(file='./log')
+    # log() include all functionality of print()
+    log('this is from global logger')
 
     # similar to logging, we can create an independent logger that replace the global logger
     my_log = Logger(file=sys.stdout)
-    # log() include all functionality of print()
     my_log('this is from an independent logger', end='\n')
 
     # logger() context manager create a temporary logger that replace the global logger
@@ -32,16 +33,16 @@ def main():
     '''took 0.012994766235351562 seconds'''
 
     # enclose() generate two text separators that enclose the execution
-    with enclose(text='box', size_x=10, size_y=1, char='=', timer=False):
-        log('content')
+    with enclose(text='enclose()', size=4, margin=1, char='=', timer=False):
+        log('my content')
     '''
-    ==========box==========
-    content
-    =======================
+    ====enclose()====
+    my content
+    =================
     '''
 
     # timer_enclose() == enclose(timer=True)
-    with timer_enclose():
+    with enclose_timer():
         # iterate() can customize iteration procedures
         # for example, sample 10% and report every 3 yield from the first 100 samples
         for d in iterate(range(1000), take_n=100, sample_ratio=0.1, progress_interval=3):
@@ -64,7 +65,7 @@ def main():
 
     # Workers() is more flexible than multiprocessing.Pool()
     n_task = 8
-    with timer_enclose('Workers()'):
+    with enclose_timer('Workers()'):
         workers = Workers(f=test_f, num_workers=4, progress=True)
         [workers.add_task({'x': i, 'fail_rate': 0.3}) for _ in range(n_task)]
         [workers.get_res() for _ in range(n_task)]
@@ -89,7 +90,7 @@ def main():
     '''
 
     # similarly, we can use work() to process tasks from an iterator
-    with timer_enclose('work()'):
+    with enclose_timer('work()'):
         for r in work(f=test_f, tasks=iter([{'x': i, 'fail_rate': 0.5} for i in range(n_task)]), ordered=True):
             log(r)
     '''
@@ -110,7 +111,7 @@ def main():
         # this_dir() return the directory of the current file
         log(this_dir())
         # dir_of() can move up multiple directories
-        log(dir_of(__file__, level=2))
+        log(dir_of(__file__, go_up=2))
         # path_join() == os.path.join()
         log(path_join(this_dir(), 'a', 'b', 'c.file'))
         # exec_dir() return the directory where you run your python command
@@ -187,8 +188,14 @@ def main():
     '''
 
     # get 3 key statistics from an iterator at once
+    log(n_min_max_avg(load_jsonl(jsonl_file_path), key_f=lambda x: x['age']))
     log(min_max_avg(load_jsonl(jsonl_file_path), key_f=lambda x: x['age']))
-    '''(24, 72, 46.333333333333336)'''
+    log(avg(load_jsonl(jsonl_file_path), key_f=lambda x: x['age']))
+    '''
+    (3, 24, 72, 46.333333333333336)
+    (24, 72, 46.333333333333336)
+    46.333333333333336
+    '''
 
 
 if __name__ == '__main__':

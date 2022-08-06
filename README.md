@@ -18,9 +18,9 @@ Make Python more beautiful :) This package includes syntax sugar & tools that yo
 * Tools for file loading
     * iterate, load_jsonl, load_json, load_csv, load_tsv, load_txt, save_json, save_jsonl, open_file
 * Tools for summarization
-    * print2, print_table, print_iter, error_msg, build_table, enclose, timer_enclose, sep, na
+    * print2, enclose, enclose_timer, print_table, build_table, print_iter, error_msg, sep, na
 * Tools for simple statistics
-    * timer, curr_time, min_max_avg, n_min_max_avg, CPU_COUNT 
+    * timer, curr_time, avg, min_max_avg, n_min_max_avg, CPU_COUNT 
   
 
 
