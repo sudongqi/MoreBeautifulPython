@@ -115,7 +115,7 @@ def main():
         log(path_join(this_dir(), 'a', 'b', 'c.file'))
         # exec_dir() return the directory where you run your python command
         log(exec_dir())
-        # lib_dir() return the path of the aetk library
+        # lib_dir() return the path of the mbp library
         log(lib_path())
         # get_only_file() return the path of the only file in a folder
         log(get_only_file(path_join(this_dir(2), 'data')))
@@ -125,7 +125,7 @@ def main():
     C:\\Users\sudon
     C:\\Users\sudon\AbsolutelyEssentialToolKit\a\b\c.file
     C:\\Users\sudon\AbsolutelyEssentialToolKit
-    C:\\Users\sudon\AbsolutelyEssentialToolKit\src\aetk.py
+    C:\\Users\sudon\AbsolutelyEssentialToolKit\src\mbp.py
     C:\\Users\sudon\data\file.txt
     ========================
     '''
