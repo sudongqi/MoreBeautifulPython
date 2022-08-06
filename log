@@ -1,22 +1,25 @@
-took 0.0069811344146728516 seconds
+took 0.005982875823974609 seconds
 ==========box==========
 content
 =======================
 
 ====================
-37
-40
-44
+4
+8
+19
 3/1000
-51
-56
-58
+20
+27
+35
 6/1000
-60
-61
-73
+43
+52
+55
 9/1000
-86
+73
+74
+99
+12/1000
 ====================
 took 0.0029921531677246094 seconds
 
@@ -25,37 +28,37 @@ started worker-0
 started worker-1
 started worker-2
 started worker-3
-worker-1 completed task-0
-worker-3 completed task-3
-worker-0 failed task-1 : AssertionError('simulated failure (30.0%)')
-worker-2 completed task-2
-worker-0 completed task-6
-worker-2 completed task-7
-worker-3 completed task-5
+worker-0 completed task-0
+worker-1 completed task-1
+worker-2 completed task-3
+worker-3 completed task-2
 worker-1 completed task-4
+worker-0 completed task-5
+worker-2 completed task-7
+worker-3 failed task-6 : AssertionError('simulated failure (30.0%)')
 terminated 4 workers
 =============================
-took 0.5065417289733887 seconds
+took 0.5151557922363281 seconds
 
 ==========work()==========
-{'worker_id': 1, 'task_id': 0, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
-{'worker_id': 2, 'task_id': 1, 'res': 2}
-{'worker_id': 0, 'task_id': 2, 'res': 4}
-{'worker_id': 3, 'task_id': 3, 'res': 6}
-{'worker_id': 4, 'task_id': 4, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+{'worker_id': 0, 'task_id': 0, 'res': 0}
+{'worker_id': 1, 'task_id': 1, 'res': 2}
+{'worker_id': 4, 'task_id': 2, 'res': 4}
+{'worker_id': 3, 'task_id': 3, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+{'worker_id': 2, 'task_id': 4, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
 {'worker_id': 5, 'task_id': 5, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
 {'worker_id': 6, 'task_id': 6, 'res': 12}
 {'worker_id': 7, 'task_id': 7, 'res': 14}
 ==========================
-took 0.34281253814697266 seconds
+took 0.3426225185394287 seconds
 
 ==========path==========
-C:\Users\sudon\AbsolutelyEssentialToolKit
+C:\Users\sudon\MoreBeautifulPython
 C:\Users\sudon
-C:\Users\sudon\AbsolutelyEssentialToolKit\a\b\c.file
-C:\Users\sudon\AbsolutelyEssentialToolKit
-C:\Users\sudon\AppData\Local\Programs\Python\Python310\lib\site-packages\aetk.py
-C:\Users\sudon\AbsolutelyEssentialToolKit\data
+C:\Users\sudon\MoreBeautifulPython\a\b\c.file
+C:\Users\sudon\MoreBeautifulPython
+C:\Users\sudon\AppData\Local\Programs\Python\Python310\lib\site-packages\mbp.py
+C:\Users\sudon\MoreBeautifulPython\data
 ========================
 
 {

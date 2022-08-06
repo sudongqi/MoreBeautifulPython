@@ -1,17 +1,17 @@
-## AbsolutelyEssentialToolKit
+## More Beautiful Python
 
 Make Python more beautiful :) This package includes syntax sugar & tools that you wish were in the standard library.
 
 ### Setup
 
-    pip install aetk
+    python -m pip install mbp
 
 ### Quick Test
 
-    >>> from aetk import *
-    >>> print_iter(work(f=test_f, tasks=iter({'x': i} for i in range(32))))
+    from mbp import *
+    print_iter(work(f=test_f, tasks=iter({'x': i} for i in range(32))))
 
-### [examples.py](https://github.com/sudongqi/AbsolutelyEssentialToolKit/blob/main/examples.py)
+### [examples.py](https://github.com/sudongqi/MoreBeautifulPython/blob/main/examples.py)
 
 * multi processes
     * work, Worker, Workers
