@@ -7,16 +7,12 @@ def main():
     # log() include all functionality of print()
     log('this is from global logger')
 
-    # similar to logging, we can create an independent logger that replace the global logger
-    my_log = Logger(file=sys.stdout)
-    my_log('this is from an independent logger', end='\n')
-
     # logger() context manager create a temporary logger that replace the global logger
-    with logger(level=DEBUG, file=sys.stderr, prefix='===> ', log_time=True, log_module=True):
+    with logger(level=DEBUG, file=sys.stderr, prefix='__temp__', meta_info=True):
         # this message will be redirected to sys.stderr
         log('this is from a temporary logger', level=CRITICAL)
     '''
-    2022-08-05 01:27:34  __main__  ===> this is from a temporary logger
+    2022-08-08 02:03:53  __temp__  this is from a temporary logger
     '''
 
     # suppress all logs by specifying level=SILENT
@@ -108,18 +104,18 @@ def main():
     '''
 
     with enclose('path'):
-        # this_dir() return the directory of the current file
+        # return the directory of the current file
         log(this_dir())
-        # dir_of() can move up multiple directories
+        # find directory of a file
         log(dir_of(__file__, go_up=2))
-        # path_join() == os.path.join()
+        # == os.path.join()
         log(path_join(this_dir(), 'a', 'b', 'c.file'))
-        # exec_dir() return the directory where you run your python command
+        # return the directory where you run your python command
         log(exec_dir())
-        # lib_dir() return the path of the mbp library
+        # return the path of the mbp library
         log(lib_path())
-        # get_only_file() return the path of the only file in a folder
-        log(get_only_file(path_join(this_dir(2), 'data')))
+        # return the path of the only file in a folder
+        log(only_file_of(path_join(this_dir(2), 'data')))
     '''
     ==========path==========
     C:\\Users\sudon\AbsolutelyEssentialToolKit
@@ -197,6 +193,7 @@ def main():
     46.333333333333336
     '''
 
+    log('this')
 
 if __name__ == '__main__':
     main()

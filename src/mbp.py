@@ -13,16 +13,33 @@ from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
+__all__ = [
+    # Alternative for logging
+    'log', 'debug', 'error', 'logger', 'set_global_logger',
+    'NOTSET', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL', 'SILENT',
+    # Alternative for multiprocessing
+    'Workers', 'work', 'test_f',
+    # Syntax sugar for pathlib
+    'dir_of', 'path_join', 'make_dir', 'this_dir', 'exec_dir', 'lib_path', 'only_file_of',
+    # Tools for file loading
+    'iterate', 'load_jsonl', 'load_json', 'load_csv', 'load_tsv', 'load_txt', 'save_json', 'save_jsonl', 'open_file',
+    # Tools for summarization
+    'print2', 'log2', 'enclose', 'enclose_timer', 'print_table', 'build_table', 'print_iter', 'error_msg', 'sep', 'na',
+    # Tools for simple statistics
+    'timer', 'curr_time', 'avg', 'min_max_avg', 'n_min_max_avg', 'CPU_COUNT',
+    # common library
+    'sys', 'os', 'random', 'json', 'itertools',
+]
+
 NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, SILENT = 0, 10, 20, 30, 40, 50, 100
 
 
 class Logger:
-    def __init__(self, file=sys.stdout, level=INFO, prefix='', log_time=False, log_module=False, sep='  '):
+    def __init__(self, file=sys.stdout, level=INFO, prefix='', meta_info=False, sep='  '):
         self.level = level
         self.file = None
         self.prefix = prefix
-        self.log_time = log_time
-        self.log_module = log_module
+        self.meta_info = True if prefix else meta_info
         self.sep = sep
         self.direct_to(file)
 
@@ -32,15 +49,13 @@ class Logger:
             make_dir(path)
             self.file = open(path, 'w', encoding='utf-8')
 
-    def __call__(self, msg, file=None, end=None, level=INFO, caller=None):
+    def __call__(self, msg, file=None, end=None, level=INFO):
         if self.level <= level:
             _file = self.file if file is None else file
-            if self.log_time:
+            if self.meta_info:
                 print(curr_time(), file=_file, end=self.sep)
-            if self.log_module:
-                print(caller, file=_file, end=self.sep)
             if self.prefix:
-                print(self.prefix, file=_file, end='')
+                print(self.prefix, file=_file, end=self.sep)
             print(msg, file=_file, end=end)
 
 
@@ -48,26 +63,35 @@ LOGGER = Logger()
 CPU_COUNT = cpu_count()
 
 
+def set_global_logger(file=sys.stdout, level=INFO, prefix='', meta_info=False):
+    global LOGGER
+    LOGGER = Logger(file, level, prefix, meta_info)
+
+
 def curr_time():
     return str(datetime.now(timezone.utc))[:19]
 
 
 def log(msg, file=None, end=None, level=INFO):
-    caller_module = inspect.getmodule(inspect.stack()[1][0])
-    caller = caller_module.__name__ if caller_module is not None else ''
-    LOGGER(msg, file, end, level, caller=caller)
+    if LOGGER.level <= level:
+        LOGGER(msg, file, end, level)
 
 
-def set_global_logger(file=sys.stdout, level=INFO, prefix='', log_time=False, log_module=False):
-    global LOGGER
-    LOGGER = Logger(file, level, prefix, log_time, log_module)
+def debug(msg, file=None, end=None):
+    if LOGGER.level <= DEBUG:
+        LOGGER(msg, file, end, DEBUG)
+
+
+def error(msg, file=None, end=None):
+    if LOGGER.level <= ERROR:
+        LOGGER(msg, file, end, ERROR)
 
 
 class logger(object):
-    def __init__(self, file=sys.stdout, level=INFO, prefix='', log_time=False, log_module=False):
+    def __init__(self, file=sys.stdout, level=INFO, prefix='', meta_info=False):
         global LOGGER
         self.org_logger = LOGGER
-        LOGGER = Logger(file, level, prefix, log_time, log_module)
+        LOGGER = Logger(file, level, prefix, meta_info)
 
     def __enter__(self):
         pass
@@ -178,14 +202,15 @@ def work(f, tasks, num_workers=CPU_COUNT, progress=False, ordered=False):
 
 
 class timer(object):
-    def __init__(self):
+    def __init__(self, level=INFO):
         self.start = None
+        self.level = level
 
     def __enter__(self):
         self.start = time.time()
 
     def __exit__(self, _type, value, _traceback):
-        log('took {} seconds'.format(time.time() - self.start))
+        log('took {} seconds'.format(time.time() - self.start), level=self.level)
 
 
 def iterate(data, take_n=None, sample_ratio=1.0, sample_seed=None, progress_interval=None):
@@ -291,21 +316,21 @@ def build_table(rows, column_names=None, space=3):
     return res
 
 
-def print_table(rows, column_names=None, space=3):
-    print_iter(build_table(rows, column_names, space))
+def print_table(rows, column_names=None, space=3, level=INFO):
+    print_iter(build_table(rows, column_names, space), level=level)
 
 
-def log2(data, indent=4, **kwargs):
-    log(json.dumps(data, indent=indent), **kwargs)
+def log2(data, indent=4, level=INFO):
+    log(json.dumps(data, indent=indent), level=level)
 
 
 def print2(data, indent=4):
     print(json.dumps(data, indent=indent))
 
 
-def print_iter(data):
+def print_iter(data, level=INFO):
     for item in data:
-        log(item)
+        log(item, level=level)
 
 
 def n_min_max_avg(data, key_f=None, take_n=None, sample_ratio=1.0, sample_seed=None):
@@ -334,34 +359,35 @@ def na(item, na_str='?'):
     return na_str if item is None else item
 
 
-def sep(text='', size=10, char='='):
+def sep(text='', size=10, char='=', level=INFO):
     wing = char * size
-    log(wing + text + wing)
+    log(wing + text + wing, level=level)
 
 
 class enclose(object):
-    def __init__(self, text='', size=10, margin=1, char='=', timer=False):
+    def __init__(self, text='', size=10, margin=1, char='=', timer=False, level=INFO):
         self.text = text
         self.size = size
         self.size_y = margin
         self.char = char
         self.start = None
         self.timer = timer
+        self.level = level
 
     def __enter__(self):
-        sep(self.text, self.size, self.char)
+        sep(self.text, self.size, self.char, self.level)
         self.start = time.time()
 
     def __exit__(self, _type, value, _traceback):
-        log(self.char * (self.size * 2 + len(self.text)))
+        log(self.char * (self.size * 2 + len(self.text)), level=self.level)
         if self.timer:
-            log('took {} seconds'.format(time.time() - self.start))
-        log('\n' * self.size_y, end='')
+            log('took {} seconds'.format(time.time() - self.start), level=self.level)
+        log('\n' * self.size_y, end='', level=self.level)
 
 
 class enclose_timer(enclose):
-    def __init__(self, text='', size=10, margin=1, char='='):
-        super().__init__(text, size, margin, char, True)
+    def __init__(self, text='', size=10, margin=1, char='=', level=INFO):
+        super().__init__(text, size, margin, char, True, level)
 
 
 def path_join(path, *paths):
@@ -374,8 +400,7 @@ def lib_path():
 
 def this_dir(go_up=0):
     caller_module = inspect.getmodule(inspect.stack()[1][0])
-    caller = caller_module.__name__ if caller_module is not None else ''
-    return dir_of(caller, go_up=go_up)
+    return dir_of(caller_module.__file__, go_up=go_up)
 
 
 def dir_of(file, go_up=0):
@@ -385,7 +410,7 @@ def dir_of(file, go_up=0):
     return str(curr_path_obj.absolute())
 
 
-def get_only_file(path):
+def only_file_of(path):
     if os.path.isdir(path):
         sub_paths = os.listdir(path)
         assert len(sub_paths) == 1, 'there are more than one files/dirs in {}'.format(path)
