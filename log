@@ -1,20 +1,27 @@
 this is from global logger
-took 0.0059833526611328125 seconds
+took 0.005982398986816406 seconds
 ====enclose()====
 my content
 =================
 
 ====================
-2
+6
+13
 41
-45
 3/1000
+44
+54
 55
-68
-69
 6/1000
-71
-96
+58
+59
+74
+9/1000
+75
+78
+84
+12/1000
+98
 ====================
 took 0.0 seconds
 
@@ -23,29 +30,29 @@ started worker-0
 started worker-1
 started worker-2
 started worker-3
+worker-0 completed task-2
 worker-1 completed task-1
+worker-2 completed task-0
 worker-3 failed task-3 : AssertionError('simulated failure (30.0%)')
-worker-2 completed task-2
-worker-0 failed task-0 : AssertionError('simulated failure (30.0%)')
-worker-2 completed task-6
-worker-0 completed task-7
-worker-1 completed task-4
-worker-3 failed task-5 : AssertionError('simulated failure (30.0%)')
+worker-3 completed task-6
+worker-1 failed task-5 : AssertionError('simulated failure (30.0%)')
+worker-0 completed task-4
+worker-2 completed task-7
 terminated 4 workers
 =============================
-took 0.4897778034210205 seconds
+took 0.507237434387207 seconds
 
 ==========work()==========
-{'worker_id': 0, 'task_id': 0, 'res': 0}
-{'worker_id': 2, 'task_id': 1, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
-{'worker_id': 3, 'task_id': 2, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
-{'worker_id': 1, 'task_id': 3, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
-{'worker_id': 4, 'task_id': 4, 'res': 8}
+{'worker_id': 0, 'task_id': 0, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+{'worker_id': 1, 'task_id': 1, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+{'worker_id': 2, 'task_id': 2, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+{'worker_id': 3, 'task_id': 3, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+{'worker_id': 4, 'task_id': 4, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
 {'worker_id': 5, 'task_id': 5, 'res': 10}
-{'worker_id': 6, 'task_id': 6, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
-{'worker_id': 8, 'task_id': 7, 'res': 14}
+{'worker_id': 6, 'task_id': 6, 'res': 12}
+{'worker_id': 7, 'task_id': 7, 'res': 14}
 ==========================
-took 0.35797739028930664 seconds
+took 0.3440663814544678 seconds
 
 ==========path==========
 C:\Users\sudon\MoreBeautifulPython
@@ -55,6 +62,12 @@ C:\Users\sudon\MoreBeautifulPython
 c:\users\sudon\morebeautifulpython\src\mbp.py
 C:\Users\data
 ========================
+
+==========open_files()==========
+found examples.py <== C:\Users\sudon\MoreBeautifulPython\examples.py
+found mbp.py <== C:\Users\sudon\MoreBeautifulPython\src\mbp.py
+found __init__.py <== C:\Users\sudon\MoreBeautifulPython\src\__init__.py
+================================
 
 {
     "quiz": {
@@ -88,4 +101,3 @@ id   name      age
 (3, 24, 72, 46.333333333333336)
 (24, 72, 46.333333333333336)
 46.333333333333336
-this

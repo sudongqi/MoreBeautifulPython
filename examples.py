@@ -7,12 +7,19 @@ def main():
     # log() include all functionality of print()
     log('this is from global logger')
 
-    # logger() context manager create a temporary logger that replace the global logger
+    # get_logger() return a local logger just like logging.getLogger
+    my_log = get_logger(prefix=__name__, meta_info=True)
+    my_log('this is from a local logger', WARNING)
+    '''
+    2022-08-08 19:07:12  __main__  this is from a local logger
+    '''
+
+    # logger() context manager temporarily modify the global logger
     with logger(level=DEBUG, file=sys.stderr, prefix='__temp__', meta_info=True):
         # this message will be redirected to sys.stderr
         log('this is from a temporary logger', level=CRITICAL)
     '''
-    2022-08-08 02:03:53  __temp__  this is from a temporary logger
+    2022-08-08 19:07:12  __temp__  this is from a temporary logger
     '''
 
     # suppress all logs by specifying level=SILENT
@@ -37,11 +44,11 @@ def main():
     =================
     '''
 
-    # timer_enclose() == enclose(timer=True)
+    # enclose_timer() == enclose(timer=True)
     with enclose_timer():
         # iterate() can customize iteration procedures
         # for example, sample 10% and report every 3 yield from the first 100 samples
-        for d in iterate(range(1000), take_n=100, sample_ratio=0.1, progress_interval=3):
+        for d in iterate(range(1000), first_n=100, sample_ratio=0.1, report_n=3):
             log(d)
     '''
     ====================
@@ -104,17 +111,17 @@ def main():
     '''
 
     with enclose('path'):
-        # return the directory of the current file
+        # this_dir() return the directory of the current file
         log(this_dir())
-        # find directory of a file
+        # dir_of() find the directory of a file
         log(dir_of(__file__, go_up=2))
-        # == os.path.join()
+        # path_join() == os.path.join()
         log(path_join(this_dir(), 'a', 'b', 'c.file'))
-        # return the directory where you run your python command
+        # exec_dir() return the directory where you run your python command
         log(exec_dir())
-        # return the path of the mbp library
+        # lib_path() return the path of the mbp library
         log(lib_path())
-        # return the path of the only file in a folder
+        # only_file_of() return the path of the only file in a folder
         log(only_file_of(path_join(this_dir(2), 'data')))
     '''
     ==========path==========
@@ -127,7 +134,18 @@ def main():
     ========================
     '''
 
-    # get data.jsonl & data.json from the current directory
+    # open_files() return all files and their paths under a directory
+    with enclose('open_files()'):
+        for f in open_files(this_dir(), pattern='.*\.py'):
+            pass
+    '''
+    ==========open_files()==========
+    found examples.py <== C:\\Users\sudon\MoreBeautifulPython\examples.py
+    found mbp.py <== C:\\Users\sudon\MoreBeautifulPython\src\mbp.py
+    found __init__.py <== C:\\Users\sudon\MoreBeautifulPython\src\__init__.py
+    ================================
+    '''
+
     jsonl_file_path = path_join(this_dir(), 'data.jsonl')
     json_file_path = path_join(this_dir(), 'data.json')
 
@@ -193,7 +211,6 @@ def main():
     46.333333333333336
     '''
 
-    log('this')
 
 if __name__ == '__main__':
     main()

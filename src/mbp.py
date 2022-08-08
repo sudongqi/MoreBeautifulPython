@@ -1,3 +1,4 @@
+import re
 import sys
 import os
 import csv
@@ -5,6 +6,7 @@ import random
 import json
 import time
 import gzip
+import glob
 import bz2
 import inspect
 import itertools
@@ -15,23 +17,25 @@ from pathlib import Path
 
 __all__ = [
     # Alternative for logging
-    'log', 'debug', 'error', 'logger', 'set_global_logger',
+    'log', 'logger', 'get_logger', 'set_global_logger', 'reset_global_logger',
     'NOTSET', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL', 'SILENT',
     # Alternative for multiprocessing
     'Workers', 'work', 'test_f',
     # Syntax sugar for pathlib
     'dir_of', 'path_join', 'make_dir', 'this_dir', 'exec_dir', 'lib_path', 'only_file_of',
-    # Tools for file loading
-    'iterate', 'load_jsonl', 'load_json', 'load_csv', 'load_tsv', 'load_txt', 'save_json', 'save_jsonl', 'open_file',
-    # Tools for summarization
+    # Tools for file loading & handling
+    'load_jsonl', 'load_json', 'load_csv', 'load_tsv', 'load_txt',
+    'iterate', 'save_json', 'save_jsonl', 'open_file', 'open_files',
+    # Tools for summarizations
     'print2', 'log2', 'enclose', 'enclose_timer', 'print_table', 'build_table', 'print_iter', 'error_msg', 'sep', 'na',
     # Tools for simple statistics
     'timer', 'curr_time', 'avg', 'min_max_avg', 'n_min_max_avg', 'CPU_COUNT',
-    # common library
+    # common libraries
     'sys', 'os', 'random', 'json', 'itertools',
 ]
 
 NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, SILENT = 0, 10, 20, 30, 40, 50, 100
+CPU_COUNT = cpu_count()
 
 
 class Logger:
@@ -49,7 +53,7 @@ class Logger:
             make_dir(path)
             self.file = open(path, 'w', encoding='utf-8')
 
-    def __call__(self, msg, file=None, end=None, level=INFO):
+    def __call__(self, msg, level=INFO, file=None, end=None):
         if self.level <= level:
             _file = self.file if file is None else file
             if self.meta_info:
@@ -59,46 +63,44 @@ class Logger:
             print(msg, file=_file, end=end)
 
 
-LOGGER = Logger()
-CPU_COUNT = cpu_count()
+LOG = Logger()
 
 
-def set_global_logger(file=sys.stdout, level=INFO, prefix='', meta_info=False):
-    global LOGGER
-    LOGGER = Logger(file, level, prefix, meta_info)
+class logger(object):
+    def __init__(self, file=sys.stdout, level=INFO, prefix='', meta_info=False):
+        global LOG
+        self.org_logger = LOG
+        LOG = Logger(file, level, prefix, meta_info)
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, _type, value, _traceback):
+        global LOG
+        LOG = self.org_logger
+
+
+def set_global_logger(file=sys.stdout, level=INFO, prefix='', meta_info=False, sep='  '):
+    global LOG
+    LOG = Logger(file, level, prefix, meta_info, sep)
+
+
+def reset_global_logger():
+    global LOG
+    LOG = Logger()
+
+
+def get_logger(file=sys.stdout, level=INFO, prefix='', meta_info=False, sep='  '):
+    return Logger(file, level, prefix, meta_info, sep)
 
 
 def curr_time():
     return str(datetime.now(timezone.utc))[:19]
 
 
-def log(msg, file=None, end=None, level=INFO):
-    if LOGGER.level <= level:
-        LOGGER(msg, file, end, level)
-
-
-def debug(msg, file=None, end=None):
-    if LOGGER.level <= DEBUG:
-        LOGGER(msg, file, end, DEBUG)
-
-
-def error(msg, file=None, end=None):
-    if LOGGER.level <= ERROR:
-        LOGGER(msg, file, end, ERROR)
-
-
-class logger(object):
-    def __init__(self, file=sys.stdout, level=INFO, prefix='', meta_info=False):
-        global LOGGER
-        self.org_logger = LOGGER
-        LOGGER = Logger(file, level, prefix, meta_info)
-
-    def __enter__(self):
-        pass
-
-    def __exit__(self, _type, value, _traceback):
-        global LOGGER
-        LOGGER = self.org_logger
+def log(msg, level=INFO, file=None, end=None):
+    if LOG.level <= level:
+        LOG(msg, level, file, end)
 
 
 def make_dir(path):
@@ -213,18 +215,18 @@ class timer(object):
         log('took {} seconds'.format(time.time() - self.start), level=self.level)
 
 
-def iterate(data, take_n=None, sample_ratio=1.0, sample_seed=None, progress_interval=None):
+def iterate(data, first_n=None, sample_ratio=1.0, sample_seed=None, report_n=None):
     if sample_seed is not None:
         random.seed(sample_seed)
-    if take_n is not None:
-        assert take_n >= 1, 'take_n should be >= 1'
+    if first_n is not None:
+        assert first_n >= 1, 'first_n should be >= 1'
     counter = 0
     total = len(data) if hasattr(data, '__len__') else '?'
-    for d in itertools.islice(data, 0, take_n):
+    for d in itertools.islice(data, 0, first_n):
         if random.random() <= sample_ratio:
             counter += 1
             yield d
-            if progress_interval is not None and counter % progress_interval == 0:
+            if report_n is not None and counter % report_n == 0:
                 log('{}/{}'.format(counter, total))
 
 
@@ -237,6 +239,19 @@ def open_file(path, encoding='utf-8', compression=None):
         return bz2.open(path, 'rb')
     else:
         assert False, '{} not supported'.format(compression)
+
+
+def open_files(path, encoding='utf-8', compression=None, pattern=".*\..*"):
+    matcher = re.compile(pattern)
+    for p, dirs, files in os.walk(path):
+        for file_name in files:
+            if matcher.fullmatch(file_name):
+                file_path = path_join(p, file_name)
+                try:
+                    yield open_file(file_path, encoding, compression)
+                    log('found {} <== {}'.format(file_name, file_path))
+                except PermissionError:
+                    log('no permission to open {} <== {}'.format(file_name, file_path))
 
 
 def save_json(data, path, encoding='utf-8'):
@@ -255,31 +270,31 @@ def load_json(path, encoding='utf-8', compression=None):
         return json.load(f)
 
 
-def load_jsonl(path, encoding="utf-8", take_n=None, sample_ratio=1.0, sample_seed=None, progress_interval=None,
+def load_jsonl(path, encoding="utf-8", first_n=None, sample_ratio=1.0, sample_seed=None, progress_interval=None,
                compression=None):
     with open_file(path, encoding, compression) as f:
-        for line in iterate(f, take_n, sample_ratio, sample_seed, progress_interval):
+        for line in iterate(f, first_n, sample_ratio, sample_seed, progress_interval):
             yield json.loads(line)
 
 
-def load_txt(path, encoding="utf-8", take_n=None, sample_ratio=1.0, sample_seed=None, progress_interval=None,
+def load_txt(path, encoding="utf-8", first_n=None, sample_ratio=1.0, sample_seed=None, progress_interval=None,
              compression=None):
     with open_file(path, encoding, compression) as f:
-        for line in iterate(f, take_n, sample_ratio, sample_seed, progress_interval):
+        for line in iterate(f, first_n, sample_ratio, sample_seed, progress_interval):
             yield line.rstrip()
 
 
-def load_csv(path, encoding="utf-8", delimiter=',', take_n=None, sample_ratio=1.0, sample_seed=None,
+def load_csv(path, encoding="utf-8", delimiter=',', first_n=None, sample_ratio=1.0, sample_seed=None,
              progress_interval=False, compression=None):
     csv.field_size_limit(10000000)
     with open_file(path, encoding, compression) as f:
-        for d in iterate(csv.reader(f, delimiter=delimiter), take_n, sample_ratio, sample_seed, progress_interval):
+        for d in iterate(csv.reader(f, delimiter=delimiter), first_n, sample_ratio, sample_seed, progress_interval):
             yield d
 
 
-def load_tsv(path, encoding="utf-8", take_n=None, sample_ratio=1.0, sample_seed=None, progress_interval=None,
+def load_tsv(path, encoding="utf-8", first_n=None, sample_ratio=1.0, sample_seed=None, progress_interval=None,
              compression=None):
-    for d in load_csv(path, encoding, '/t', take_n, sample_ratio, sample_seed, progress_interval, compression):
+    for d in load_csv(path, encoding, '/t', first_n, sample_ratio, sample_seed, progress_interval, compression):
         yield d
 
 
@@ -333,9 +348,9 @@ def print_iter(data, level=INFO):
         log(item, level=level)
 
 
-def n_min_max_avg(data, key_f=None, take_n=None, sample_ratio=1.0, sample_seed=None):
+def n_min_max_avg(data, key_f=None, first_n=None, sample_ratio=1.0, sample_seed=None):
     res_min, res_max, res_sum = float('inf'), -float('inf'), 0
-    iterator = iterate(data, take_n=take_n, sample_ratio=sample_ratio, sample_seed=sample_seed)
+    iterator = iterate(data, first_n=first_n, sample_ratio=sample_ratio, sample_seed=sample_seed)
     if key_f is not None:
         iterator = map(key_f, iterator)
     counter = 0
@@ -347,12 +362,12 @@ def n_min_max_avg(data, key_f=None, take_n=None, sample_ratio=1.0, sample_seed=N
     return counter, res_min, res_max, res_sum / counter
 
 
-def min_max_avg(data, key_f=None, take_n=None, sample_ratio=1.0, sample_seed=None):
-    return tuple(n_min_max_avg(data, key_f, take_n, sample_ratio, sample_seed)[1:])
+def min_max_avg(data, key_f=None, first_n=None, sample_ratio=1.0, sample_seed=None):
+    return tuple(n_min_max_avg(data, key_f, first_n, sample_ratio, sample_seed)[1:])
 
 
-def avg(data, key_f=None, take_n=None, sample_ratio=1.0, sample_seed=None):
-    return n_min_max_avg(data, key_f, take_n, sample_ratio, sample_seed)[3]
+def avg(data, key_f=None, first_n=None, sample_ratio=1.0, sample_seed=None):
+    return n_min_max_avg(data, key_f, first_n, sample_ratio, sample_seed)[3]
 
 
 def na(item, na_str='?'):
