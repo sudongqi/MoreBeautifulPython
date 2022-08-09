@@ -6,7 +6,6 @@ import random
 import json
 import time
 import gzip
-import glob
 import bz2
 import inspect
 import itertools
@@ -22,7 +21,7 @@ __all__ = [
     # Alternative for multiprocessing
     'Workers', 'work', 'test_f',
     # Syntax sugar for pathlib
-    'dir_of', 'path_join', 'make_dir', 'this_dir', 'exec_dir', 'lib_path', 'only_file_of',
+    'dir_of', 'path_join', 'make_dir', 'make_dir_of', 'this_dir', 'exec_dir', 'lib_path', 'only_file_of',
     # Tools for file loading & handling
     'load_jsonl', 'load_json', 'load_csv', 'load_tsv', 'load_txt',
     'iterate', 'save_json', 'save_jsonl', 'open_file', 'open_files',
@@ -104,8 +103,11 @@ def log(msg, level=INFO, file=None, end=None):
 
 
 def make_dir(path):
-    os.makedirs(dir_of(path), exist_ok=True)
-    return path
+    os.makedirs(path, exist_ok=True)
+
+
+def make_dir_of(file_path):
+    os.makedirs(dir_of(file_path), exist_ok=True)
 
 
 def test_f(x, fail_rate=0, running_time=0.2):
@@ -375,8 +377,11 @@ def na(item, na_str='?'):
 
 
 def sep(text='', size=10, char='=', level=INFO):
-    wing = char * size
-    log(wing + text + wing, level=level)
+    if isinstance(text, str):
+        wing = char * size
+        log(wing + text + wing, level=level)
+    elif isinstance(text, int):
+        log(char * text, level=level)
 
 
 class enclose(object):

@@ -213,4 +213,5 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    with logger(level=SILENT):
+        log("hello")
