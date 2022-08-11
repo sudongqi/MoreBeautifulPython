@@ -22,7 +22,7 @@ def main():
     log('this is from the global logger')
 
     # get_logger() return a local logger just like logging.getLogger
-    my_log = get_logger(prefix=__name__, meta_info=True)
+    my_log = get_logger(__name__, meta_info=True)
     my_log('this is from the local logger', WARNING)
     '''
     2022-08-11 05:22:17 WARNING __main__: this is from the local logger

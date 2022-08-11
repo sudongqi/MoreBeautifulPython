@@ -2,7 +2,6 @@
 
 Make Python more beautiful :) This package includes syntax sugar & tools that you wish were in the standard library.
 
-
 ### Setup
 
     python -m pip install mbp
@@ -13,15 +12,16 @@ Make Python more beautiful :) This package includes syntax sugar & tools that yo
     execution_directory   C:\Users\sudon\MoreBeautifulPython
     library_path          C:\Users\sudon\MoreBeautifulPython\src\mbp.py
     cpu_count             16
-    version               1.1.0
+    version               1.1.1
     =================================================================================
 
-
 ### Examples
+
 https://github.com/sudongqi/MoreBeautifulPython/blob/main/examples.py
-*  Alternative for multiprocessing
-*  Alternative for logging
-*  Syntax sugar for pathlib
+
+* Alternative for multiprocessing
+* Alternative for logging
+* Syntax sugar for pathlib
 * Tools for file loading & handling
 * Tools for summarizations
 * Tools for simple statistics

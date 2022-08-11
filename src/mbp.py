@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.1.0'
+VERSION = '1.1.1'
 
 __all__ = [
     # Alternative for multiprocessing
@@ -108,7 +108,7 @@ def reset_global_logger():
     LOG = Logger()
 
 
-def get_logger(file=sys.stdout, level=INFO, prefix='', meta_info=False, sep=' '):
+def get_logger(prefix='', file=sys.stdout, level=INFO, meta_info=False, sep=' '):
     return Logger(file, level, prefix, meta_info, sep)
 
 
@@ -134,7 +134,7 @@ def error_msg(e, detailed=True, seperator='\n\n'):
 
 
 class Worker(Process):
-    def __init__(self, f, inp, out, worker_id=None, cached_objects=None, detailed_error=False, progress=True):
+    def __init__(self, f, inp, out, worker_id=None, cached_objects=None, detailed_error=True, progress=True):
         super(Worker, self).__init__()
         self.worker_id = worker_id
         self.inp = inp
@@ -162,7 +162,7 @@ class Worker(Process):
 
 
 class Workers:
-    def __init__(self, f, num_workers=CPU_COUNT, cached_objects=None, detailed_error=False, progress=True,
+    def __init__(self, f, num_workers=CPU_COUNT, cached_objects=None, detailed_error=True, progress=True,
                  ignore_error=False):
         self.inp = Queue()
         self.out = Queue()
@@ -235,8 +235,8 @@ class Workers:
             log('terminated {} workers'.format(len(self.workers)))
 
 
-def work(f, tasks, num_workers=CPU_COUNT, cached_objects=None, detailed_error=False, progress=False,
-         ordered=False, res_only=True, ignore_error=False):
+def work(f, tasks, num_workers=CPU_COUNT, cached_objects=None, detailed_error=True, progress=False, ordered=False,
+         res_only=True, ignore_error=False):
     workers = Workers(f=f, num_workers=num_workers, cached_objects=cached_objects, detailed_error=detailed_error,
                       progress=progress, ignore_error=ignore_error)
     for d in workers.map(tasks=tasks, ordered=ordered, res_only=res_only):
