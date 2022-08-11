@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.1.3'
+VERSION = '1.1.4'
 
 __all__ = [
     # Alternative for multiprocessing
@@ -29,7 +29,6 @@ __all__ = [
     'iterate', 'save_json', 'save_jsonl', 'open_file', 'open_files',
     # Tools for summarizations
     'print2', 'log2', 'enclose', 'enclose_timer', 'print_table', 'build_table', 'print_iter', 'error_msg', 'line_break',
-    'na',
     # Tools for simple statistics
     'timer', 'curr_date_time', 'avg', 'min_max_avg', 'n_min_max_avg', 'CPU_COUNT'
 ]
@@ -142,7 +141,7 @@ class Worker(Process):
         self.cached_objects = cached_objects
         self.detailed_error = detailed_error
         if progress:
-            log('started worker-{}'.format(na(worker_id)))
+            log('started worker-{}'.format('?' if worker_id is None else worker_id))
 
     def run(self):
         while True:
@@ -412,10 +411,6 @@ def avg(data, key_f=None, first_n=None, sample_p=1.0, sample_seed=None):
     return n_min_max_avg(data, key_f, first_n, sample_p, sample_seed)[3]
 
 
-def na(item, na_str='?'):
-    return na_str if item is None else item
-
-
 def strip_and_add_spaces(s):
     if s == '':
         return ''
@@ -476,8 +471,8 @@ def this_dir(go_up=0, extend=None):
     return dir_of(caller_module.__file__, go_up=go_up, extend=extend)
 
 
-def dir_of(file, go_up=0, extend=None):
-    curr_path_obj = Path(file)
+def dir_of(file_path, go_up=0, extend=None):
+    curr_path_obj = Path(file_path)
     for i in range(go_up + 1):
         curr_path_obj = curr_path_obj.parent
     res = str(curr_path_obj.absolute())
@@ -486,12 +481,12 @@ def dir_of(file, go_up=0, extend=None):
     return res
 
 
-def only_file_of(path):
-    if os.path.isdir(path):
-        sub_paths = os.listdir(path)
-        assert len(sub_paths) == 1, 'there are more than one files/dirs in {}'.format(path)
-        return path_join(path, sub_paths[0])
-    return path
+def only_file_of(dir_path):
+    if os.path.isdir(dir_path):
+        sub_paths = os.listdir(dir_path)
+        assert len(sub_paths) == 1, 'there are more than one files/dirs in {}'.format(dir_path)
+        return path_join(dir_path, sub_paths[0])
+    return dir_path
 
 
 def exec_dir():
