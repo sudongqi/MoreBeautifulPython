@@ -1,57 +1,61 @@
 this is from the global logger
-took 5.984 ms
+took 6.981 ms
 ====enclose()====
 my content
 =================
 
 ====================
-28
-52
-60
-3/1000 ==> 9.398 items/s
-120
-126
-140
-6/1000 ==> 9.134 items/s
-144
-154
-178
+10
+12
+20
+3/1000 ==> 9.355 items/s
+50
+70
+74
+6/1000 ==> 9.236 items/s
+76
+84
+98
 9/1000 ==> 9.145 items/s
-188
+146
+154
+168
+12/1000 ==> 9.144 items/s
+174
 ====================
-took 1084.059 ms
+took 1410.499 ms
 
 ==========Workers()==========
 started worker-0
 started worker-1
 started worker-2
 started worker-3
-worker-1 completed task-0
-worker-0 completed task-1
-worker-2 failed task-3 : AssertionError('simulated failure (30.0%)')
-worker-3 failed task-2 : AssertionError('simulated failure (30.0%)')
-worker-1 completed task-5
-worker-0 failed task-4 : AssertionError('simulated failure (30.0%)')
-worker-3 completed task-6
-worker-2 failed task-7 : AssertionError('simulated failure (30.0%)')
+worker-3 completed task-3
+worker-0 completed task-0
+worker-1 completed task-1
+worker-2 completed task-2
+worker-2 completed task-7
+worker-3 failed task-5 : AssertionError('simulated failure (30.0%)')
+worker-1 completed task-6
+worker-0 completed task-4
 terminated 4 workers
 =============================
-took 505.925 ms
+took 502.424 ms
 
 ==========work()==========
-None
-None
-None
-None
-8
-10
-12
-14
+{'worker_id': 0, 'task_id': 0, 'res': 0}
+{'worker_id': 1, 'task_id': 1, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+{'worker_id': 3, 'task_id': 2, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+{'worker_id': 2, 'task_id': 3, 'res': 6}
+{'worker_id': 4, 'task_id': 4, 'res': 8}
+{'worker_id': 5, 'task_id': 5, 'res': 10}
+{'worker_id': 6, 'task_id': 6, 'res': 12}
+{'worker_id': 7, 'task_id': 7, 'res': 14}
 ==========================
-took 348.880 ms
+took 346.871 ms
 
-work() took 6003.476 ms
-work() with cached_objects took 107.506 ms
+work() took 6034.158 ms
+work() with cached_objects took 107.864 ms
 ==========path==========
 C:\Users\sudon\MoreBeautifulPython
 C:\Users

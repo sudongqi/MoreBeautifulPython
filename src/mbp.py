@@ -10,11 +10,12 @@ import bz2
 import inspect
 import itertools
 import traceback
+import bisect
 from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.0.8'
+VERSION = '1.0.9'
 
 __all__ = [
     # Alternative for multiprocessing
@@ -33,12 +34,29 @@ __all__ = [
     'timer', 'curr_date_time', 'avg', 'min_max_avg', 'n_min_max_avg', 'CPU_COUNT'
 ]
 
-NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, SILENT = 0, 10, 20, 30, 40, 50, 100
+NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, SILENT = 0, 10, 20, 30, 40, 50, 60
 CPU_COUNT = cpu_count()
 
 
+def get_msg_level(level):
+    if level < 10:
+        return 'NOTSET'
+    elif level < 20:
+        return 'DEBUG'
+    elif level < 30:
+        return 'INFO'
+    elif level < 40:
+        return 'WARNING'
+    elif level < 50:
+        return 'ERROR'
+    elif level < 60:
+        return 'CRITICAL'
+    else:
+        return 'SILENT'
+
+
 class Logger:
-    def __init__(self, file=sys.stdout, level=INFO, prefix='', meta_info=False, sep='  '):
+    def __init__(self, file=sys.stdout, level=INFO, prefix='', meta_info=False, sep=' '):
         self.level = level
         self.file = None
         self.prefix = prefix
@@ -56,9 +74,10 @@ class Logger:
         if self.level <= level:
             _file = self.file if file is None else file
             if self.meta_info:
-                print(curr_date_time(), file=_file, end=self.sep)
-            if self.prefix:
-                print(self.prefix, file=_file, end=self.sep)
+                headers = [curr_date_time(), get_msg_level(level)]
+                if self.prefix:
+                    headers.append(self.prefix)
+                print(self.sep.join(headers), file=_file, end=': ')
             print(msg, file=_file, end=end)
 
 
@@ -79,7 +98,7 @@ class logger(object):
         LOG = self.org_logger
 
 
-def set_global_logger(file=sys.stdout, level=INFO, prefix='', meta_info=False, sep='  '):
+def set_global_logger(file=sys.stdout, level=INFO, prefix='', meta_info=False, sep=' '):
     global LOG
     LOG = Logger(file, level, prefix, meta_info, sep)
 
@@ -89,7 +108,7 @@ def reset_global_logger():
     LOG = Logger()
 
 
-def get_logger(file=sys.stdout, level=INFO, prefix='', meta_info=False, sep='  '):
+def get_logger(file=sys.stdout, level=INFO, prefix='', meta_info=False, sep=' '):
     return Logger(file, level, prefix, meta_info, sep)
 
 
@@ -143,12 +162,14 @@ class Worker(Process):
 
 
 class Workers:
-    def __init__(self, f, num_workers=CPU_COUNT, cached_objects=None, detailed_error=False, progress=True):
+    def __init__(self, f, num_workers=CPU_COUNT, cached_objects=None, detailed_error=False, progress=True,
+                 ignore_error=False):
         self.inp = Queue()
         self.out = Queue()
         self.workers = []
         self.task_id = 0
         self.progress = progress
+        self.ignore_error = ignore_error
         self.f = f
         for i in range(num_workers):
             worker = Worker(f, self.inp, self.out, i, cached_objects, detailed_error, progress)
@@ -198,7 +219,12 @@ class Workers:
         res = self.out.get()
         if self.progress:
             if 'error' in res:
-                log('worker-{} failed task-{} : {}'.format(res['worker_id'], res['task_id'], res['error']))
+                err_msg = 'worker-{} failed task-{} : {}'.format(res['worker_id'], res['task_id'], res['error'])
+                if not self.ignore_error:
+                    self.terminate()
+                    assert False, err_msg
+                else:
+                    log(err_msg)
             else:
                 log('worker-{} completed task-{}'.format(res['worker_id'], res['task_id']))
         return res
@@ -210,8 +236,10 @@ class Workers:
             log('terminated {} workers'.format(len(self.workers)))
 
 
-def work(f, tasks, num_workers=CPU_COUNT, cached_objects=None, progress=False, ordered=False, res_only=True):
-    workers = Workers(f=f, num_workers=num_workers, cached_objects=cached_objects, progress=progress)
+def work(f, tasks, num_workers=CPU_COUNT, cached_objects=None, detailed_error=False, progress=False,
+         ordered=False, res_only=True, ignore_error=False):
+    workers = Workers(f=f, num_workers=num_workers, cached_objects=cached_objects, detailed_error=detailed_error,
+                      progress=progress, ignore_error=ignore_error)
     for d in workers.map(tasks=tasks, ordered=ordered, res_only=res_only):
         yield d
     workers.terminate()

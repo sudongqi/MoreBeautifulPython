@@ -11,7 +11,8 @@ def test_f_x2_sleep(x, fail_rate=0, running_time=0.2):
 
 
 def test_f_get_value_at_idx(idx, vec):
-    return vec[idx]
+    res = vec[idx]
+    return res
 
 
 def main():
@@ -24,7 +25,7 @@ def main():
     my_log = get_logger(prefix=__name__, meta_info=True)
     my_log('this is from the local logger', WARNING)
     '''
-    2022-08-08 19:07:12  __main__  this is from a local logger
+    2022-08-11 05:22:17 WARNING __main__: this is from the local logger
     '''
 
     # logger() context manager temporarily modify the global logger
@@ -32,7 +33,7 @@ def main():
         # this message will be redirected to sys.stderr
         log('this is from the temporary logger', level=CRITICAL)
     '''
-    2022-08-08 19:07:12  __temp__  this is from a temporary logger
+    2022-08-11 05:22:17 CRITICAL __temp__: this is from the temporary logger
     '''
 
     # suppress all logs by specifying level=SILENT
@@ -84,7 +85,7 @@ def main():
     # Workers() is more flexible than multiprocessing.Pool()
     n_task = 8
     with enclose_timer('Workers()'):
-        workers = Workers(f=test_f_x2_sleep, num_workers=4, progress=True)
+        workers = Workers(f=test_f_x2_sleep, num_workers=4, progress=True, ignore_error=True)
         [workers.add_task({'x': i, 'fail_rate': 0.3}) for _ in range(n_task)]
         [workers.get_res() for _ in range(n_task)]
         workers.terminate()
@@ -110,7 +111,8 @@ def main():
     # similarly, we can use work() to process tasks from an iterator
     # tasks can be iterator of tuple (need to specify all inputs) or dict
     with enclose_timer('work()'):
-        for r in work(f=test_f_x2_sleep, tasks=iter([(i, 0.5, 0.2) for i in range(n_task)]), ordered=True):
+        tasks = iter([(i, 0.5, 0.2) for i in range(n_task)])
+        for r in work(f=test_f_x2_sleep, tasks=tasks, ordered=True, ignore_error=True, res_only=False):
             log(r)
     '''
     ==========work()==========
@@ -181,8 +183,6 @@ def main():
 
     # print2() is a superior pprint.pprint()
     print2(load_json(json_file_path), indent=4)
-    # log2() is the logging version of the print2()
-    log2(load_json(json_file_path), indent=4)
     '''
     {
         "quiz": {
@@ -201,6 +201,9 @@ def main():
         }
     }
     '''
+
+    # log2() is the logging version of the print2()
+    log2(load_json(json_file_path), indent=4)
 
     # load_jsonl() return an iterator of dictionary
     data = list(load_jsonl(jsonl_file_path))
