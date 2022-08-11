@@ -14,6 +14,8 @@ from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
+VERSION = '1.0.7'
+
 __all__ = [
     # Alternative for logging
     'log', 'logger', 'get_logger', 'set_global_logger', 'reset_global_logger',
@@ -135,7 +137,10 @@ class Worker(Process):
         while True:
             task_id, kwargs = self.inp.get()
             try:
-                res = self.f(**kwargs)
+                if isinstance(kwargs, dict):
+                    res = self.f(**kwargs)
+                else:
+                    res = self.f(*kwargs)
                 self.out.put({'worker_id': self.worker_id, 'task_id': task_id, 'res': res})
             except Exception as e:
                 self.out.put({'worker_id': self.worker_id, 'task_id': task_id, 'res': None,
@@ -452,8 +457,9 @@ if __name__ == '__main__':
     with enclose('More Beautiful Python', 30):
         _rows = [
             ['example', 'https://github.com/sudongqi/MoreBeautifulPython/examples.py'],
-            ['execution directory', exec_dir()],
-            ['library path', lib_path()],
-            ['cpu count', CPU_COUNT],
+            ['execution_directory', exec_dir()],
+            ['library_path', lib_path()],
+            ['cpu_count', CPU_COUNT],
+            ['version', VERSION]
         ]
         print_table(_rows)

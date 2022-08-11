@@ -6,7 +6,7 @@ Make Python more beautiful :) This package includes syntax sugar & tools that yo
 ### Setup
 
     python -m pip install mbp
-    python -m mbp
+    python -m mbp (verify)
 
 
 ### Examples

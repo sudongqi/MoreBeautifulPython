@@ -93,8 +93,9 @@ def main():
     '''
 
     # similarly, we can use work() to process tasks from an iterator
+    # tasks can be iterator of tuple (need to specify all inputs) or dict
     with enclose_timer('work()'):
-        for r in work(f=test_f, tasks=iter([{'x': i, 'fail_rate': 0.5} for i in range(n_task)]), ordered=True):
+        for r in work(f=test_f, tasks=iter([(i, 0.5, 0.2) for i in range(n_task)]), ordered=True):
             log(r)
     '''
     ==========work()==========
