@@ -145,24 +145,27 @@ def main():
     with enclose('path'):
         # this_dir() return the directory of the current file
         log(this_dir())
+        # path_join() == os.path.join()
+        log(path_join(this_dir(), 'a', 'b', 'c.file'))
         # dir_of() find the directory of a file
         log(dir_of(__file__, go_up=2))
-        # path_join() == os.path.join()W
-        log(path_join(this_dir(), 'a', 'b', 'c.file'))
+        # dir_of() can also extend a path
+        log(dir_of(__file__, 0, 'hello.txt'))
         # exec_dir() return the directory where you run your python command
         log(exec_dir())
         # lib_path() return the path of the mbp library
         log(lib_path())
         # only_file_of() return the path of the only file in a folder
-        log(only_file_of(path_join(this_dir(2), 'data')))
+        log(only_file_of(this_dir(2, 'data')))
     '''
     ==========path==========
-    C:\\Users\sudon\AbsolutelyEssentialToolKit
-    C:\\Users\sudon
-    C:\\Users\sudon\AbsolutelyEssentialToolKit\a\b\c.file
-    C:\\Users\sudon\AbsolutelyEssentialToolKit
-    C:\\Users\sudon\AbsolutelyEssentialToolKit\src\mbp.py
-    C:\\Users\sudon\data\file.txt
+    C:\\Users\sudon\MoreBeautifulPython
+    C:\\Users\sudon\MoreBeautifulPython\a\b\c.file
+    C:\\Users
+    C:\\Users\sudon\MoreBeautifulPython\hello.txt
+    C:\\Users\sudon\MoreBeautifulPython
+    c:\\users\sudon\morebeautifulpython\src\mbp.py
+    C:\\Users\data
     ========================
     '''
 

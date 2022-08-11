@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.0.9'
+VERSION = '1.1.0'
 
 __all__ = [
     # Alternative for multiprocessing
@@ -217,16 +217,15 @@ class Workers:
 
     def get_res(self):
         res = self.out.get()
+        if 'error' in res:
+            err_msg = 'worker-{} failed task-{} : {}'.format(res['worker_id'], res['task_id'], res['error'])
+            if not self.ignore_error:
+                self.terminate()
+                assert False, err_msg
+            if self.progress:
+                log(err_msg)
         if self.progress:
-            if 'error' in res:
-                err_msg = 'worker-{} failed task-{} : {}'.format(res['worker_id'], res['task_id'], res['error'])
-                if not self.ignore_error:
-                    self.terminate()
-                    assert False, err_msg
-                else:
-                    log(err_msg)
-            else:
-                log('worker-{} completed task-{}'.format(res['worker_id'], res['task_id']))
+            log('worker-{} completed task-{}'.format(res['worker_id'], res['task_id']))
         return res
 
     def terminate(self):
@@ -453,24 +452,27 @@ class enclose_timer(enclose):
         super().__init__(text, size, margin, char, True, level)
 
 
-def path_join(path, *paths):
-    return os.path.join(path, *paths)
+def path_join(*args, **kwargs):
+    return os.path.join(*args, **kwargs)
 
 
 def lib_path():
     return str(Path(__file__).absolute())
 
 
-def this_dir(go_up=0):
+def this_dir(go_up=0, extend=None):
     caller_module = inspect.getmodule(inspect.stack()[1][0])
-    return dir_of(caller_module.__file__, go_up=go_up)
+    return dir_of(caller_module.__file__, go_up=go_up, extend=extend)
 
 
-def dir_of(file, go_up=0):
+def dir_of(file, go_up=0, extend=None):
     curr_path_obj = Path(file)
     for i in range(go_up + 1):
         curr_path_obj = curr_path_obj.parent
-    return str(curr_path_obj.absolute())
+    res = str(curr_path_obj.absolute())
+    if extend is not None:
+        res = path_join(res, extend)
+    return res
 
 
 def only_file_of(path):

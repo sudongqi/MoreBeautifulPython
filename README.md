@@ -13,7 +13,7 @@ Make Python more beautiful :) This package includes syntax sugar & tools that yo
     execution_directory   C:\Users\sudon\MoreBeautifulPython
     library_path          C:\Users\sudon\MoreBeautifulPython\src\mbp.py
     cpu_count             16
-    version               1.0.9
+    version               1.1.0
     =================================================================================
 
 

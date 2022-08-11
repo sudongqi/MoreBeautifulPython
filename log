@@ -1,65 +1,65 @@
 this is from the global logger
-took 6.981 ms
+took 6.018 ms
 ====enclose()====
 my content
 =================
 
 ====================
-10
-12
-20
-3/1000 ==> 9.355 items/s
 50
-70
-74
-6/1000 ==> 9.236 items/s
-76
-84
-98
-9/1000 ==> 9.145 items/s
-146
-154
-168
-12/1000 ==> 9.144 items/s
+94
+112
+3/1000 ==> 9.421 items/s
+118
 174
+176
+6/1000 ==> 9.174 items/s
+180
+186
 ====================
-took 1410.499 ms
+took 863.925 ms
 
 ==========Workers()==========
 started worker-0
 started worker-1
 started worker-2
 started worker-3
+worker-3 failed task-3 : AssertionError('simulated failure (30.0%)')
 worker-3 completed task-3
-worker-0 completed task-0
-worker-1 completed task-1
+worker-0 failed task-1 : AssertionError('simulated failure (30.0%)')
+worker-0 completed task-1
+worker-2 failed task-2 : AssertionError('simulated failure (30.0%)')
 worker-2 completed task-2
-worker-2 completed task-7
-worker-3 failed task-5 : AssertionError('simulated failure (30.0%)')
-worker-1 completed task-6
-worker-0 completed task-4
+worker-1 completed task-0
+worker-0 failed task-5 : AssertionError('simulated failure (30.0%)')
+worker-0 completed task-5
+worker-1 failed task-7 : AssertionError('simulated failure (30.0%)')
+worker-1 completed task-7
+worker-3 completed task-4
+worker-2 failed task-6 : AssertionError('simulated failure (30.0%)')
+worker-2 completed task-6
 terminated 4 workers
 =============================
-took 502.424 ms
+took 498.384 ms
 
 ==========work()==========
-{'worker_id': 0, 'task_id': 0, 'res': 0}
-{'worker_id': 1, 'task_id': 1, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
-{'worker_id': 3, 'task_id': 2, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
-{'worker_id': 2, 'task_id': 3, 'res': 6}
+{'worker_id': 1, 'task_id': 0, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+{'worker_id': 0, 'task_id': 1, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+{'worker_id': 2, 'task_id': 2, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+{'worker_id': 3, 'task_id': 3, 'res': 6}
 {'worker_id': 4, 'task_id': 4, 'res': 8}
 {'worker_id': 5, 'task_id': 5, 'res': 10}
 {'worker_id': 6, 'task_id': 6, 'res': 12}
-{'worker_id': 7, 'task_id': 7, 'res': 14}
+{'worker_id': 8, 'task_id': 7, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
 ==========================
-took 346.871 ms
+took 346.041 ms
 
-work() took 6034.158 ms
-work() with cached_objects took 107.864 ms
+work() took 6034.320 ms
+work() with cached_objects took 105.757 ms
 ==========path==========
 C:\Users\sudon\MoreBeautifulPython
-C:\Users
 C:\Users\sudon\MoreBeautifulPython\a\b\c.file
+C:\Users
+C:\Users\sudon\MoreBeautifulPython\hello.txt
 C:\Users\sudon\MoreBeautifulPython
 c:\users\sudon\morebeautifulpython\src\mbp.py
 C:\Users\data
