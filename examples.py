@@ -4,15 +4,14 @@ import random
 from mbp import *
 
 
-def test_f_x2_sleep(x, fail_rate=0, running_time=0.2):
+def test_f_x2_sleep_maybe_fail(x, fail_rate=0, running_time=0.2):
     time.sleep(running_time)
     assert random.random() > fail_rate, "simulated failure ({}%)".format(fail_rate * 100)
     return x * 2
 
 
 def test_f_get_value_at_idx(idx, vec):
-    res = vec[idx]
-    return res
+    return vec[idx]
 
 
 def main():
@@ -29,7 +28,7 @@ def main():
     '''
 
     # logger() context manager temporarily modify the global logger
-    with logger(level=DEBUG, file=sys.stderr, prefix='__temp__', meta_info=True):
+    with logger(level=DEBUG, file=sys.stderr, name='__temp__', meta_info=True):
         # this message will be redirected to sys.stderr
         log('this is from the temporary logger', level=CRITICAL)
     '''
@@ -63,7 +62,7 @@ def main():
         # iterate() can customize iteration procedures
         # for example, sample 10% and report every 3 yield from the first 100 samples
         for d in iterate(range(1000), first_n=100, sample_p=0.1, report_n=3):
-            log(test_f_x2_sleep(d, running_time=0.1))
+            log(test_f_x2_sleep_maybe_fail(d, running_time=0.1))
     '''
     ====================
     2
@@ -85,7 +84,7 @@ def main():
     # Workers() is more flexible than multiprocessing.Pool()
     n_task = 8
     with enclose_timer('Workers()'):
-        workers = Workers(f=test_f_x2_sleep, num_workers=4, progress=True, ignore_error=True)
+        workers = Workers(f=test_f_x2_sleep_maybe_fail, num_workers=4, progress=True, ignore_error=True)
         [workers.add_task({'x': i, 'fail_rate': 0.3}) for _ in range(n_task)]
         [workers.get_res() for _ in range(n_task)]
         workers.terminate()
@@ -112,7 +111,7 @@ def main():
     # tasks can be iterator of tuple (need to specify all inputs) or dict
     with enclose_timer('work()'):
         tasks = iter([(i, 0.5, 0.2) for i in range(n_task)])
-        for r in work(f=test_f_x2_sleep, tasks=tasks, ordered=True, ignore_error=True, res_only=False):
+        for r in work(f=test_f_x2_sleep_maybe_fail, tasks=tasks, ordered=True, ignore_error=True, res_only=False):
             log(r)
     '''
     ==========work()==========

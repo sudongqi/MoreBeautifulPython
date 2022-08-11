@@ -1,124 +1,56 @@
 this is from the global logger
-took 5.984 ms
+took 6.112 ms
 ====enclose()====
 my content
 =================
 
 ====================
-30
-40
+32
+60
 64
-3/1000 ==> 9.326 items/s
-132
-164
-184
-6/1000 ==> 9.147 items/s
+3/1000 ==> 9.067 items/s
+80
+114
+124
+6/1000 ==> 9.140 items/s
+160
+176
+178
+9/1000 ==> 9.073 items/s
+186
+194
 ====================
-took 649.673 ms
+took 1209.088 ms
 
 ==========Workers()==========
 started worker-0
 started worker-1
 started worker-2
 started worker-3
+worker-3 completed task-3
+worker-0 completed task-0
 worker-2 completed task-2
 worker-1 completed task-1
-worker-0 failed task-0 : AssertionError('simulated failure (30.0%)')
-
-Traceback (most recent call last):
-  File "c:\users\sudon\morebeautifulpython\src\mbp.py", line 155, in run
-    res = self.f(**kwargs)
-  File "C:\Users\sudon\MoreBeautifulPython\examples.py", line 9, in test_f_x2_sleep
-    assert random.random() > fail_rate, "simulated failure ({}%)".format(fail_rate * 100)
-AssertionError: simulated failure (30.0%)
-
-worker-0 completed task-0
-worker-3 failed task-3 : AssertionError('simulated failure (30.0%)')
-
-Traceback (most recent call last):
-  File "c:\users\sudon\morebeautifulpython\src\mbp.py", line 155, in run
-    res = self.f(**kwargs)
-  File "C:\Users\sudon\MoreBeautifulPython\examples.py", line 9, in test_f_x2_sleep
-    assert random.random() > fail_rate, "simulated failure ({}%)".format(fail_rate * 100)
-AssertionError: simulated failure (30.0%)
-
-worker-3 completed task-3
-worker-0 completed task-6
-worker-2 completed task-4
-worker-3 completed task-7
-worker-1 failed task-5 : AssertionError('simulated failure (30.0%)')
-
-Traceback (most recent call last):
-  File "c:\users\sudon\morebeautifulpython\src\mbp.py", line 155, in run
-    res = self.f(**kwargs)
-  File "C:\Users\sudon\MoreBeautifulPython\examples.py", line 9, in test_f_x2_sleep
-    assert random.random() > fail_rate, "simulated failure ({}%)".format(fail_rate * 100)
-AssertionError: simulated failure (30.0%)
-
-worker-1 completed task-5
+worker-1 completed task-6
+worker-3 completed task-4
+worker-2 failed task-7 : AssertionError('simulated failure (30.0%)')
+worker-2 completed task-7
+worker-0 failed task-5 : AssertionError('simulated failure (30.0%)')
+worker-0 completed task-5
 terminated 4 workers
 =============================
-took 502.233 ms
+took 499.953 ms
 
 ==========work()==========
-{'worker_id': 0, 'task_id': 0, 'res': None, 'error': 'AssertionError(\'simulated failure (50.0%)\')\n\nTraceback (most recent call last):\n  File "c:\\users\\sudon\\morebeautifulpython\\src\\mbp.py", line 157, in run\n    res = self.f(*kwargs)\n  File "C:\\Users\\sudon\\MoreBeautifulPython\\examples.py", line 9, in test_f_x2_sleep\n    assert random.random() > fail_rate, "simulated failure ({}%)".format(fail_rate * 100)\nAssertionError: simulated failure (50.0%)\n'}
-{'worker_id': 2, 'task_id': 1, 'res': None, 'error': 'AssertionError(\'simulated failure (50.0%)\')\n\nTraceback (most recent call last):\n  File "c:\\users\\sudon\\morebeautifulpython\\src\\mbp.py", line 157, in run\n    res = self.f(*kwargs)\n  File "C:\\Users\\sudon\\MoreBeautifulPython\\examples.py", line 9, in test_f_x2_sleep\n    assert random.random() > fail_rate, "simulated failure ({}%)".format(fail_rate * 100)\nAssertionError: simulated failure (50.0%)\n'}
-{'worker_id': 1, 'task_id': 2, 'res': None, 'error': 'AssertionError(\'simulated failure (50.0%)\')\n\nTraceback (most recent call last):\n  File "c:\\users\\sudon\\morebeautifulpython\\src\\mbp.py", line 157, in run\n    res = self.f(*kwargs)\n  File "C:\\Users\\sudon\\MoreBeautifulPython\\examples.py", line 9, in test_f_x2_sleep\n    assert random.random() > fail_rate, "simulated failure ({}%)".format(fail_rate * 100)\nAssertionError: simulated failure (50.0%)\n'}
-{'worker_id': 3, 'task_id': 3, 'res': 6}
+{'worker_id': 1, 'task_id': 0, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+{'worker_id': 2, 'task_id': 1, 'res': 2}
+{'worker_id': 0, 'task_id': 2, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+{'worker_id': 3, 'task_id': 3, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
 {'worker_id': 4, 'task_id': 4, 'res': 8}
-{'worker_id': 6, 'task_id': 5, 'res': None, 'error': 'AssertionError(\'simulated failure (50.0%)\')\n\nTraceback (most recent call last):\n  File "c:\\users\\sudon\\morebeautifulpython\\src\\mbp.py", line 157, in run\n    res = self.f(*kwargs)\n  File "C:\\Users\\sudon\\MoreBeautifulPython\\examples.py", line 9, in test_f_x2_sleep\n    assert random.random() > fail_rate, "simulated failure ({}%)".format(fail_rate * 100)\nAssertionError: simulated failure (50.0%)\n'}
+{'worker_id': 6, 'task_id': 5, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
 {'worker_id': 5, 'task_id': 6, 'res': 12}
-{'worker_id': 7, 'task_id': 7, 'res': 14}
+{'worker_id': 7, 'task_id': 7, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
 ==========================
-took 346.517 ms
+took 349.796 ms
 
-work() took 5969.739 ms
-work() with cached_objects took 110.953 ms
-==========path==========
-C:\Users\sudon\MoreBeautifulPython
-C:\Users\sudon\MoreBeautifulPython\a\b\c.file
-C:\Users
-C:\Users\sudon\MoreBeautifulPython\hello.txt
-C:\Users\sudon\MoreBeautifulPython
-c:\users\sudon\morebeautifulpython\src\mbp.py
-C:\Users\data
-========================
-
-==========open_files()==========
-found examples.py <== C:\Users\sudon\MoreBeautifulPython\examples.py
-found mbp.py <== C:\Users\sudon\MoreBeautifulPython\src\mbp.py
-found __init__.py <== C:\Users\sudon\MoreBeautifulPython\src\__init__.py
-================================
-
-{
-    "quiz": {
-        "maths": {
-            "q1": {
-                "question": "5 + 7 = ?",
-                "options": [
-                    "10",
-                    "11",
-                    "12",
-                    "13"
-                ],
-                "answer": "12"
-            }
-        }
-    }
-}
-==========print_list()==========
-{'id': 1, 'name': 'Jackson', 'age': 43}
-{'id': 2, 'name': 'Zunaira', 'age': 24}
-{'id': 3, 'name': 'Lorelei', 'age': 72}
-================================
-
-==========print_table()==========
-id   name      age
-1    Jackson   43
-2    Zunaira   24
-3    Lorelei   72
-=================================
-
-(3, 24, 72, 46.333333333333336)
-(24, 72, 46.333333333333336)
-46.333333333333336
+work() took 104.663 ms
