@@ -49,7 +49,7 @@ class Logger:
     def direct_to(self, path):
         self.file = path
         if isinstance(path, str):
-            make_dir(path)
+            make_dir_of(path)
             self.file = open(path, 'w', encoding='utf-8')
 
     def __call__(self, msg, level=INFO, file=None, end=None):
@@ -149,12 +149,13 @@ class Workers:
         self.workers = []
         self.task_id = 0
         self.progress = progress
+        self.f = f
         for i in range(num_workers):
             worker = Worker(f, self.inp, self.out, i, detailed_error, progress)
             worker.start()
             self.workers.append(worker)
 
-    def map(self, data):
+    def _map(self, data):
         it = iter(data)
         running_task_num = 0
         try:
@@ -168,7 +169,20 @@ class Workers:
         except StopIteration:
             for i in range(running_task_num):
                 yield self.get_res()
-            self.terminate()
+
+    def map(self, tasks, ordered=False):
+        if ordered:
+            saved = {}
+            id_task_waiting_for = 0
+            for d in self._map(tasks):
+                saved[d['task_id']] = d
+                while id_task_waiting_for in saved:
+                    yield saved[id_task_waiting_for]
+                    saved.pop(id_task_waiting_for)
+                    id_task_waiting_for += 1
+        else:
+            for d in self._map(tasks):
+                yield d
 
     def add_task(self, inp):
         self.inp.put((self.task_id, inp))
@@ -191,18 +205,10 @@ class Workers:
 
 
 def work(f, tasks, num_workers=CPU_COUNT, progress=False, ordered=False):
-    if ordered:
-        saved = {}
-        id_task_waiting_for = 0
-        for d in Workers(f, num_workers, progress=progress).map(tasks):
-            saved[d['task_id']] = d
-            while id_task_waiting_for in saved:
-                yield saved[id_task_waiting_for]
-                saved.pop(id_task_waiting_for)
-                id_task_waiting_for += 1
-    else:
-        for d in Workers(f, num_workers, progress=progress).map(tasks):
-            yield d
+    workers = Workers(f=f, num_workers=num_workers, progress=progress)
+    for d in workers.map(tasks=tasks, ordered=ordered):
+        yield d
+    workers.terminate()
 
 
 class timer(object):

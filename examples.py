@@ -5,11 +5,11 @@ def main():
     # all log() in this script will print to file at path "./log"
     set_global_logger(file='./log')
     # log() include all functionality of print()
-    log('this is from global logger')
+    log('this is from the global logger')
 
     # get_logger() return a local logger just like logging.getLogger
     my_log = get_logger(prefix=__name__, meta_info=True)
-    my_log('this is from a local logger', WARNING)
+    my_log('this is from the local logger', WARNING)
     '''
     2022-08-08 19:07:12  __main__  this is from a local logger
     '''
@@ -17,7 +17,7 @@ def main():
     # logger() context manager temporarily modify the global logger
     with logger(level=DEBUG, file=sys.stderr, prefix='__temp__', meta_info=True):
         # this message will be redirected to sys.stderr
-        log('this is from a temporary logger', level=CRITICAL)
+        log('this is from the temporary logger', level=CRITICAL)
     '''
     2022-08-08 19:07:12  __temp__  this is from a temporary logger
     '''
@@ -213,5 +213,4 @@ def main():
 
 
 if __name__ == '__main__':
-    with logger(level=SILENT):
-        log("hello")
+    main()

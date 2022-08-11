@@ -1,27 +1,26 @@
 this is from global logger
-took 0.005982398986816406 seconds
+took 0.0059833526611328125 seconds
 ====enclose()====
 my content
 =================
 
 ====================
-6
-13
-41
+2
+9
+14
 3/1000
-44
-54
-55
+41
+43
+67
 6/1000
-58
-59
-74
+72
+85
+92
 9/1000
-75
-78
-84
+95
+96
+97
 12/1000
-98
 ====================
 took 0.0 seconds
 
@@ -30,29 +29,29 @@ started worker-0
 started worker-1
 started worker-2
 started worker-3
-worker-0 completed task-2
+worker-0 completed task-0
 worker-1 completed task-1
-worker-2 completed task-0
-worker-3 failed task-3 : AssertionError('simulated failure (30.0%)')
-worker-3 completed task-6
-worker-1 failed task-5 : AssertionError('simulated failure (30.0%)')
-worker-0 completed task-4
+worker-3 failed task-2 : AssertionError('simulated failure (30.0%)')
+worker-2 completed task-3
 worker-2 completed task-7
+worker-1 failed task-4 : AssertionError('simulated failure (30.0%)')
+worker-0 completed task-5
+worker-3 failed task-6 : AssertionError('simulated failure (30.0%)')
 terminated 4 workers
 =============================
-took 0.507237434387207 seconds
+took 0.5455005168914795 seconds
 
 ==========work()==========
 {'worker_id': 0, 'task_id': 0, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
 {'worker_id': 1, 'task_id': 1, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
-{'worker_id': 2, 'task_id': 2, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
-{'worker_id': 3, 'task_id': 3, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
-{'worker_id': 4, 'task_id': 4, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
-{'worker_id': 5, 'task_id': 5, 'res': 10}
-{'worker_id': 6, 'task_id': 6, 'res': 12}
-{'worker_id': 7, 'task_id': 7, 'res': 14}
+{'worker_id': 3, 'task_id': 2, 'res': 4}
+{'worker_id': 4, 'task_id': 3, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+{'worker_id': 2, 'task_id': 4, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+{'worker_id': 6, 'task_id': 5, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+{'worker_id': 5, 'task_id': 6, 'res': 12}
+{'worker_id': 7, 'task_id': 7, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
 ==========================
-took 0.3440663814544678 seconds
+took 0.3588533401489258 seconds
 
 ==========path==========
 C:\Users\sudon\MoreBeautifulPython
