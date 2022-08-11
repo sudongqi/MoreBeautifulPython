@@ -4,13 +4,15 @@ import random
 from mbp import *
 
 
-def test_f_x2_sleep_maybe_fail(x, fail_rate=0, running_time=0.2):
+# test function for multiprocessing
+def test_f(x, fail_rate=0, running_time=0.2):
     time.sleep(running_time)
     assert random.random() > fail_rate, "simulated failure ({}%)".format(fail_rate * 100)
     return x * 2
 
 
-def test_f_get_value_at_idx(idx, vec):
+# test function 2 for multiprocessing
+def test_f2(idx, vec):
     return vec[idx]
 
 
@@ -46,15 +48,19 @@ def main():
         d = {i: i for i in range(100)}
         for i in range(200000):
             d.get(i, None)
-    '''took 6.980 ms'''
+    '''
+    took 6.980 ms
+    '''
 
     # enclose() generate two text separators that enclose the execution
-    with enclose(text='enclose()', size=4, margin=1, char='=', use_timer=False):
-        log('my content')
+    with enclose(text_or_length='enclose()', extend_size=4, margin=1, char='=', use_timer=False):
+        log('your first line')
+        log('your second line')
     '''
-    ====enclose()====
-    my content
-    =================
+    ==== enclose() ====
+    your first line
+    your second line
+    ===================
     '''
 
     # enclose_timer() == enclose(timer=True)
@@ -62,7 +68,7 @@ def main():
         # iterate() can customize iteration procedures
         # for example, sample 10% and report every 3 yield from the first 100 samples
         for d in iterate(range(1000), first_n=100, sample_p=0.1, report_n=3):
-            log(test_f_x2_sleep_maybe_fail(d, running_time=0.1))
+            log(test_f(d, running_time=0.1))
     '''
     ====================
     2
@@ -84,12 +90,12 @@ def main():
     # Workers() is more flexible than multiprocessing.Pool()
     n_task = 8
     with enclose_timer('Workers()'):
-        workers = Workers(f=test_f_x2_sleep_maybe_fail, num_workers=4, progress=True, ignore_error=True)
+        workers = Workers(f=test_f, num_workers=4, progress=True, ignore_error=True)
         [workers.add_task({'x': i, 'fail_rate': 0.3}) for _ in range(n_task)]
         [workers.get_res() for _ in range(n_task)]
         workers.terminate()
     '''
-    ==========Workers()==========
+    ========== Workers() ==========
     started worker-0
     started worker-1
     started worker-2
@@ -97,48 +103,52 @@ def main():
     worker-1 completed task-1
     worker-0 completed task-0
     worker-3 completed task-3
-    worker-2 failed task-2 : AssertionError('simulated failure (30.0%)')
-    worker-3 completed task-7
-    worker-2 completed task-5
-    worker-0 failed task-6 : AssertionError('simulated failure (30.0%)')
+    worker-2 completed task-2
+    worker-3 completed task-6
+    worker-0 completed task-5
+    worker-1 failed task-4 : AssertionError('simulated failure (30.0%)')
     worker-1 completed task-4
+    worker-2 failed task-7 : AssertionError('simulated failure (30.0%)')
+    worker-2 completed task-7
     terminated 4 workers
-    =============================
-    took 497.200 ms
+    ===============================
+    took 499.086 ms
     '''
 
     # similarly, we can use work() to process tasks from an iterator
     # tasks can be iterator of tuple (need to specify all inputs) or dict
     with enclose_timer('work()'):
         tasks = iter([(i, 0.5, 0.2) for i in range(n_task)])
-        for r in work(f=test_f_x2_sleep_maybe_fail, tasks=tasks, ordered=True, ignore_error=True, res_only=False):
+        for r in work(f=test_f, tasks=tasks, ordered=True, ignore_error=True, res_only=False):
             log(r)
     '''
-    ==========work()==========
-    {'worker_id': 2, 'task_id': 0, 'res': 0}
-    {'worker_id': 0, 'task_id': 1, 'res': 2}
-    {'worker_id': 1, 'task_id': 2, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
-    {'worker_id': 3, 'task_id': 3, 'res': 6}
-    {'worker_id': 4, 'task_id': 4, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+    ========== work() ==========
+    {'worker_id': 1, 'task_id': 0, 'res': 0}
+    {'worker_id': 0, 'task_id': 1, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+    {'worker_id': 4, 'task_id': 2, 'res': 4}
+    {'worker_id': 2, 'task_id': 3, 'res': 6}
+    {'worker_id': 3, 'task_id': 4, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
     {'worker_id': 5, 'task_id': 5, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
-    {'worker_id': 6, 'task_id': 6, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
-    {'worker_id': 7, 'task_id': 7, 'res': 14}
-    ==========================
-    took 345.638 ms
+    {'worker_id': 6, 'task_id': 6, 'res': 12}
+    {'worker_id': 8, 'task_id': 7, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+    ============================
+    took 346.133 ms
     '''
 
     # use cached_objects = {'fixed_input': value, ...} to avoid pickling of heavy objects
     vec = [i for i in range(1000000)]
     with timer('work()'):
-        a = list(work(test_f_get_value_at_idx, num_workers=1, ordered=True,
-                      tasks=iter((i, vec) for i in range(100))))
+        tasks = iter((i, vec) for i in range(30))
+        a = list(work(test_f2, num_workers=1, ordered=True, tasks=tasks))
     with timer('work() with cached_objects'):
-        b = list(work(test_f_get_value_at_idx, num_workers=1, ordered=True,
-                      tasks=iter({'idx': i} for i in range(100)), cached_objects={'vec': vec}))
+        tasks = iter({'idx': i} for i in range(30))
+        # cached vec
+        cached_objects = {'vec': vec}
+        b = list(work(test_f2, num_workers=1, ordered=True, tasks=tasks, cached_objects=cached_objects))
     assert a == b
     '''
-    work() took 6003.476 ms
-    work() with cached_objects took 107.506 ms
+    work() ==> took 1904.171 ms
+    work() with cached_objects ==> took 100.659 ms
     '''
 
     with enclose('path'):
@@ -157,7 +167,7 @@ def main():
         # only_file_of() return the path of the only file in a folder
         log(only_file_of(this_dir(2, 'data')))
     '''
-    ==========path==========
+    ========== path ==========
     C:\\Users\sudon\MoreBeautifulPython
     C:\\Users\sudon\MoreBeautifulPython\a\b\c.file
     C:\\Users
@@ -165,7 +175,7 @@ def main():
     C:\\Users\sudon\MoreBeautifulPython
     c:\\users\sudon\morebeautifulpython\src\mbp.py
     C:\\Users\data
-    ========================
+    ==========================
     '''
 
     # open_files() return all files and their paths under a directory
@@ -173,11 +183,11 @@ def main():
         for f in open_files(this_dir(), pattern='.*\.py'):
             pass
     '''
-    ==========open_files()==========
+    ========== open_files() ==========
     found examples.py <== C:\\Users\sudon\MoreBeautifulPython\examples.py
     found mbp.py <== C:\\Users\sudon\MoreBeautifulPython\src\mbp.py
     found __init__.py <== C:\\Users\sudon\MoreBeautifulPython\src\__init__.py
-    ================================
+    ==================================
     '''
 
     jsonl_file_path = path_join(this_dir(), 'data.jsonl')
@@ -214,11 +224,11 @@ def main():
     with enclose('print_list()'):
         print_iter(data)
     '''
-    ==========print_iter()==========
+    ========== print_list() ==========
     {'id': 1, 'name': 'Jackson', 'age': 43}
     {'id': 2, 'name': 'Zunaira', 'age': 24}
     {'id': 3, 'name': 'Lorelei', 'age': 72}
-    ================================
+    ==================================
     '''
 
     # print_table() can adjust column width automatically
@@ -228,22 +238,25 @@ def main():
         column_names = list(data[0].keys())
         print_table(rows, column_names=column_names, space=3)
     '''
-    ==========print_table()==========
+    ========== print_table() ==========
     id   name      age
     1    Jackson   43
     2    Zunaira   24
     3    Lorelei   72
-    =================================
+    ===================================
     '''
 
     # get 3 key statistics from an iterator at once
-    log(n_min_max_avg(load_jsonl(jsonl_file_path), key_f=lambda x: x['age']))
-    log(min_max_avg(load_jsonl(jsonl_file_path), key_f=lambda x: x['age']))
-    log(avg(load_jsonl(jsonl_file_path), key_f=lambda x: x['age']))
+    with enclose_timer('simple statistics'):
+        log(n_min_max_avg(load_jsonl(jsonl_file_path), key_f=lambda x: x['age']))
+        log(min_max_avg(load_jsonl(jsonl_file_path), key_f=lambda x: x['age']))
+        log(avg(load_jsonl(jsonl_file_path), key_f=lambda x: x['age']))
     '''
+    ========== simple statistics ==========
     (3, 24, 72, 46.333333333333336)
     (24, 72, 46.333333333333336)
     46.333333333333336
+    =======================================
     '''
 
 

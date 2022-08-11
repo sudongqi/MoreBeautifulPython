@@ -10,12 +10,11 @@ import bz2
 import inspect
 import itertools
 import traceback
-import bisect
 from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.1.2'
+VERSION = '1.1.3'
 
 __all__ = [
     # Alternative for multiprocessing
@@ -29,7 +28,8 @@ __all__ = [
     'load_jsonl', 'load_json', 'load_csv', 'load_tsv', 'load_txt',
     'iterate', 'save_json', 'save_jsonl', 'open_file', 'open_files',
     # Tools for summarizations
-    'print2', 'log2', 'enclose', 'enclose_timer', 'print_table', 'build_table', 'print_iter', 'error_msg', 'sep', 'na',
+    'print2', 'log2', 'enclose', 'enclose_timer', 'print_table', 'build_table', 'print_iter', 'error_msg', 'line_break',
+    'na',
     # Tools for simple statistics
     'timer', 'curr_date_time', 'avg', 'min_max_avg', 'n_min_max_avg', 'CPU_COUNT'
 ]
@@ -245,14 +245,14 @@ def work(f, tasks, num_workers=CPU_COUNT, cached_objects=None, progress=False, o
 class timer(object):
     def __init__(self, msg='', level=INFO):
         self.start = None
-        self.msg = msg
+        self.msg = msg.strip()
         self.level = level
 
     def __enter__(self):
         self.start = time.time()
 
     def __exit__(self, _type, value, _traceback):
-        log('{}took {:.3f} ms'.format('' if self.msg == '' else self.msg + ' ', (time.time() - self.start) * 1000),
+        log('{}took {:.3f} ms'.format('' if self.msg == '' else self.msg + ' ==> ', (time.time() - self.start) * 1000),
             level=self.level)
 
 
@@ -416,18 +416,31 @@ def na(item, na_str='?'):
     return na_str if item is None else item
 
 
-def sep(text='', size=10, char='=', level=INFO):
-    if isinstance(text, str):
-        wing = char * size
-        log(wing + text + wing, level=level)
-    elif isinstance(text, int):
-        log(char * text, level=level)
+def strip_and_add_spaces(s):
+    if s == '':
+        return ''
+    s = s.strip()
+    if s[0] != ' ':
+        s = ' ' + s
+    if s[-1] != ' ':
+        s = s + ' '
+    return s
+
+
+def line_break(text_or_length='', extend_size=10, char='=', level=INFO):
+    if isinstance(text_or_length, str):
+        wing = char * extend_size
+        log(wing + strip_and_add_spaces(text_or_length) + wing, level=level)
+    elif isinstance(text_or_length, int):
+        log(char * text_or_length, level=level)
+    else:
+        assert False, 'text_or_length should be one of {str, int}'
 
 
 class enclose(object):
-    def __init__(self, text='', size=10, margin=1, char='=', use_timer=False, level=INFO):
-        self.text = text
-        self.size = size
+    def __init__(self, text_or_length='', extend_size=10, margin=1, char='=', use_timer=False, level=INFO):
+        self.text_or_length = strip_and_add_spaces(text_or_length)
+        self.extend_size = extend_size
         self.size_y = margin
         self.char = char
         self.start = None
@@ -435,19 +448,19 @@ class enclose(object):
         self.level = level
 
     def __enter__(self):
-        sep(self.text, self.size, self.char, self.level)
+        line_break(self.text_or_length, self.extend_size, self.char, self.level)
         self.start = time.time()
 
     def __exit__(self, _type, value, _traceback):
-        log(self.char * (self.size * 2 + len(self.text)), level=self.level)
+        log(self.char * (self.extend_size * 2 + len(self.text_or_length)), level=self.level)
         if self.use_timer:
             log('took {:.3f} ms'.format((time.time() - self.start) * 1000), level=self.level)
         log('\n' * self.size_y, end='', level=self.level)
 
 
 class enclose_timer(enclose):
-    def __init__(self, text='', size=10, margin=1, char='=', level=INFO):
-        super().__init__(text, size, margin, char, True, level)
+    def __init__(self, text_or_length='', extend_size=10, margin=1, char='=', level=INFO):
+        super().__init__(text_or_length, extend_size, margin, char, True, level)
 
 
 def path_join(*args, **kwargs):

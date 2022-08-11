@@ -7,13 +7,14 @@ Make Python more beautiful :) This package includes syntax sugar & tools that yo
     python -m pip install mbp
     
     > python -m mbp
-    ==============================More Beautiful Python==============================
+    ============================== More Beautiful Python ==============================
     examples              https://github.com/sudongqi/MoreBeautifulPython/examples.py
     execution_directory   C:\Users\sudon\MoreBeautifulPython
-    library_path          C:\Users\sudon\MoreBeautifulPython\src\mbp.py
+    library_path          c:\users\sudon\morebeautifulpython\src\mbp.py
     cpu_count             16
-    version               1.1.2
-    =================================================================================
+    version               1.1.3
+    ===================================================================================
+
 
 ### Examples
 
