@@ -14,25 +14,23 @@ from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.0.7'
+VERSION = '1.0.8'
 
 __all__ = [
+    # Alternative for multiprocessing
+    'Workers', 'work',
     # Alternative for logging
     'log', 'logger', 'get_logger', 'set_global_logger', 'reset_global_logger',
     'NOTSET', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL', 'SILENT',
-    # Alternative for multiprocessing
-    'Workers', 'work', 'test_f',
     # Syntax sugar for pathlib
-    'dir_of', 'path_join', 'make_dir', 'make_dir_of', 'this_dir', 'exec_dir', 'lib_path', 'only_file_of',
+    'dir_of', 'path_join', 'make_dir', 'make_dir_for', 'this_dir', 'exec_dir', 'lib_path', 'only_file_of',
     # Tools for file loading & handling
     'load_jsonl', 'load_json', 'load_csv', 'load_tsv', 'load_txt',
     'iterate', 'save_json', 'save_jsonl', 'open_file', 'open_files',
     # Tools for summarizations
     'print2', 'log2', 'enclose', 'enclose_timer', 'print_table', 'build_table', 'print_iter', 'error_msg', 'sep', 'na',
     # Tools for simple statistics
-    'timer', 'curr_time', 'avg', 'min_max_avg', 'n_min_max_avg', 'CPU_COUNT',
-    # common libraries
-    'sys', 'os', 'random', 'json', 'itertools',
+    'timer', 'curr_date_time', 'avg', 'min_max_avg', 'n_min_max_avg', 'CPU_COUNT'
 ]
 
 NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, SILENT = 0, 10, 20, 30, 40, 50, 100
@@ -51,14 +49,14 @@ class Logger:
     def direct_to(self, path):
         self.file = path
         if isinstance(path, str):
-            make_dir_of(path)
+            make_dir_for(path)
             self.file = open(path, 'w', encoding='utf-8')
 
     def __call__(self, msg, level=INFO, file=None, end=None):
         if self.level <= level:
             _file = self.file if file is None else file
             if self.meta_info:
-                print(curr_time(), file=_file, end=self.sep)
+                print(curr_date_time(), file=_file, end=self.sep)
             if self.prefix:
                 print(self.prefix, file=_file, end=self.sep)
             print(msg, file=_file, end=end)
@@ -95,7 +93,7 @@ def get_logger(file=sys.stdout, level=INFO, prefix='', meta_info=False, sep='  '
     return Logger(file, level, prefix, meta_info, sep)
 
 
-def curr_time():
+def curr_date_time():
     return str(datetime.now(timezone.utc))[:19]
 
 
@@ -108,14 +106,8 @@ def make_dir(path):
     os.makedirs(path, exist_ok=True)
 
 
-def make_dir_of(file_path):
+def make_dir_for(file_path):
     os.makedirs(dir_of(file_path), exist_ok=True)
-
-
-def test_f(x, fail_rate=0, running_time=0.2):
-    time.sleep(running_time)
-    assert random.random() > fail_rate, "simulated failure ({}%)".format(fail_rate * 100)
-    return x * 2
 
 
 def error_msg(e, detailed=True, seperator='\n\n'):
@@ -123,12 +115,13 @@ def error_msg(e, detailed=True, seperator='\n\n'):
 
 
 class Worker(Process):
-    def __init__(self, f, inp, out, worker_id=None, detailed_error=False, progress=True):
+    def __init__(self, f, inp, out, worker_id=None, cached_objects=None, detailed_error=False, progress=True):
         super(Worker, self).__init__()
         self.worker_id = worker_id
         self.inp = inp
         self.out = out
         self.f = f
+        self.cached_objects = cached_objects
         self.detailed_error = detailed_error
         if progress:
             log('started worker-{}'.format(na(worker_id)))
@@ -138,6 +131,8 @@ class Worker(Process):
             task_id, kwargs = self.inp.get()
             try:
                 if isinstance(kwargs, dict):
+                    if self.cached_objects is not None:
+                        kwargs.update(self.cached_objects)
                     res = self.f(**kwargs)
                 else:
                     res = self.f(*kwargs)
@@ -148,7 +143,7 @@ class Worker(Process):
 
 
 class Workers:
-    def __init__(self, f, num_workers=CPU_COUNT, detailed_error=False, progress=True):
+    def __init__(self, f, num_workers=CPU_COUNT, cached_objects=None, detailed_error=False, progress=True):
         self.inp = Queue()
         self.out = Queue()
         self.workers = []
@@ -156,7 +151,7 @@ class Workers:
         self.progress = progress
         self.f = f
         for i in range(num_workers):
-            worker = Worker(f, self.inp, self.out, i, detailed_error, progress)
+            worker = Worker(f, self.inp, self.out, i, cached_objects, detailed_error, progress)
             worker.start()
             self.workers.append(worker)
 
@@ -175,19 +170,25 @@ class Workers:
             for i in range(running_task_num):
                 yield self.get_res()
 
-    def map(self, tasks, ordered=False):
+    def map(self, tasks, ordered=False, res_only=True):
         if ordered:
             saved = {}
             id_task_waiting_for = 0
             for d in self._map(tasks):
                 saved[d['task_id']] = d
                 while id_task_waiting_for in saved:
-                    yield saved[id_task_waiting_for]
+                    if res_only:
+                        yield saved[id_task_waiting_for]['res']
+                    else:
+                        yield saved[id_task_waiting_for]
                     saved.pop(id_task_waiting_for)
                     id_task_waiting_for += 1
         else:
             for d in self._map(tasks):
-                yield d
+                if res_only:
+                    yield d['res']
+                else:
+                    yield d
 
     def add_task(self, inp):
         self.inp.put((self.task_id, inp))
@@ -209,38 +210,44 @@ class Workers:
             log('terminated {} workers'.format(len(self.workers)))
 
 
-def work(f, tasks, num_workers=CPU_COUNT, progress=False, ordered=False):
-    workers = Workers(f=f, num_workers=num_workers, progress=progress)
-    for d in workers.map(tasks=tasks, ordered=ordered):
+def work(f, tasks, num_workers=CPU_COUNT, cached_objects=None, progress=False, ordered=False, res_only=True):
+    workers = Workers(f=f, num_workers=num_workers, cached_objects=cached_objects, progress=progress)
+    for d in workers.map(tasks=tasks, ordered=ordered, res_only=res_only):
         yield d
     workers.terminate()
 
 
 class timer(object):
-    def __init__(self, level=INFO):
+    def __init__(self, msg='', level=INFO):
         self.start = None
+        self.msg = msg
         self.level = level
 
     def __enter__(self):
         self.start = time.time()
 
     def __exit__(self, _type, value, _traceback):
-        log('took {} seconds'.format(time.time() - self.start), level=self.level)
+        log('{}took {:.3f} ms'.format('' if self.msg == '' else self.msg + ' ', (time.time() - self.start) * 1000),
+            level=self.level)
 
 
-def iterate(data, first_n=None, sample_ratio=1.0, sample_seed=None, report_n=None):
+def iterate(data, first_n=None, sample_p=1.0, sample_seed=None, report_n=None):
     if sample_seed is not None:
         random.seed(sample_seed)
     if first_n is not None:
         assert first_n >= 1, 'first_n should be >= 1'
     counter = 0
     total = len(data) if hasattr(data, '__len__') else '?'
+    prev_time = time.time()
     for d in itertools.islice(data, 0, first_n):
-        if random.random() <= sample_ratio:
+        if random.random() <= sample_p:
             counter += 1
             yield d
             if report_n is not None and counter % report_n == 0:
-                log('{}/{}'.format(counter, total))
+                curr_time = time.time()
+                speed = report_n / (curr_time - prev_time) if curr_time - prev_time != 0 else 'inf'
+                log('{}/{} ==> {:.3f} items/s'.format(counter, total, speed))
+                prev_time = curr_time
 
 
 def open_file(path, encoding='utf-8', compression=None):
@@ -283,31 +290,28 @@ def load_json(path, encoding='utf-8', compression=None):
         return json.load(f)
 
 
-def load_jsonl(path, encoding="utf-8", first_n=None, sample_ratio=1.0, sample_seed=None, progress_interval=None,
-               compression=None):
+def load_jsonl(path, encoding="utf-8", first_n=None, sample_p=1.0, sample_seed=None, report_n=None, compression=None):
     with open_file(path, encoding, compression) as f:
-        for line in iterate(f, first_n, sample_ratio, sample_seed, progress_interval):
+        for line in iterate(f, first_n, sample_p, sample_seed, report_n):
             yield json.loads(line)
 
 
-def load_txt(path, encoding="utf-8", first_n=None, sample_ratio=1.0, sample_seed=None, progress_interval=None,
-             compression=None):
+def load_txt(path, encoding="utf-8", first_n=None, sample_p=1.0, sample_seed=None, report_n=None, compression=None):
     with open_file(path, encoding, compression) as f:
-        for line in iterate(f, first_n, sample_ratio, sample_seed, progress_interval):
+        for line in iterate(f, first_n, sample_p, sample_seed, report_n):
             yield line.rstrip()
 
 
-def load_csv(path, encoding="utf-8", delimiter=',', first_n=None, sample_ratio=1.0, sample_seed=None,
-             progress_interval=False, compression=None):
+def load_csv(path, encoding="utf-8", delimiter=',', first_n=None, sample_p=1.0, sample_seed=None,
+             report_n=None, compression=None):
     csv.field_size_limit(10000000)
     with open_file(path, encoding, compression) as f:
-        for d in iterate(csv.reader(f, delimiter=delimiter), first_n, sample_ratio, sample_seed, progress_interval):
+        for d in iterate(csv.reader(f, delimiter=delimiter), first_n, sample_p, sample_seed, report_n):
             yield d
 
 
-def load_tsv(path, encoding="utf-8", first_n=None, sample_ratio=1.0, sample_seed=None, progress_interval=None,
-             compression=None):
-    for d in load_csv(path, encoding, '/t', first_n, sample_ratio, sample_seed, progress_interval, compression):
+def load_tsv(path, encoding="utf-8", first_n=None, sample_p=1.0, sample_seed=None, report_n=None, compression=None):
+    for d in load_csv(path, encoding, '/t', first_n, sample_p, sample_seed, report_n, compression):
         yield d
 
 
@@ -361,9 +365,9 @@ def print_iter(data, level=INFO):
         log(item, level=level)
 
 
-def n_min_max_avg(data, key_f=None, first_n=None, sample_ratio=1.0, sample_seed=None):
+def n_min_max_avg(data, key_f=None, first_n=None, sample_p=1.0, sample_seed=None):
     res_min, res_max, res_sum = float('inf'), -float('inf'), 0
-    iterator = iterate(data, first_n=first_n, sample_ratio=sample_ratio, sample_seed=sample_seed)
+    iterator = iterate(data, first_n=first_n, sample_p=sample_p, sample_seed=sample_seed)
     if key_f is not None:
         iterator = map(key_f, iterator)
     counter = 0
@@ -375,12 +379,12 @@ def n_min_max_avg(data, key_f=None, first_n=None, sample_ratio=1.0, sample_seed=
     return counter, res_min, res_max, res_sum / counter
 
 
-def min_max_avg(data, key_f=None, first_n=None, sample_ratio=1.0, sample_seed=None):
-    return tuple(n_min_max_avg(data, key_f, first_n, sample_ratio, sample_seed)[1:])
+def min_max_avg(data, key_f=None, first_n=None, sample_p=1.0, sample_seed=None):
+    return tuple(n_min_max_avg(data, key_f, first_n, sample_p, sample_seed)[1:])
 
 
-def avg(data, key_f=None, first_n=None, sample_ratio=1.0, sample_seed=None):
-    return n_min_max_avg(data, key_f, first_n, sample_ratio, sample_seed)[3]
+def avg(data, key_f=None, first_n=None, sample_p=1.0, sample_seed=None):
+    return n_min_max_avg(data, key_f, first_n, sample_p, sample_seed)[3]
 
 
 def na(item, na_str='?'):
@@ -396,13 +400,13 @@ def sep(text='', size=10, char='=', level=INFO):
 
 
 class enclose(object):
-    def __init__(self, text='', size=10, margin=1, char='=', timer=False, level=INFO):
+    def __init__(self, text='', size=10, margin=1, char='=', use_timer=False, level=INFO):
         self.text = text
         self.size = size
         self.size_y = margin
         self.char = char
         self.start = None
-        self.timer = timer
+        self.use_timer = use_timer
         self.level = level
 
     def __enter__(self):
@@ -411,8 +415,8 @@ class enclose(object):
 
     def __exit__(self, _type, value, _traceback):
         log(self.char * (self.size * 2 + len(self.text)), level=self.level)
-        if self.timer:
-            log('took {} seconds'.format(time.time() - self.start), level=self.level)
+        if self.use_timer:
+            log('took {:.3f} ms'.format((time.time() - self.start) * 1000), level=self.level)
         log('\n' * self.size_y, end='', level=self.level)
 
 
@@ -456,7 +460,7 @@ def exec_dir():
 if __name__ == '__main__':
     with enclose('More Beautiful Python', 30):
         _rows = [
-            ['example', 'https://github.com/sudongqi/MoreBeautifulPython/examples.py'],
+            ['examples', 'https://github.com/sudongqi/MoreBeautifulPython/examples.py'],
             ['execution_directory', exec_dir()],
             ['library_path', lib_path()],
             ['cpu_count', CPU_COUNT],

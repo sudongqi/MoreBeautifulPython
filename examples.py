@@ -1,4 +1,17 @@
+import sys
+import time
+import random
 from mbp import *
+
+
+def test_f_x2_sleep(x, fail_rate=0, running_time=0.2):
+    time.sleep(running_time)
+    assert random.random() > fail_rate, "simulated failure ({}%)".format(fail_rate * 100)
+    return x * 2
+
+
+def test_f_get_value_at_idx(idx, vec):
+    return vec[idx]
 
 
 def main():
@@ -33,10 +46,10 @@ def main():
         d = {i: i for i in range(100)}
         for i in range(200000):
             d.get(i, None)
-    '''took 0.012994766235351562 seconds'''
+    '''took 6.980 ms'''
 
     # enclose() generate two text separators that enclose the execution
-    with enclose(text='enclose()', size=4, margin=1, char='=', timer=False):
+    with enclose(text='enclose()', size=4, margin=1, char='=', use_timer=False):
         log('my content')
     '''
     ====enclose()====
@@ -48,28 +61,30 @@ def main():
     with enclose_timer():
         # iterate() can customize iteration procedures
         # for example, sample 10% and report every 3 yield from the first 100 samples
-        for d in iterate(range(1000), first_n=100, sample_ratio=0.1, report_n=3):
-            log(d)
+        for d in iterate(range(1000), first_n=100, sample_p=0.1, report_n=3):
+            log(test_f_x2_sleep(d, running_time=0.1))
     '''
     ====================
-    4
-    13
-    22
-    3/1000
-    36
-    59
-    64
-    6/1000
-    65
-    77
+    2
+    58
+    66
+    3/1000 ==> 9.369 items/s
+    94
+    104
+    118
+    6/1000 ==> 9.182 items/s
+    126
+    148
+    184
+    9/1000 ==> 9.144 items/s
     ====================
-    took 0.0019941329956054688 seconds
+    took 974.987 ms
     '''
 
     # Workers() is more flexible than multiprocessing.Pool()
     n_task = 8
     with enclose_timer('Workers()'):
-        workers = Workers(f=test_f, num_workers=4, progress=True)
+        workers = Workers(f=test_f_x2_sleep, num_workers=4, progress=True)
         [workers.add_task({'x': i, 'fail_rate': 0.3}) for _ in range(n_task)]
         [workers.get_res() for _ in range(n_task)]
         workers.terminate()
@@ -89,13 +104,13 @@ def main():
     worker-1 completed task-4
     terminated 4 workers
     =============================
-    took 0.5016000270843506 seconds
+    took 497.200 ms
     '''
 
     # similarly, we can use work() to process tasks from an iterator
     # tasks can be iterator of tuple (need to specify all inputs) or dict
     with enclose_timer('work()'):
-        for r in work(f=test_f, tasks=iter([(i, 0.5, 0.2) for i in range(n_task)]), ordered=True):
+        for r in work(f=test_f_x2_sleep, tasks=iter([(i, 0.5, 0.2) for i in range(n_task)]), ordered=True):
             log(r)
     '''
     ==========work()==========
@@ -108,7 +123,21 @@ def main():
     {'worker_id': 6, 'task_id': 6, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
     {'worker_id': 7, 'task_id': 7, 'res': 14}
     ==========================
-    took 0.3321056365966797 seconds
+    took 345.638 ms
+    '''
+
+    # use cached_objects = {'fixed_input': value, ...} to avoid pickling of heavy objects
+    vec = [i for i in range(1000000)]
+    with timer('work()'):
+        a = list(work(test_f_get_value_at_idx, num_workers=1, ordered=True,
+                      tasks=iter((i, vec) for i in range(100))))
+    with timer('work() with cached_objects'):
+        b = list(work(test_f_get_value_at_idx, num_workers=1, ordered=True,
+                      tasks=iter({'idx': i} for i in range(100)), cached_objects={'vec': vec}))
+    assert a == b
+    '''
+    work() took 6003.476 ms
+    work() with cached_objects took 107.506 ms
     '''
 
     with enclose('path'):
@@ -116,7 +145,7 @@ def main():
         log(this_dir())
         # dir_of() find the directory of a file
         log(dir_of(__file__, go_up=2))
-        # path_join() == os.path.join()
+        # path_join() == os.path.join()W
         log(path_join(this_dir(), 'a', 'b', 'c.file'))
         # exec_dir() return the directory where you run your python command
         log(exec_dir())
