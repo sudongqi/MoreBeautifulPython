@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.1.4'
+VERSION = '1.1.5'
 
 __all__ = [
     # Alternative for multiprocessing
@@ -380,8 +380,9 @@ def log2(data, indent=4, level=INFO):
     log(json.dumps(data, indent=indent), level=level)
 
 
-def print2(data, indent=4):
-    print(json.dumps(data, indent=indent))
+def print2(*args, indent=4):
+    for data in args:
+        print(json.dumps(data, indent=indent))
 
 
 def print_iter(data, level=INFO):
