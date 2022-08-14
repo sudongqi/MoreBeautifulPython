@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.1.5'
+VERSION = '1.1.6'
 
 __all__ = [
     # Alternative for multiprocessing
@@ -28,7 +28,7 @@ __all__ = [
     'load_jsonl', 'load_json', 'load_csv', 'load_tsv', 'load_txt',
     'iterate', 'save_json', 'save_jsonl', 'open_file', 'open_files',
     # Tools for summarizations
-    'print2', 'log2', 'enclose', 'enclose_timer', 'print_table', 'build_table', 'print_iter', 'error_msg', 'line_break',
+    'print2', 'log2', 'enclose', 'enclose_timer', 'print_table', 'build_table', 'print_iter', 'error_msg', 'line',
     # Tools for simple statistics
     'timer', 'curr_date_time', 'avg', 'min_max_avg', 'n_min_max_avg', 'CPU_COUNT'
 ]
@@ -127,8 +127,12 @@ def make_dir_for(file_path):
     os.makedirs(dir_of(file_path), exist_ok=True)
 
 
-def error_msg(e, detailed=True, seperator='\n\n'):
-    return repr(e) + seperator + traceback.format_exc() if detailed else repr(e)
+def error_msg(e, detailed=True, seperator='\n'):
+    if not detailed:
+        return repr(e)
+    else:
+        res = traceback.format_exc()
+        return res.replace('\n', seperator)
 
 
 class Worker(Process):
@@ -423,7 +427,7 @@ def strip_and_add_spaces(s):
     return s
 
 
-def line_break(text_or_length='', extend_size=10, char='=', level=INFO):
+def line(text_or_length='', extend_size=10, char='-', level=INFO):
     if isinstance(text_or_length, str):
         wing = char * extend_size
         log(wing + strip_and_add_spaces(text_or_length) + wing, level=level)
@@ -444,7 +448,7 @@ class enclose(object):
         self.level = level
 
     def __enter__(self):
-        line_break(self.text_or_length, self.extend_size, self.char, self.level)
+        line(self.text_or_length, self.extend_size, self.char, self.level)
         self.start = time.time()
 
     def __exit__(self, _type, value, _traceback):
