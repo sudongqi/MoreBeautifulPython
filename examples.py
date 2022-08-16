@@ -18,7 +18,7 @@ def test_f2(idx, vec):
 
 def main():
     # all log() in this script will print to file at path "./log"
-    set_global_logger(file='./log')
+    set_global_logger(file=['./log', sys.stdout])
     # log() include all functionality of print()
     log('this is from the global logger')
 

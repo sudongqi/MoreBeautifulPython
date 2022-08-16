@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.1.6'
+VERSION = '1.1.7'
 
 __all__ = [
     # Alternative for multiprocessing
@@ -54,30 +54,34 @@ def get_msg_level(level):
         return 'SILENT'
 
 
+def open_files_for_logger(file):
+    res = file if isinstance(file, list) else [file]
+    for i in range(len(res)):
+        f = res[i]
+        if isinstance(f, str):
+            make_dir_for(f)
+            res[i] = open(f, 'w', encoding='utf-8')
+    return res
+
+
 class Logger:
     def __init__(self, name='', file=sys.stdout, level=INFO, meta_info=False, sep=' '):
         self.level = level
-        self.file = None
+        self.file = open_files_for_logger(file)
         self.prefix = name
         self.meta_info = True if name else meta_info
         self.sep = sep
-        self.direct_to(file)
-
-    def direct_to(self, path):
-        self.file = path
-        if isinstance(path, str):
-            make_dir_for(path)
-            self.file = open(path, 'w', encoding='utf-8')
 
     def __call__(self, msg, level=INFO, file=None, end=None, flush=False):
         if self.level <= level:
-            _file = self.file if file is None else file
-            if self.meta_info:
-                headers = [curr_date_time(), get_msg_level(level)]
-                if self.prefix:
-                    headers.append(self.prefix)
-                print(self.sep.join(headers), file=_file, end=': ', flush=flush)
-            print(msg, file=_file, end=end, flush=flush)
+            _file = self.file if file is None else open_files_for_logger(file)
+            for f in _file:
+                if self.meta_info:
+                    headers = [curr_date_time(), get_msg_level(level)]
+                    if self.prefix:
+                        headers.append(self.prefix)
+                    print(self.sep.join(headers), file=f, end=': ', flush=flush)
+                print(msg, file=f, end=end, flush=flush)
 
 
 LOG = Logger()
