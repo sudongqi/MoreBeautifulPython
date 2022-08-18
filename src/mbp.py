@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.1.7'
+VERSION = '1.1.8'
 
 __all__ = [
     # Alternative for multiprocessing
@@ -475,9 +475,12 @@ def lib_path():
     return str(Path(__file__).absolute())
 
 
-def this_dir(go_up=0, extend=None):
+def this_dir(go_up_or_extend=0, extend=None):
     caller_module = inspect.getmodule(inspect.stack()[1][0])
-    return dir_of(caller_module.__file__, go_up=go_up, extend=extend)
+    if isinstance(go_up_or_extend, str):
+        assert extend is None, 'if 1st argument is a string, 2nd argument should not be specified'
+        return dir_of(caller_module.__file__, go_up=0, extend=go_up_or_extend)
+    return dir_of(caller_module.__file__, go_up=go_up_or_extend, extend=extend)
 
 
 def dir_of(file_path, go_up=0, extend=None):
