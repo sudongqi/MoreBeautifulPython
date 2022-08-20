@@ -1,7 +1,7 @@
 import sys
 import time
 import random
-from mbp import *
+from src.mbp import *
 
 
 # test function for multiprocessing
@@ -58,7 +58,7 @@ def main():
     '''
 
     # enclose() generate two text separators that enclose the execution
-    with enclose(text_or_length='enclose()', extend_size=4, margin=1, char='=', use_timer=False):
+    with enclose(text_or_length='enclose()', wing_size=4, bottom_margin=1, char='=', use_timer=False):
         log('your first line')
         log('your second line')
     '''
@@ -162,7 +162,7 @@ def main():
         # path_join() == os.path.join()
         log(path_join(this_dir(), 'a', 'b', 'c.file'))
         # dir_of() find the directory of a file
-        log(dir_of(__file__, go_up=2))
+        log(dir_of(__file__, move_up=2))
         # dir_of() can also extend a path
         log(dir_of(__file__, 0, 'hello.txt'))
         # exec_dir() return the directory where you run your python command
@@ -198,8 +198,8 @@ def main():
     jsonl_file_path = path_join(this_dir(), 'data.jsonl')
     json_file_path = path_join(this_dir(), 'data.json')
 
-    # print2() is a superior pprint.pprint()
-    print2(load_json(json_file_path), indent=4)
+    # print_dict() is a superior pprint.pprint()
+    print_dict(load_json(json_file_path), indent=4)
     '''
     {
         "quiz": {
@@ -219,11 +219,14 @@ def main():
     }
     '''
 
-    # log2() is the logging version of the print2()
-    log2(load_json(json_file_path), indent=4)
+    # log_dict() is the logging version of the print2()
+    log_dict(load_json(json_file_path), indent=4)
 
     # load_jsonl() return an iterator of dictionary
     data = list(load_jsonl(jsonl_file_path))
+
+    # draw_line() will draw a line
+    draw_line()
 
     # print_iter() print items from an iterator one by one
     with enclose('print_list()'):

@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.2.0'
+VERSION = '1.2.1'
 
 __all__ = [
     # Alternative for multiprocessing
@@ -28,7 +28,8 @@ __all__ = [
     'load_jsonl', 'load_json', 'load_csv', 'load_tsv', 'load_txt',
     'iterate', 'save_json', 'save_jsonl', 'open_file', 'open_files',
     # Tools for summarizations
-    'print2', 'log2', 'enclose', 'enclose_timer', 'print_table', 'build_table', 'print_iter', 'error_msg', 'line',
+    'print_dict', 'log_dict', 'enclose', 'enclose_timer', 'print_table', 'build_table', 'print_iter', 'error_msg',
+    'draw_line',
     # Tools for simple statistics
     'timer', 'curr_date_time', 'avg', 'min_max_avg', 'n_min_max_avg', 'CPU_COUNT'
 ]
@@ -393,11 +394,11 @@ def print_table(rows, column_names=None, space=3, level=INFO):
     print_iter(build_table(rows, column_names, space), level=level)
 
 
-def log2(data, indent=4, level=INFO):
+def log_dict(data, indent=4, level=INFO):
     log(json.dumps(data, indent=indent), level=level)
 
 
-def print2(*args, indent=4):
+def print_dict(*args, indent=4):
     for data in args:
         print(json.dumps(data, indent=indent))
 
@@ -440,40 +441,49 @@ def strip_and_add_spaces(s):
     return s
 
 
-def line(text_or_length='', extend_size=10, char='-', level=INFO):
+def draw_line(text_or_length='', wing_size=10, char='-', level=INFO, no_print=False):
     if isinstance(text_or_length, str):
-        wing = char * extend_size
-        log(wing + strip_and_add_spaces(text_or_length) + wing, level=level)
+        wing = char * wing_size
+        res = wing + strip_and_add_spaces(text_or_length) + wing
+        if not no_print:
+            log(res, level=level)
+        return res
     elif isinstance(text_or_length, int):
-        log(char * text_or_length, level=level)
+        res = char * text_or_length
+        if not no_print:
+            log(res, level=level)
+        return res
     else:
-        assert False, 'text_or_length should be one of {str, int}'
+        assert False, 'text_or_length should be an instance of either str or int'
 
 
 class enclose(object):
-    def __init__(self, text_or_length='', extend_size=10, margin=1, char='=', use_timer=False, level=INFO):
+    def __init__(self, text_or_length='', wing_size=10, char='=', top_margin=0, bottom_margin=1, use_timer=False,
+                 level=INFO):
         self.text_or_length = strip_and_add_spaces(text_or_length)
-        self.extend_size = extend_size
-        self.size_y = margin
+        self.wing_size = wing_size
+        self.top_margin = top_margin
+        self.bottom_margin = bottom_margin
         self.char = char
         self.start = None
         self.use_timer = use_timer
         self.level = level
 
     def __enter__(self):
-        line(self.text_or_length, self.extend_size, self.char, self.level)
+        log('\n' * self.top_margin, end='', level=self.level)
+        draw_line(self.text_or_length, self.wing_size, self.char, self.level)
         self.start = time.time()
 
     def __exit__(self, _type, value, _traceback):
-        log(self.char * (self.extend_size * 2 + len(self.text_or_length)), level=self.level)
+        log(self.char * (self.wing_size * 2 + len(self.text_or_length)), level=self.level)
         if self.use_timer:
             log('took {:.3f} ms'.format((time.time() - self.start) * 1000), level=self.level)
-        log('\n' * self.size_y, end='', level=self.level)
+        log('\n' * self.bottom_margin, end='', level=self.level)
 
 
 class enclose_timer(enclose):
-    def __init__(self, text_or_length='', extend_size=10, margin=1, char='=', level=INFO):
-        super().__init__(text_or_length, extend_size, margin, char, True, level)
+    def __init__(self, text_or_length='', wing_size=10, char='=', top_margin=0, bottom_margin=1, level=INFO):
+        super().__init__(text_or_length, wing_size, char, top_margin, bottom_margin, True, level)
 
 
 def path_join(*args, **kwargs):
@@ -484,21 +494,21 @@ def lib_path():
     return str(Path(__file__).absolute())
 
 
-def this_dir(go_up_or_extend=0, extend=None):
+def this_dir(move_up_or_sub_path=0, sub_path=None):
     caller_module = inspect.getmodule(inspect.stack()[1][0])
-    if isinstance(go_up_or_extend, str):
-        assert extend is None, 'if 1st argument is a string, 2nd argument should not be specified'
-        return dir_of(caller_module.__file__, go_up=0, extend=go_up_or_extend)
-    return dir_of(caller_module.__file__, go_up=go_up_or_extend, extend=extend)
+    if isinstance(move_up_or_sub_path, str):
+        assert sub_path is None, 'if 1st argument is a string, 2nd argument should not be specified'
+        return dir_of(caller_module.__file__, move_up=0, sub_path=move_up_or_sub_path)
+    return dir_of(caller_module.__file__, move_up=move_up_or_sub_path, sub_path=sub_path)
 
 
-def dir_of(file_path, go_up=0, extend=None):
+def dir_of(file_path, move_up=0, sub_path=None):
     curr_path_obj = Path(file_path)
-    for i in range(go_up + 1):
+    for i in range(move_up + 1):
         curr_path_obj = curr_path_obj.parent
     res = str(curr_path_obj.absolute())
-    if extend is not None:
-        res = path_join(res, extend)
+    if sub_path is not None:
+        res = path_join(res, sub_path)
     return res
 
 
