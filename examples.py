@@ -43,6 +43,11 @@ def main():
             # all loggings are suppressed
             log(i)
 
+    # context manager logger() will also deactivate any logger() within its scope
+    with logger(level=INFO):
+        with logger(level=SILENT):
+            log('==> a hidden message')
+
     # use timer() context manager to get execution time
     with timer():
         d = {i: i for i in range(100)}
