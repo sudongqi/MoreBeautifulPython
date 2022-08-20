@@ -8,11 +8,11 @@ Make Python more beautiful :) This package includes syntax sugar & tools that yo
     
     > python -m mbp
     ============================== More Beautiful Python ==============================
-    examples              https://github.com/sudongqi/MoreBeautifulPython/examples.py
-    execution_directory   C:\Users\sudon\MoreBeautifulPython
-    library_path          c:\users\sudon\morebeautifulpython\src\mbp.py
+    examples              https://github.com/user/MoreBeautifulPython/blob/main/examples.py
+    execution_directory   C:\Users\user\MoreBeautifulPython
+    library_path          C:\Users\user\AppData\Local\Programs\Python\Python310\lib\site-packages\mbp.py
     cpu_count             16
-    version               1.1.9
+    version               1.2.0
     ===================================================================================
 
 
@@ -20,8 +20,8 @@ Make Python more beautiful :) This package includes syntax sugar & tools that yo
 
 https://github.com/sudongqi/MoreBeautifulPython/blob/main/examples.py
 
-* Alternative for multiprocessing
 * Alternative for logging
+* Alternative for multiprocessing
 * Syntax sugar for pathlib
 * Tools for file loading & handling
 * Tools for summarizations

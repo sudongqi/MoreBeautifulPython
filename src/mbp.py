@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.1.9'
+VERSION = '1.2.0'
 
 __all__ = [
     # Alternative for multiprocessing
@@ -517,7 +517,7 @@ def exec_dir():
 if __name__ == '__main__':
     with enclose('More Beautiful Python', 30):
         _rows = [
-            ['examples', 'https://github.com/sudongqi/MoreBeautifulPython/examples.py'],
+            ['examples', 'https://github.com/sudongqi/MoreBeautifulPython/blob/main/examples.py'],
             ['execution_directory', exec_dir()],
             ['library_path', lib_path()],
             ['cpu_count', CPU_COUNT],
