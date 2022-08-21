@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.2.1'
+VERSION = '1.2.2'
 
 __all__ = [
     # Alternative for multiprocessing
@@ -28,8 +28,8 @@ __all__ = [
     'load_jsonl', 'load_json', 'load_csv', 'load_tsv', 'load_txt',
     'iterate', 'save_json', 'save_jsonl', 'open_file', 'open_files',
     # Tools for summarizations
-    'print_dict', 'log_dict', 'enclose', 'enclose_timer', 'print_table', 'build_table', 'print_iter', 'error_msg',
-    'draw_line',
+    'enclose', 'enclose_timer', 'error_msg',
+    'print_dict', 'log_dict', 'print_line', 'print_table', 'build_table', 'print_iter',
     # Tools for simple statistics
     'timer', 'curr_date_time', 'avg', 'min_max_avg', 'n_min_max_avg', 'CPU_COUNT'
 ]
@@ -441,7 +441,7 @@ def strip_and_add_spaces(s):
     return s
 
 
-def draw_line(text_or_length='', wing_size=10, char='-', level=INFO, no_print=False):
+def print_line(text_or_length='', wing_size=10, char='-', level=INFO, no_print=False):
     if isinstance(text_or_length, str):
         wing = char * wing_size
         res = wing + strip_and_add_spaces(text_or_length) + wing
@@ -471,7 +471,7 @@ class enclose(object):
 
     def __enter__(self):
         log('\n' * self.top_margin, end='', level=self.level)
-        draw_line(self.text_or_length, self.wing_size, self.char, self.level)
+        print_line(self.text_or_length, self.wing_size, self.char, self.level)
         self.start = time.time()
 
     def __exit__(self, _type, value, _traceback):

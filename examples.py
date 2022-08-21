@@ -1,7 +1,7 @@
 import sys
 import time
 import random
-from src.mbp import *
+from mbp import *
 
 
 # test function for multiprocessing
@@ -226,7 +226,7 @@ def main():
     data = list(load_jsonl(jsonl_file_path))
 
     # draw_line() will draw a line
-    draw_line()
+    print_line()
 
     # print_iter() print items from an iterator one by one
     with enclose('print_list()'):
