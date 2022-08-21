@@ -43,10 +43,15 @@ def main():
             # all loggings are suppressed
             log(i)
 
-    # context manager logger() will also deactivate any logger() within its scope
+    # context manager logger() will also overwrite all logger() within its scope
     with logger(level=INFO):
         with logger(level=SILENT):
             log('==> a hidden message')
+
+    # except when can_overwrite == False
+    with logger(level=INFO):
+        with logger(level=SILENT, can_overwrite=False):
+            log('==> this will never be printed')
 
     # use timer() context manager to get execution time
     with timer():

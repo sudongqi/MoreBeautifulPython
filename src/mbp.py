@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.2.2'
+VERSION = '1.2.3'
 
 __all__ = [
     # Alternative for multiprocessing
@@ -90,14 +90,14 @@ CONTEXT_LOGGER_SET = False
 
 
 class logger(object):
-    def __init__(self, name='', file=sys.stdout, level=INFO, meta_info=False):
+    def __init__(self, name='', file=sys.stdout, level=INFO, meta_info=False, can_overwrite=True):
         global LOG
         global CONTEXT_LOGGER_SET
-        self.new_logger = False
-        if not CONTEXT_LOGGER_SET:
+        self.logger_was_changed = False
+        if not CONTEXT_LOGGER_SET or not can_overwrite:
             self.org_logger = LOG
             LOG = Logger(name, file, level, meta_info)
-            self.new_logger = True
+            self.logger_was_changed = True
             CONTEXT_LOGGER_SET = True
 
     def __enter__(self):
@@ -106,7 +106,7 @@ class logger(object):
     def __exit__(self, _type, value, _traceback):
         global LOG
         global CONTEXT_LOGGER_SET
-        if self.new_logger:
+        if self.logger_was_changed:
             LOG = self.org_logger
             CONTEXT_LOGGER_SET = False
 
