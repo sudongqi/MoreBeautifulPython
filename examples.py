@@ -210,22 +210,14 @@ def main():
         "quiz": {
             "maths": {
                 "q1": {
-                    "question": "5 + 7 = ?",
-                    "options": [
-                        "10",
-                        "11",
-                        "12",
-                        "13"
-                    ],
-                    "answer": "12"
-                }
-            }
-        }
+                    "question": "5 + 7 = ?", 
+                    "options": ["10", "11", "12", "13"], 
+                    "answer": "12", 
+                }, 
+            }, 
+        }, 
     }
     '''
-
-    # log_dict() is the logging version of the print2()
-    log_dict(load_json(json_file_path), indent=4)
 
     # load_jsonl() return an iterator of dictionary
     data = list(load_jsonl(jsonl_file_path))

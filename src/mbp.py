@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.2.3'
+VERSION = '1.2.4'
 
 __all__ = [
     # Alternative for multiprocessing
@@ -26,10 +26,10 @@ __all__ = [
     'dir_of', 'path_join', 'make_dir', 'make_dir_for', 'this_dir', 'exec_dir', 'lib_path', 'only_file_of',
     # Tools for file loading & handling
     'load_jsonl', 'load_json', 'load_csv', 'load_tsv', 'load_txt',
-    'iterate', 'save_json', 'save_jsonl', 'open_file', 'open_files',
+    'iterate', 'save_json', 'save_jsonl', 'open_file', 'file_paths_of', 'open_files',
     # Tools for summarizations
     'enclose', 'enclose_timer', 'error_msg',
-    'print_dict', 'log_dict', 'print_line', 'print_table', 'build_table', 'print_iter',
+    'print_dict', 'print_line', 'print_table', 'build_table', 'print_iter',
     # Tools for simple statistics
     'timer', 'curr_date_time', 'avg', 'min_max_avg', 'n_min_max_avg', 'CPU_COUNT'
 ]
@@ -303,17 +303,24 @@ def open_file(path, encoding='utf-8', compression=None):
         assert False, '{} not supported'.format(compression)
 
 
-def open_files(path, encoding='utf-8', compression=None, pattern=".*\..*"):
+def file_paths_of(path, pattern=".*\..*", progress=True):
     matcher = re.compile(pattern)
     for p, dirs, files in os.walk(path):
         for file_name in files:
             if matcher.fullmatch(file_name):
                 file_path = path_join(p, file_name)
                 try:
-                    yield open_file(file_path, encoding, compression)
-                    log('found {} <== {}'.format(file_name, file_path))
+                    yield file_path
+                    if progress:
+                        log('found {} <== {}'.format(file_name, file_path))
                 except PermissionError:
-                    log('no permission to open {} <== {}'.format(file_name, file_path))
+                    if progress:
+                        log('no permission to open {} <== {}'.format(file_name, file_path))
+
+
+def open_files(path, encoding='utf-8', compression=None, pattern=".*\..*", progress=True):
+    for file_path in file_paths_of(path, pattern, progress):
+        yield open_file(file_path, encoding, compression)
 
 
 def save_json(data, path, encoding='utf-8'):
@@ -394,13 +401,56 @@ def print_table(rows, column_names=None, space=3, level=INFO):
     print_iter(build_table(rows, column_names, space), level=level)
 
 
-def log_dict(data, indent=4, level=INFO):
-    log(json.dumps(data, indent=indent), level=level)
+def instance_of(data, types):
+    if isinstance(types, set) or isinstance(types, dict) or isinstance(types, list):
+        return any(isinstance(data, t) for t in types)
+    return isinstance(data, types)
 
 
-def print_dict(*args, indent=4):
-    for data in args:
-        print(json.dumps(data, indent=indent))
+def print_dict(data, indent=4, value_width=50, sep=', ', kv_sep=': ', level=INFO, no_print=False):
+    def indent_str(_level):
+        return '\n' + ' ' * _level * indent
+
+    def quote_str(s):
+        return ('"' + s + '"') if isinstance(s, str) else str(s)
+
+    def dfs(_data, l):
+        L, R = '{', '}'
+        if instance_of(_data, list):
+            L, R = '[', ']'
+        elif instance_of(_data, tuple):
+            L, R = '(', ')'
+        if instance_of(_data, {list, set, tuple}):
+            acc = [L]
+            total = 0
+            for i, d in enumerate(_data):
+                if not instance_of(d, {int, str}):
+                    acc.append(indent_str(l) + dfs(d, l) + (indent_str(l) if i != len(_data) - 1 else ''))
+                    total = 0
+                else:
+                    total += len(str(d)) + 2
+                    if total >= value_width:
+                        acc.append('\n' + ' ' * l * indent)
+                        total = 0
+                    acc.append((quote_str(d) + sep) if i != len(_data) - 1 else quote_str(d))
+            acc.append(R)
+        elif isinstance(_data, dict):
+            acc = [L]
+            for k, d in _data.items():
+                acc.append(indent_str(l) + quote_str(k) + kv_sep)
+                if instance_of(d, {list, dict, set, tuple}):
+                    acc.append(dfs(d, l + 1) + sep)
+                else:
+                    acc.append(quote_str(d) + sep)
+            acc.append(indent_str(l - 1) + R)
+        else:
+            assert False, 'format not supported'
+        return ''.join(acc)
+
+    res = dfs(data, l=1)
+    if no_print:
+        return res
+    log(res, level=level)
 
 
 def print_iter(data, level=INFO):
