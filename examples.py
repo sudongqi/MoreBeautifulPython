@@ -145,20 +145,28 @@ def main():
     took 346.133 ms
     '''
 
-    # use cached_objects = {'fixed_input': value, ...} to avoid pickling of heavy objects
-    vec = [i for i in range(1000000)]
+    # use cached_inp = {'fixed_input': value, ...} to avoid pickling of heavy objects
+    vec = [x for x in range(1000000)]
     with timer('work()'):
-        tasks = iter((i, vec) for i in range(30))
-        a = list(work(test_f2, num_workers=1, ordered=True, tasks=tasks))
-    with timer('work() with cached_objects'):
-        tasks = iter({'idx': i} for i in range(30))
-        # cached vec
-        cached_objects = {'vec': vec}
-        b = list(work(test_f2, num_workers=1, ordered=True, tasks=tasks, cached_objects=cached_objects))
+        a = list(work(test_f2, num_workers=1, ordered=True, tasks=iter((i, vec) for i in range(30))))
+    with timer('work() with cached_inp'):
+        b = list(work(test_f2, num_workers=1, ordered=True, tasks=iter({'idx': i} for i in range(30)),
+                      cached_inp={'vec': vec}))
     assert a == b
     '''
     work() ==> took 1904.171 ms
-    work() with cached_objects ==> took 100.659 ms
+    work() with cached_inp ==> took 100.659 ms
+    '''
+
+    def build_vec():
+        return [x for x in range(1000000)]
+
+    # for objects that can not be pickled, use built_inp
+    with timer('work() with built_inp'):
+        tasks = iter({'idx': i} for i in range(30))
+        list(work(test_f2, num_workers=1, ordered=True, tasks=tasks, built_inp={'vec': build_vec}))
+    '''
+    work() with built_inp ==> took 128.602 ms
     '''
 
     with enclose('path'):
@@ -190,10 +198,11 @@ def main():
 
     # open_files() return all files and their paths under a directory
     with enclose('open_files()'):
-        for f in open_files(this_dir(), pattern='.*\.py'):
+        for f in open_files(this_dir(), pattern='.*\.py', progress=True):
             pass
     '''
     ========== open_files() ==========
+    found build_and_push.py <== C:\\Users\sudon\MoreBeautifulPython\build_and_push.py
     found examples.py <== C:\\Users\sudon\MoreBeautifulPython\examples.py
     found mbp.py <== C:\\Users\sudon\MoreBeautifulPython\src\mbp.py
     found __init__.py <== C:\\Users\sudon\MoreBeautifulPython\src\__init__.py

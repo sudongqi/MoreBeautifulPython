@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.2.4'
+VERSION = '1.2.5'
 
 __all__ = [
     # Alternative for multiprocessing
@@ -150,13 +150,15 @@ def error_msg(e, detailed=True, seperator='\n'):
 
 
 class Worker(Process):
-    def __init__(self, f, inp, out, worker_id=None, cached_objects=None, detailed_error=True, progress=True):
+    def __init__(self, f, inp, out, worker_id=None, cached_inp=None, built_inp=None, detailed_error=True,
+                 progress=True):
         super(Worker, self).__init__()
         self.worker_id = worker_id
         self.inp = inp
         self.out = out
         self.f = f
-        self.cached_objects = cached_objects
+        self.cached_inp = cached_inp
+        self.built_inp = None if built_inp is None else {k: v() for k, v in built_inp.items()}
         self.detailed_error = detailed_error
         if progress:
             log('started worker-{}'.format('?' if worker_id is None else worker_id))
@@ -166,8 +168,10 @@ class Worker(Process):
             task_id, kwargs = self.inp.get()
             try:
                 if isinstance(kwargs, dict):
-                    if self.cached_objects is not None:
-                        kwargs.update(self.cached_objects)
+                    if self.cached_inp is not None:
+                        kwargs.update(self.cached_inp)
+                    if self.built_inp is not None:
+                        kwargs.update(self.built_inp)
                     res = self.f(**kwargs)
                 else:
                     res = self.f(*kwargs)
@@ -178,7 +182,7 @@ class Worker(Process):
 
 
 class Workers:
-    def __init__(self, f, num_workers=CPU_COUNT, cached_objects=None, progress=True, ignore_error=False):
+    def __init__(self, f, num_workers=CPU_COUNT, cached_inp=None, built_inp=None, progress=True, ignore_error=False):
         self.inp = Queue()
         self.out = Queue()
         self.workers = []
@@ -187,7 +191,7 @@ class Workers:
         self.ignore_error = ignore_error
         self.f = f
         for i in range(num_workers):
-            worker = Worker(f, self.inp, self.out, i, cached_objects, not ignore_error, progress)
+            worker = Worker(f, self.inp, self.out, i, cached_inp, built_inp, not ignore_error, progress)
             worker.start()
             self.workers.append(worker)
 
@@ -250,11 +254,10 @@ class Workers:
             log('terminated {} workers'.format(len(self.workers)))
 
 
-def work(f, tasks, num_workers=CPU_COUNT, cached_objects=None, progress=False, ordered=False,
+def work(f, tasks, num_workers=CPU_COUNT, cached_inp=None, built_inp=None, progress=False, ordered=False,
          res_only=True, ignore_error=False):
-    workers = Workers(f=f, num_workers=num_workers, cached_objects=cached_objects, progress=progress,
-                      ignore_error=ignore_error)
-    for d in workers.map(tasks=tasks, ordered=ordered, res_only=res_only):
+    workers = Workers(f, num_workers, cached_inp, built_inp, progress, ignore_error)
+    for d in workers.map(tasks, ordered, res_only):
         yield d
     workers.terminate()
 
@@ -303,7 +306,7 @@ def open_file(path, encoding='utf-8', compression=None):
         assert False, '{} not supported'.format(compression)
 
 
-def file_paths_of(path, pattern=".*\..*", progress=True):
+def file_paths_of(path, pattern=".*\..*", progress=False):
     matcher = re.compile(pattern)
     for p, dirs, files in os.walk(path):
         for file_name in files:
@@ -318,7 +321,7 @@ def file_paths_of(path, pattern=".*\..*", progress=True):
                         log('no permission to open {} <== {}'.format(file_name, file_path))
 
 
-def open_files(path, encoding='utf-8', compression=None, pattern=".*\..*", progress=True):
+def open_files(path, encoding='utf-8', compression=None, pattern=".*\..*", progress=False):
     for file_path in file_paths_of(path, pattern, progress):
         yield open_file(file_path, encoding, compression)
 
