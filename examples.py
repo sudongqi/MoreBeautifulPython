@@ -213,7 +213,7 @@ def main():
     json_file_path = path_join(this_dir(), 'data.json')
 
     # print_dict() is a superior pprint.pprint()
-    print_dict(load_json(json_file_path), indent=4)
+    prints(load_json(json_file_path), indent=4)
     '''
     {
         "quiz": {

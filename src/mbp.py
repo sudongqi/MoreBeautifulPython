@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.2.5'
+VERSION = '1.2.6'
 
 __all__ = [
     # Alternative for multiprocessing
@@ -29,7 +29,7 @@ __all__ = [
     'iterate', 'save_json', 'save_jsonl', 'open_file', 'file_paths_of', 'open_files',
     # Tools for summarizations
     'enclose', 'enclose_timer', 'error_msg',
-    'print_dict', 'print_line', 'print_table', 'build_table', 'print_iter',
+    'prints', 'print_line', 'print_table', 'build_table', 'print_iter',
     # Tools for simple statistics
     'timer', 'curr_date_time', 'avg', 'min_max_avg', 'n_min_max_avg', 'CPU_COUNT'
 ]
@@ -410,7 +410,7 @@ def instance_of(data, types):
     return isinstance(data, types)
 
 
-def print_dict(data, indent=4, value_width=50, sep=', ', kv_sep=': ', level=INFO, no_print=False):
+def prints(data, indent=4, value_width=50, sep=', ', kv_sep=': ', level=INFO, no_print=False):
     def indent_str(_level):
         return '\n' + ' ' * _level * indent
 
@@ -423,11 +423,11 @@ def print_dict(data, indent=4, value_width=50, sep=', ', kv_sep=': ', level=INFO
             L, R = '[', ']'
         elif instance_of(_data, tuple):
             L, R = '(', ')'
-        if instance_of(_data, {list, set, tuple}):
+        if instance_of(_data, {list, set}):
             acc = [L]
             total = 0
             for i, d in enumerate(_data):
-                if not instance_of(d, {int, str}):
+                if not instance_of(d, {int, str, tuple}):
                     acc.append(indent_str(l) + dfs(d, l) + (indent_str(l) if i != len(_data) - 1 else ''))
                     total = 0
                 else:
@@ -441,7 +441,7 @@ def print_dict(data, indent=4, value_width=50, sep=', ', kv_sep=': ', level=INFO
             acc = [L]
             for k, d in _data.items():
                 acc.append(indent_str(l) + quote_str(k) + kv_sep)
-                if instance_of(d, {list, dict, set, tuple}):
+                if instance_of(d, {list, dict, set}):
                     acc.append(dfs(d, l + 1) + sep)
                 else:
                     acc.append(quote_str(d) + sep)
