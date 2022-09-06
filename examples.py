@@ -233,18 +233,39 @@ def main():
     v_long = [i for i in range(100)]
     v_hybrid = v_short + [v_long] + v_short
     v_multi = [v_short, v_short, v_short]
-    v_nested = [[[0, 0], [1, 1], [2, 2]], [(0, 0), [1, 1], [2, 2]]]
+    v_nested = [[[0, 0], [1, 1], [2, 2]], [[0, 0], [1, 1], [2, 2]]]
     t_multi = [(1, 2, 3) for _ in range(3)]
     d1 = {'a': 'value', 'b': (1, 2, 3), 'c': v_short}
-    d2 = {'a': 'value', 'a very ........... long key': v_long, 'c': set(v_short)}
-    d3 = {'a': d1, 'b': d2}
-    d4 = {'a': d3, 'hybrid': v_hybrid}
-    num = 500
-    comment = "this is a test string"
-    comments = 'import sys\nimport os\nimport time\ndef test_f(a, b):\n\treturn a + b'
-    d5 = {'single-line': comment, 'multi-line': comments}
+    d2 = {'a': 'value', 'a very ........... long key': v_long, 'b': set(v_short)}
+    '''
+    {
+         "a": "value",
+         "a very ........... long key": [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,
+              22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,
+              49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,
+              76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99],
+         "b": {1,2,3,4,5,"x","z","y"}
+     }
+    '''
 
-    for x in [v_short, v_long, v_multi, v_hybrid, v_nested, t_multi, d1, d2, d3, d4, d5, num, comment]:
+    d3 = {'a': d1, 'b': d2, 'hybrid': v_hybrid}
+    num = 500
+    string = "this is a test string"
+    strings = 'import sys\nimport os\nimport time\ndef test_f(a, b):\n\treturn a + b'
+    d4 = {'single-line': string, 'multi-line': strings}
+    '''
+    {
+         "single-line": "this is a test string",
+         "multi-line": 
+             "import sys"
+             "import os"
+             "import time"
+             "def test_f(a, b):"
+             "	return a + b"
+     }
+    '''
+
+    for x in [v_short, v_long, v_multi, v_hybrid, v_nested, t_multi, d1, d2, d3, d4, num, string]:
         prints(x, shift=5)
 
     # load_jsonl() return an iterator of dictionary
@@ -295,4 +316,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
