@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.2.7'
+VERSION = '1.2.8'
 
 __all__ = [
     # Alternative for multiprocessing
@@ -22,13 +22,12 @@ __all__ = [
     'log', 'logger', 'get_logger', 'set_global_logger', 'reset_global_logger',
     'NOTSET', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL', 'SILENT',
     # Syntax sugar for pathlib
-    'dir_of', 'path_join', 'make_dir', 'make_dir_for', 'this_dir', 'exec_dir', 'lib_path', 'only_file_of',
+    'dir_of', 'join_path', 'make_dir', 'make_dir_for', 'this_dir', 'exec_dir', 'lib_path', 'only_file_of',
     # Tools for file loading & handling
-    'load_jsonl', 'load_json', 'load_txt',
-    'iterate', 'save_json', 'save_jsonl', 'open_file', 'file_paths_of', 'open_files',
+    'load_jsonl', 'load_json', 'load_txt', 'open_file', 'open_files',
+    'iterate', 'save_json', 'save_jsonl', 'file_paths_of', 'file_name_of',
     # Tools for summarizations
-    'enclose', 'enclose_timer', 'error_msg',
-    'prints', 'print_line', 'print_table', 'build_table', 'print_iter',
+    'enclose', 'enclose_timer', 'error_msg', 'prints', 'print_line', 'print_table', 'build_table', 'print_iter',
     # Tools for simple statistics
     'timer', 'curr_date_time', 'avg', 'min_max_avg', 'n_min_max_avg', 'CPU_COUNT'
 ]
@@ -310,7 +309,7 @@ def file_paths_of(path, pattern=".*\..*", progress=False):
     for p, dirs, files in os.walk(path):
         for file_name in files:
             if matcher.fullmatch(file_name):
-                file_path = path_join(p, file_name)
+                file_path = join_path(p, file_name)
                 try:
                     yield file_path
                     if progress:
@@ -431,7 +430,6 @@ def _prints(data, indent=4, width=80, level=INFO, shift=0, extra_indent=None, se
             marker_l, marker_r = '(', ')'
         elif collections_type == 2:
             marker_l, marker_r = '{', '}'
-
         tokens = []
         curr_line_count = [0 if extra_indent is None else extra_indent]
         first_line = [True]
@@ -516,7 +514,7 @@ def avg(data, key_f=None, first_n=None, sample_p=1.0, sample_seed=None):
     return n_min_max_avg(data, key_f, first_n, sample_p, sample_seed)[3]
 
 
-def strip_and_add_spaces(s):
+def _strip_and_add_spaces(s):
     if s == '':
         return ''
     s = s.strip()
@@ -530,7 +528,7 @@ def strip_and_add_spaces(s):
 def print_line(text_or_length='', wing_size=10, char='-', level=INFO, no_print=False):
     if isinstance(text_or_length, str):
         wing = char * wing_size
-        res = wing + strip_and_add_spaces(text_or_length) + wing
+        res = wing + _strip_and_add_spaces(text_or_length) + wing
         if not no_print:
             log(res, level=level)
         return res
@@ -546,7 +544,7 @@ def print_line(text_or_length='', wing_size=10, char='-', level=INFO, no_print=F
 class enclose(object):
     def __init__(self, text_or_length='', wing_size=10, char='=', top_margin=0, bottom_margin=1, use_timer=False,
                  level=INFO):
-        self.text_or_length = strip_and_add_spaces(text_or_length)
+        self.text_or_length = _strip_and_add_spaces(text_or_length)
         self.wing_size = wing_size
         self.top_margin = top_margin
         self.bottom_margin = bottom_margin
@@ -572,12 +570,16 @@ class enclose_timer(enclose):
         super().__init__(text_or_length, wing_size, char, top_margin, bottom_margin, True, level)
 
 
-def path_join(*args, **kwargs):
+def join_path(*args, **kwargs):
     return os.path.join(*args, **kwargs)
 
 
 def lib_path():
     return str(Path(__file__).absolute())
+
+
+def file_name_of(path):
+    return os.path.basename(path)
 
 
 def this_dir(move_up_or_sub_path=0, sub_path=None):
@@ -594,7 +596,7 @@ def dir_of(file_path, move_up=0, sub_path=None):
         curr_path_obj = curr_path_obj.parent
     res = str(curr_path_obj.absolute())
     if sub_path is not None:
-        res = path_join(res, sub_path)
+        res = join_path(res, sub_path)
     return res
 
 
@@ -602,7 +604,7 @@ def only_file_of(dir_path):
     if os.path.isdir(dir_path):
         sub_paths = os.listdir(dir_path)
         assert len(sub_paths) == 1, 'there are more than one files/dirs in {}'.format(dir_path)
-        return path_join(dir_path, sub_paths[0])
+        return join_path(dir_path, sub_paths[0])
     return dir_path
 
 

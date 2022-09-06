@@ -1,7 +1,7 @@
 import sys
 import time
 import random
-from mbp import *
+from src.mbp import *
 
 
 # test function for multiprocessing
@@ -173,7 +173,7 @@ def main():
         # this_dir() return the directory of the current file
         log(this_dir())
         # path_join() == os.path.join()
-        log(path_join(this_dir(), 'a', 'b', 'c.file'))
+        log(join_path(this_dir(), 'a', 'b', 'c.file'))
         # dir_of() find the directory of a file
         log(dir_of(__file__, move_up=2))
         # dir_of() can also extend a path
@@ -184,6 +184,8 @@ def main():
         log(lib_path())
         # only_file_of() return the path of the only file in a folder
         log(only_file_of(this_dir(2, 'data')))
+        # file_name_of() == os.path.basename()
+        log(file_name_of(__file__))
     '''
     ========== path ==========
     C:\\Users\sudon\MoreBeautifulPython
@@ -193,6 +195,7 @@ def main():
     C:\\Users\sudon\MoreBeautifulPython
     c:\\users\sudon\morebeautifulpython\src\mbp.py
     C:\\Users\data
+    examples.py
     ==========================
     '''
 
@@ -209,8 +212,8 @@ def main():
     ==================================
     '''
 
-    jsonl_file_path = path_join(this_dir(), 'data.jsonl')
-    json_file_path = path_join(this_dir(), 'data.json')
+    jsonl_file_path = join_path(this_dir(), 'data.jsonl')
+    json_file_path = join_path(this_dir(), 'data.json')
 
     # print_dict() is a superior pprint.pprint()
     prints(load_json(json_file_path), indent=4)
@@ -228,7 +231,7 @@ def main():
     }
     '''
 
-    # other prints() examples, see log
+    # other prints() examples, see log for details
     v_short = [1, 2, 3, 4, 5, "x", "y", "z"]
     v_long = [i for i in range(100)]
     v_hybrid = v_short + [v_long] + v_short
