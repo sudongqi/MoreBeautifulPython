@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.2.6'
+VERSION = '1.2.7'
 
 __all__ = [
     # Alternative for multiprocessing
@@ -25,7 +25,7 @@ __all__ = [
     # Syntax sugar for pathlib
     'dir_of', 'path_join', 'make_dir', 'make_dir_for', 'this_dir', 'exec_dir', 'lib_path', 'only_file_of',
     # Tools for file loading & handling
-    'load_jsonl', 'load_json', 'load_csv', 'load_tsv', 'load_txt',
+    'load_jsonl', 'load_json', 'load_txt',
     'iterate', 'save_json', 'save_jsonl', 'open_file', 'file_paths_of', 'open_files',
     # Tools for summarizations
     'enclose', 'enclose_timer', 'error_msg',
@@ -354,19 +354,6 @@ def load_txt(path, encoding="utf-8", first_n=None, sample_p=1.0, sample_seed=Non
             yield line.rstrip()
 
 
-def load_csv(path, encoding="utf-8", delimiter=',', first_n=None, sample_p=1.0, sample_seed=None,
-             report_n=None, compression=None):
-    csv.field_size_limit(10000000)
-    with open_file(path, encoding, compression) as f:
-        for d in iterate(csv.reader(f, delimiter=delimiter), first_n, sample_p, sample_seed, report_n):
-            yield d
-
-
-def load_tsv(path, encoding="utf-8", first_n=None, sample_p=1.0, sample_seed=None, report_n=None, compression=None):
-    for d in load_csv(path, encoding, '/t', first_n, sample_p, sample_seed, report_n, compression):
-        yield d
-
-
 def build_table(rows, column_names=None, space=3):
     assert space >= 1, 'column_gap_size must be >= 1'
 
@@ -404,56 +391,103 @@ def print_table(rows, column_names=None, space=3, level=INFO):
     print_iter(build_table(rows, column_names, space), level=level)
 
 
-def instance_of(data, types):
-    if isinstance(types, set) or isinstance(types, dict) or isinstance(types, list):
-        return any(isinstance(data, t) for t in types)
-    return isinstance(data, types)
+def type_in(data, types):
+    if isinstance(types, list):
+        for idx, _type in enumerate(types):
+            if isinstance(data, _type):
+                return idx
+    return None
 
 
-def prints(data, indent=4, value_width=50, sep=', ', kv_sep=': ', level=INFO, no_print=False):
-    def indent_str(_level):
-        return '\n' + ' ' * _level * indent
+def prints(data, indent=4, width=80, shift=0, sep=',', quote='"', level=INFO):
+    _prints(data, indent, width, level, shift, None, sep, quote)
+    log('', level=level)
 
-    def quote_str(s):
-        return ('"' + s + '"') if isinstance(s, str) else str(s)
 
-    def dfs(_data, l):
-        L, R = '{', '}'
-        if instance_of(_data, list):
-            L, R = '[', ']'
-        elif instance_of(_data, tuple):
-            L, R = '(', ')'
-        if instance_of(_data, {list, set}):
-            acc = [L]
-            total = 0
-            for i, d in enumerate(_data):
-                if not instance_of(d, {int, str, tuple}):
-                    acc.append(indent_str(l) + dfs(d, l) + (indent_str(l) if i != len(_data) - 1 else ''))
-                    total = 0
+def _prints(data, indent=4, width=80, level=INFO, shift=0, extra_indent=None, sep=',', quote='"'):
+    sep_length = len(sep)
+
+    def short_data(_d):
+        r = type_in(_d, [int, float, str])
+        if r == 2:
+            return not any(True for ch in _d if ch == '\n')
+        return r is not None
+
+    def _s(string):
+        return quote + string + quote if isinstance(string, str) else str(string)
+
+    def _log(*args, **kwargs):
+        kwargs['level'] = level
+        kwargs['end'] = ''
+        log(*args, **kwargs)
+
+    shift_str = shift * ' '
+
+    collections_type = type_in(data, [list, tuple, set])
+    if short_data(data):
+        _log(shift_str + _s(data))
+    elif collections_type is not None:
+        marker_l, marker_r = '[', ']'
+        if collections_type == 1:
+            marker_l, marker_r = '(', ')'
+        elif collections_type == 2:
+            marker_l, marker_r = '{', '}'
+
+        tokens = []
+        curr_line_count = [0 if extra_indent is None else extra_indent]
+        first_line = [True]
+
+        def flush_line_str(_tokens):
+            line = ''.join(_tokens)
+            if first_line[0]:
+                line = line
+                first_line[0] = False
+            else:
+                line = shift_str + ' ' + line
+            _log(line)
+            _tokens.clear()
+            curr_line_count[0] = 0
+
+        _log('{}{}'.format(('' if first_line[0] and extra_indent is not None else shift_str), marker_l))
+        for idx, d in enumerate(data):
+            if not short_data(d):
+                if tokens:
+                    flush_line_str(tokens)
+                    _log('\n')
+                if idx == 0:
+                    _prints(d, indent, width, level, shift + 1, 0, sep, quote)
                 else:
-                    total += len(str(d)) + 2
-                    if total >= value_width:
-                        acc.append('\n' + ' ' * l * indent)
-                        total = 0
-                    acc.append((quote_str(d) + sep) if i != len(_data) - 1 else quote_str(d))
-            acc.append(R)
-        elif isinstance(_data, dict):
-            acc = [L]
-            for k, d in _data.items():
-                acc.append(indent_str(l) + quote_str(k) + kv_sep)
-                if instance_of(d, {list, dict, set}):
-                    acc.append(dfs(d, l + 1) + sep)
-                else:
-                    acc.append(quote_str(d) + sep)
-            acc.append(indent_str(l - 1) + R)
-        else:
-            assert False, 'format not supported'
-        return ''.join(acc)
-
-    res = dfs(data, l=1)
-    if no_print:
-        return res
-    log(res, level=level)
+                    _prints(d, indent, width, level, shift + 1, None, sep, quote)
+                if idx != len(data) - 1:
+                    _log('{}\n'.format(sep))
+            else:
+                str_d = _s(d)
+                if curr_line_count[0] > width:
+                    flush_line_str(tokens)
+                    _log('\n')
+                curr_line_count[0] += len(str_d) + sep_length
+                tokens.append(str_d)
+                if idx != len(data) - 1:
+                    tokens.append(sep)
+        flush_line_str(tokens)
+        _log(marker_r)
+    elif isinstance(data, dict):
+        first_line = [True]
+        _log(('' if first_line[0] and extra_indent is not None else shift_str) + '{')
+        kv = data.items()
+        for idx, (k, v) in enumerate(kv):
+            if short_data(v):
+                _log('{}{}: {}{}'.format('\n' + shift_str + indent * ' ', _s(k), _s(v), sep))
+            else:
+                _log('{}{}: '.format('\n' + shift_str + indent * ' ', _s(k)))
+                n_shift = shift + indent if isinstance(v, dict) else shift + indent * 2
+                _prints(v, indent, width, level, n_shift, len(_s(k)) + 2 - indent, sep, quote)
+                if idx != len(kv) - 1:
+                    _log(sep)
+        _log('\n' + shift_str + '}')
+    elif isinstance(data, str):
+        for s in data.split('\n'):
+            _log('\n{}{}'.format(shift_str, quote + s + quote))
 
 
 def print_iter(data, level=INFO):

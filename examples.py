@@ -1,7 +1,7 @@
 import sys
 import time
 import random
-from mbp import *
+from src.mbp import *
 
 
 # test function for multiprocessing
@@ -219,14 +219,33 @@ def main():
         "quiz": {
             "maths": {
                 "q1": {
-                    "question": "5 + 7 = ?", 
-                    "options": ["10", "11", "12", "13"], 
-                    "answer": "12", 
-                }, 
-            }, 
-        }, 
+                    "question": "5 + 7 = ?",
+                    "options": ["10","11","12","13"],
+                    "answer": "12",
+                }
+            }
+        }
     }
     '''
+
+    # other prints() examples, see log
+    v_short = [1, 2, 3, 4, 5, "x", "y", "z"]
+    v_long = [i for i in range(100)]
+    v_hybrid = v_short + [v_long] + v_short
+    v_multi = [v_short, v_short, v_short]
+    v_nested = [[[0, 0], [1, 1], [2, 2]], [(0, 0), [1, 1], [2, 2]]]
+    t_multi = [(1, 2, 3) for _ in range(3)]
+    d1 = {'a': 'value', 'b': (1, 2, 3), 'c': v_short}
+    d2 = {'a': 'value', 'a very ........... long key': v_long, 'c': set(v_short)}
+    d3 = {'a': d1, 'b': d2}
+    d4 = {'a': d3, 'hybrid': v_hybrid}
+    num = 500
+    comment = "this is a test string"
+    comments = 'import sys\nimport os\nimport time\ndef test_f(a, b):\n\treturn a + b'
+    d5 = {'single-line': comment, 'multi-line': comments}
+
+    for x in [v_short, v_long, v_multi, v_hybrid, v_nested, t_multi, d1, d2, d3, d4, d5, num, comment]:
+        prints(x, shift=5)
 
     # load_jsonl() return an iterator of dictionary
     data = list(load_jsonl(jsonl_file_path))
@@ -276,3 +295,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
