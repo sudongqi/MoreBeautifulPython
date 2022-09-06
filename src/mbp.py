@@ -1,7 +1,6 @@
 import re
 import sys
 import os
-import csv
 import random
 import json
 import time

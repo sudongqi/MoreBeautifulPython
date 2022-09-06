@@ -1,7 +1,7 @@
 import sys
 import time
 import random
-from src.mbp import *
+from mbp import *
 
 
 # test function for multiprocessing
