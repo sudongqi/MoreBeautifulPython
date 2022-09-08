@@ -9,17 +9,18 @@ import bz2
 import inspect
 import itertools
 import traceback
+from io import StringIO
 from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.2.8'
+VERSION = '1.2.9'
 
 __all__ = [
     # Alternative for multiprocessing
     'Workers', 'work',
     # Alternative for logging
-    'log', 'logger', 'get_logger', 'set_global_logger', 'reset_global_logger',
+    'log', 'logger', 'get_logger', 'set_global_logger', 'reset_global_logger', 'recorder',
     'NOTSET', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL', 'SILENT',
     # Syntax sugar for pathlib
     'dir_of', 'join_path', 'make_dir', 'make_dir_for', 'this_dir', 'exec_dir', 'lib_path', 'only_file_of',
@@ -27,7 +28,7 @@ __all__ = [
     'load_jsonl', 'load_json', 'load_txt', 'open_file', 'open_files',
     'iterate', 'save_json', 'save_jsonl', 'file_paths_of', 'file_name_of',
     # Tools for summarizations
-    'enclose', 'enclose_timer', 'error_msg', 'prints', 'print_line', 'print_table', 'build_table', 'print_iter',
+    'enclose', 'enclose_timer', 'error_msg', 'prints', 'print_line', 'print_table', 'print_iter',
     # Tools for simple statistics
     'timer', 'curr_date_time', 'avg', 'min_max_avg', 'n_min_max_avg', 'CPU_COUNT'
 ]
@@ -129,6 +130,29 @@ def curr_date_time():
 
 def log(msg, level=INFO, file=None, end=None, flush=False):
     LOG(msg, level, file, end, flush)
+
+
+class recorder(object):
+    def __init__(self, tape, raw=False):
+        assert tape == [], '1st argument must be an empty list'
+        global LOG
+        global CONTEXT_LOGGER_SET
+        self.buffer = StringIO()
+        self.logger = logger(file=self.buffer, can_overwrite=False)
+        self.tape = tape
+        self.raw = raw
+
+    def __enter__(self):
+        self.logger.__enter__()
+
+    def __exit__(self, _type, value, _traceback):
+        buffer_value = self.buffer.getvalue()
+        if self.raw:
+            self.tape.append(buffer_value)
+        else:
+            buffer_value = buffer_value.rstrip().split('\n')
+            self.tape.extend(buffer_value)
+        self.logger.__exit__(_type, value, _traceback)
 
 
 def make_dir(path):
@@ -270,8 +294,8 @@ class timer(object):
         self.start = time.time()
 
     def __exit__(self, _type, value, _traceback):
-        log('{}took {:.3f} ms'.format('' if self.msg == '' else self.msg + ' ==> ', (time.time() - self.start) * 1000),
-            level=self.level)
+        log('{}took {:.3f} ms'.format(
+            '' if self.msg == '' else self.msg + ' ==> ', (time.time() - self.start) * 1000), level=self.level)
 
 
 def iterate(data, first_n=None, sample_p=1.0, sample_seed=None, report_n=None):
@@ -346,13 +370,15 @@ def load_jsonl(path, encoding="utf-8", first_n=None, sample_p=1.0, sample_seed=N
             yield json.loads(line)
 
 
-def load_txt(path, encoding="utf-8", first_n=None, sample_p=1.0, sample_seed=None, report_n=None, compression=None):
+def load_txt(path, raw=False, encoding="utf-8", first_n=None, sample_p=1.0, sample_seed=None, report_n=None,
+             compression=None):
     with open_file(path, encoding, compression) as f:
         for line in iterate(f, first_n, sample_p, sample_seed, report_n):
-            yield line.rstrip()
+            if not raw:
+                yield line.rstrip()
 
 
-def build_table(rows, column_names=None, space=3):
+def _build_table(rows, column_names=None, space=3):
     assert space >= 1, 'column_gap_size must be >= 1'
 
     rows = [[str(r) for r in row] for row in rows]
@@ -385,8 +411,11 @@ def build_table(rows, column_names=None, space=3):
     return res
 
 
-def print_table(rows, column_names=None, space=3, level=INFO):
-    print_iter(build_table(rows, column_names, space), level=level)
+def print_table(rows, column_names=None, space=3, level=INFO, no_print=False):
+    res = _build_table(rows, column_names, space)
+    if not no_print:
+        print_iter(res, level=level)
+    return res
 
 
 def type_in(data, types):
@@ -397,94 +426,111 @@ def type_in(data, types):
     return None
 
 
-def prints(data, indent=4, width=80, shift=0, sep=',', quote='"', level=INFO):
-    _prints(data, indent, width, level, shift, None, sep, quote)
-    log('', level=level)
+def prints(data, indent=4, width=80, shift=0, sep=',', quote='"', level=INFO, no_print=False):
+    if no_print:
+        res = []
+        with recorder(res):
+            _prints(data, indent, width, level, shift, None, sep, quote)
+        return res
+    else:
+        _prints(data, indent, width, level, shift, None, sep, quote)
+        log('', level=level)
 
 
 def _prints(data, indent=4, width=80, level=INFO, shift=0, extra_indent=None, sep=',', quote='"'):
     sep_length = len(sep)
+    shift_str = shift * ' '
 
-    def short_data(_d):
+    def is_short_data(_d):
         r = type_in(_d, [int, float, str])
         if r == 2:
             return not any(True for ch in _d if ch == '\n')
         return r is not None
 
-    def _s(string):
+    def put_quote(string):
         return quote + string + quote if isinstance(string, str) else str(string)
 
-    def _log(*args, **kwargs):
+    def log_raw(*args, **kwargs):
         kwargs['level'] = level
         kwargs['end'] = ''
         log(*args, **kwargs)
 
-    shift_str = shift * ' '
+    # extra_indent=None, shift
+    # extra_indent=0,    shift
+    # extra_indent>0,    less_shift
 
-    collections_type = type_in(data, [list, tuple, set])
-    if short_data(data):
-        _log(shift_str + _s(data))
-    elif collections_type is not None:
-        marker_l, marker_r = '[', ']'
-        if collections_type == 1:
-            marker_l, marker_r = '(', ')'
-        elif collections_type == 2:
-            marker_l, marker_r = '{', '}'
-        tokens = []
-        curr_line_count = [0 if extra_indent is None else extra_indent]
-        first_line = [True]
+    def print_cache(_tokens, _shift, _extra_indent):
+        line = sep.join(_tokens)
+        if _extra_indent is None:
+            line = _shift * ' ' + line
+        log_raw(line)
 
-        def flush_line_str(_tokens):
-            line = ''.join(_tokens)
-            if first_line[0]:
-                line = line
-                first_line[0] = False
-            else:
-                line = shift_str + ' ' + line
-            _log(line)
-            _tokens.clear()
-            curr_line_count[0] = 0
-
-        _log('{}{}'.format(('' if first_line[0] and extra_indent is not None else shift_str), marker_l))
-        for idx, d in enumerate(data):
-            if not short_data(d):
-                if tokens:
-                    flush_line_str(tokens)
-                    _log('\n')
-                if idx == 0:
-                    _prints(d, indent, width, level, shift + 1, 0, sep, quote)
-                else:
-                    _prints(d, indent, width, level, shift + 1, None, sep, quote)
-                if idx != len(data) - 1:
-                    _log('{}\n'.format(sep))
-            else:
-                str_d = _s(d)
-                if curr_line_count[0] > width:
-                    flush_line_str(tokens)
-                    _log('\n')
-                curr_line_count[0] += len(str_d) + sep_length
-                tokens.append(str_d)
-                if idx != len(data) - 1:
-                    tokens.append(sep)
-        flush_line_str(tokens)
-        _log(marker_r)
-    elif isinstance(data, dict):
-        first_line = [True]
-        _log(('' if first_line[0] and extra_indent is not None else shift_str) + '{')
-        kv = data.items()
-        for idx, (k, v) in enumerate(kv):
-            if short_data(v):
-                _log('{}{}: {}{}'.format('\n' + shift_str + indent * ' ', _s(k), _s(v), sep))
-            else:
-                _log('{}{}: '.format('\n' + shift_str + indent * ' ', _s(k)))
-                n_shift = shift + indent if isinstance(v, dict) else shift + indent * 2
-                _prints(v, indent, width, level, n_shift, len(_s(k)) + 2 - indent, sep, quote)
-                if idx != len(kv) - 1:
-                    _log(sep)
-        _log('\n' + shift_str + '}')
+    list_like_type = type_in(data, [list, tuple, set])
+    if is_short_data(data):
+        log_raw(shift_str + put_quote(data))
     elif isinstance(data, str):
-        for s in data.split('\n'):
-            _log('\n{}{}'.format(shift_str, quote + s + quote))
+        for idx, s in enumerate(data.split('\n')):
+            if idx == 0 and extra_indent is None:
+                log_raw('{}'.format(shift_str))
+            elif idx != 0 or extra_indent is None:
+                log_raw('\n{}'.format(shift_str))
+            log_raw('{}'.format(quote + s + quote))
+    elif list_like_type is not None:
+        marker_l, marker_r = '[', ']'
+        if list_like_type == 1:
+            marker_l, marker_r = '(', ')'
+        elif list_like_type == 2:
+            marker_l, marker_r = '{', '}'
+        if extra_indent is None:
+            marker_l = shift_str + marker_l
+        if not data:
+            log_raw(marker_l + marker_r)
+
+        cache_size = 0 if extra_indent is None else extra_indent
+        cache = []
+        log_raw(marker_l)
+        # group data
+        for idx, d in enumerate(data):
+            if is_short_data(d):
+                if cache_size > width:
+                    cache.append([])
+                    cache_size = 0
+                str_d = put_quote(d)
+                if not cache or not isinstance(cache[-1], list):
+                    cache.append([])
+                cache[-1].append(str_d)
+                cache_size += len(str_d) + sep_length
+            else:
+                cache.append(idx)
+                cache_size = 0
+        # log
+        for idx, d in enumerate(cache):
+            if isinstance(d, list):
+                print_cache(d, shift + 1, 0 if idx == 0 else None)
+            else:
+                _prints(data[d], indent, width, level, shift + 1, 0 if idx == 0 else None, sep, quote)
+            if idx != len(cache) - 1:
+                log_raw('{}\n'.format(sep))
+        log_raw(marker_r)
+    elif isinstance(data, dict):
+        marker_l = '{\n'
+        if extra_indent is None:
+            marker_l = shift_str + marker_l
+        log_raw(marker_l)
+        kv = data.items()
+        indent_str = indent * ' '
+        for idx, (k, v) in enumerate(kv):
+            if is_short_data(v):
+                log_raw('{}{}: {}'.format(shift_str + indent_str, put_quote(k), put_quote(v)))
+            else:
+                log_raw('{}{}: '.format(shift_str + indent_str, put_quote(k)))
+                v_indent = shift + indent if isinstance(v, dict) else shift + indent * 2 + 1
+                _prints(v, indent, width, level, v_indent, len(put_quote(k)) + 2 - indent, sep, quote)
+            if idx != len(kv) - 1:
+                log_raw(sep + '\n')
+            else:
+                log_raw('\n')
+        log_raw(shift_str + '}')
 
 
 def print_iter(data, level=INFO):
@@ -525,20 +571,15 @@ def _strip_and_add_spaces(s):
     return s
 
 
-def print_line(text_or_length='', wing_size=10, char='-', level=INFO, no_print=False):
-    if isinstance(text_or_length, str):
-        wing = char * wing_size
-        res = wing + _strip_and_add_spaces(text_or_length) + wing
-        if not no_print:
-            log(res, level=level)
-        return res
-    elif isinstance(text_or_length, int):
-        res = char * text_or_length
-        if not no_print:
-            log(res, level=level)
-        return res
-    else:
-        assert False, 'text_or_length should be an instance of either str or int'
+def print_line(text_or_wing_size='', wing_size=10, char='-', level=INFO, no_print=False):
+    if isinstance(text_or_wing_size, int):
+        text_or_wing_size = ''
+        wing_size = text_or_wing_size
+    wing = char * wing_size
+    res = wing + _strip_and_add_spaces(text_or_wing_size) + wing
+    if not no_print:
+        log(res, level=level)
+    return res
 
 
 class enclose(object):
@@ -578,25 +619,24 @@ def lib_path():
     return str(Path(__file__).absolute())
 
 
-def file_name_of(path):
-    return os.path.basename(path)
+def file_name_of(file_path):
+    return os.path.basename(file_path)
 
 
-def this_dir(move_up_or_sub_path=0, sub_path=None):
+def this_dir(go_up_or_go_to=0, go_to=None):
     caller_module = inspect.getmodule(inspect.stack()[1][0])
-    if isinstance(move_up_or_sub_path, str):
-        assert sub_path is None, 'if 1st argument is a string, 2nd argument should not be specified'
-        return dir_of(caller_module.__file__, move_up=0, sub_path=move_up_or_sub_path)
-    return dir_of(caller_module.__file__, move_up=move_up_or_sub_path, sub_path=sub_path)
+    if isinstance(go_up_or_go_to, str):
+        return dir_of(caller_module.__file__, go_up=0, go_to=go_up_or_go_to)
+    return dir_of(caller_module.__file__, go_up=go_up_or_go_to, go_to=go_to)
 
 
-def dir_of(file_path, move_up=0, sub_path=None):
+def dir_of(file_path, go_up=0, go_to=None):
     curr_path_obj = Path(file_path)
-    for i in range(move_up + 1):
+    for i in range(go_up + 1):
         curr_path_obj = curr_path_obj.parent
     res = str(curr_path_obj.absolute())
-    if sub_path is not None:
-        res = join_path(res, sub_path)
+    if go_to is not None:
+        res = join_path(res, go_to)
     return res
 
 

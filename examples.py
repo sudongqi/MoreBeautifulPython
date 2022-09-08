@@ -1,7 +1,7 @@
 import sys
 import time
 import random
-from src.mbp import *
+from mbp import *
 
 
 # test function for multiprocessing
@@ -145,28 +145,29 @@ def main():
     took 346.133 ms
     '''
 
-    # use cached_inp = {'fixed_input': value, ...} to avoid pickling of heavy objects
-    vec = [x for x in range(1000000)]
-    with timer('work()'):
-        a = list(work(test_f2, num_workers=1, ordered=True, tasks=iter((i, vec) for i in range(30))))
-    with timer('work() with cached_inp'):
-        b = list(work(test_f2, num_workers=1, ordered=True, tasks=iter({'idx': i} for i in range(30)),
-                      cached_inp={'vec': vec}))
-    assert a == b
-    '''
-    work() ==> took 1904.171 ms
-    work() with cached_inp ==> took 100.659 ms
-    '''
+    with enclose("work() with cache_inp"):
+        # use cached_inp = {'fixed_input': value, ...} to avoid pickling of heavy objects
+        vec = [x for x in range(1000000)]
+        with timer('work()'):
+            a = list(work(test_f2, num_workers=1, ordered=True, tasks=iter((i, vec) for i in range(30))))
+        with timer('work() with cached_inp'):
+            b = list(work(test_f2, num_workers=1, ordered=True, tasks=iter({'idx': i} for i in range(30)),
+                          cached_inp={'vec': vec}))
+        assert a == b
 
-    def build_vec():
-        return [x for x in range(1000000)]
+        def build_vec():
+            return [x for x in range(1000000)]
 
-    # for objects that can not be pickled, use built_inp
-    with timer('work() with built_inp'):
-        tasks = iter({'idx': i} for i in range(30))
-        list(work(test_f2, num_workers=1, ordered=True, tasks=tasks, built_inp={'vec': build_vec}))
+        # for objects that can not be pickled, use built_inp
+        with timer('work() with built_inp'):
+            tasks = iter({'idx': i} for i in range(30))
+            list(work(test_f2, num_workers=1, ordered=True, tasks=tasks, built_inp={'vec': build_vec}))
     '''
-    work() with built_inp ==> took 128.602 ms
+    ========== work() with cache_inp ==========
+    work() ==> took 1889.645 ms
+    work() with cached_inp ==> took 165.947 ms
+    work() with built_inp ==> took 135.059 ms
+    ===========================================
     '''
 
     with enclose('path'):
@@ -175,7 +176,7 @@ def main():
         # path_join() == os.path.join()
         log(join_path(this_dir(), 'a', 'b', 'c.file'))
         # dir_of() find the directory of a file
-        log(dir_of(__file__, move_up=2))
+        log(dir_of(__file__, go_up=2))
         # dir_of() can also extend a path
         log(dir_of(__file__, 0, 'hello.txt'))
         # exec_dir() return the directory where you run your python command
@@ -212,66 +213,59 @@ def main():
     ==================================
     '''
 
-    jsonl_file_path = join_path(this_dir(), 'data.jsonl')
-    json_file_path = join_path(this_dir(), 'data.json')
-
-    # print_dict() is a superior pprint.pprint()
-    prints(load_json(json_file_path), indent=4)
+    # prints() is a superior pprint()
+    with enclose("prints()"):
+        multi_line = "line1\n▪️line2\n▪️line3"
+        long_list = [i for i in range(70)]
+        nested_list = [[[1, 2, 3], [4, 5, 6]]]
+        hybrid_list = [{'abc', 'bcd'}] + long_list + [(1, 2, 3)] + [[[multi_line, multi_line]]] + [0, 1, 2]
+        hybrid_dict = {'a': hybrid_list, 'b': {'c': nested_list, 'd': {'a very ........... long key': long_list}}}
+        prints(hybrid_dict, shift=5)
     '''
-    {
-        "quiz": {
-            "maths": {
-                "q1": {
-                    "question": "5 + 7 = ?",
-                    "options": ["10","11","12","13"],
-                    "answer": "12",
-                }
-            }
-        }
-    }
-    '''
-
-    # other prints() examples, see log for details
-    v_short = [1, 2, 3, 4, 5, "x", "y", "z"]
-    v_long = [i for i in range(100)]
-    v_hybrid = v_short + [v_long] + v_short
-    v_multi = [v_short, v_short, v_short]
-    v_nested = [[[0, 0], [1, 1], [2, 2]], [[0, 0], [1, 1], [2, 2]]]
-    t_multi = [(1, 2, 3) for _ in range(3)]
-    d1 = {'a': 'value', 'b': (1, 2, 3), 'c': v_short}
-    d2 = {'a': 'value', 'a very ........... long key': v_long, 'b': set(v_short)}
-    '''
-    {
-         "a": "value",
-         "a very ........... long key": [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,
-              22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,
-              49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,
-              76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99],
-         "b": {1,2,3,4,5,"x","z","y"}
+    ========== prints() ==========
+     {
+         "a": [{"abc","bcd"},
+               0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,
+               31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,
+               58,59,60,61,62,63,64,65,66,67,68,69,
+               (1,2,3),
+               [["line1"
+                 "▪️line2"
+                 "▪️line3",
+                 "line1"
+                 "▪️line2"
+                 "▪️line3"]],
+               0,1,2],
+         "b": {
+             "c": [[[1,2,3],
+                    [4,5,6]]],
+             "d": {
+                 "a very ........... long key": [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,
+                       22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,
+                       49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69]
+             }
+         }
      }
+    ==============================
     '''
 
-    d3 = {'a': d1, 'b': d2, 'hybrid': v_hybrid}
-    num = 500
-    string = "this is a test string"
-    strings = 'import sys\nimport os\nimport time\ndef test_f(a, b):\n\treturn a + b'
-    d4 = {'single-line': string, 'multi-line': strings}
+    # recorder() save all logs into a list
+    with enclose('recorder()'):
+        tape = []
+        with recorder(tape):
+            log('9 8 7 6 5 4 3 2 1')
+            log('ok', end='')
+        tape[0] = tape[0][::-1]
+        print_iter(tape)
     '''
-    {
-         "single-line": "this is a test string",
-         "multi-line": 
-             "import sys"
-             "import os"
-             "import time"
-             "def test_f(a, b):"
-             "	return a + b"
-     }
+    ========== recorder() ==========
+    1 2 3 4 5 6 7 8 9
+    ok
+    ================================
     '''
-
-    for x in [v_short, v_long, v_multi, v_hybrid, v_nested, t_multi, d1, d2, d3, d4, num, string]:
-        prints(x, shift=5)
 
     # load_jsonl() return an iterator of dictionary
+    jsonl_file_path = join_path(this_dir(), 'data.jsonl')
     data = list(load_jsonl(jsonl_file_path))
 
     # draw_line() will draw a line
@@ -304,7 +298,7 @@ def main():
     '''
 
     # get 3 key statistics from an iterator at once
-    with enclose_timer('simple statistics'):
+    with enclose('simple statistics'):
         log(n_min_max_avg(load_jsonl(jsonl_file_path), key_f=lambda x: x['age']))
         log(min_max_avg(load_jsonl(jsonl_file_path), key_f=lambda x: x['age']))
         log(avg(load_jsonl(jsonl_file_path), key_f=lambda x: x['age']))
