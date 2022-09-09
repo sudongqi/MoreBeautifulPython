@@ -220,11 +220,8 @@ def main():
         long_list = [i for i in range(70)]
         nested_list = [[[1, 2, 3], [4, 5, 6]]]
         hybrid_list = [{'abc', 'bcd'}] + long_list + [(1, 2, 3)] + [[[multi_line, multi_line]]] + [0, 1, 2]
-        hybrid_dict = {'a': hybrid_list,
-                       '': 'empty_key',
-                       'c': {'d': nested_list,
-                             'e': long_strings,
-                             'f': {'a longer key': long_list}}}
+        hybrid_dict = {'a': hybrid_list, '': 'empty_key',
+                       'c': {'d': nested_list, 'e': long_strings, 'f': {'a longer key': long_list}}}
         prints(hybrid_dict)
     '''
     ========== prints() ==========
@@ -279,8 +276,11 @@ def main():
     jsonl_file_path = join_path(this_dir(), 'data.jsonl')
     data = list(load_jsonl(jsonl_file_path))
 
-    # draw_line() will draw a line
+    # print_line() will draw a line
     print_line()
+    '''
+    --------------------
+    '''
 
     # print_iter() print items from an iterator one by one
     with enclose('print_list()'):
@@ -294,7 +294,6 @@ def main():
     '''
 
     # print_table() can adjust column width automatically
-    # print_table(rows) == print_iter(build_table(rows))
     with enclose('print_table()'):
         rows = [list(d.values()) for d in data]
         column_names = list(data[0].keys())
@@ -307,6 +306,11 @@ def main():
     3    Lorelei   72
     ===================================
     '''
+
+    # print_table() can also handle tables inside table
+    with enclose('tables inside table'):
+        rows = [['total', 140], ['stats', [['a: ', 70], ['b: ', 20], ['c: ', 50]]]]
+        print_table(rows)
 
     # get 3 key statistics from an iterator at once
     with enclose('simple statistics'):
