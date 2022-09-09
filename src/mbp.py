@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.2.9'
+VERSION = '1.3.0'
 
 __all__ = [
     # Alternative for multiprocessing
@@ -328,7 +328,7 @@ def open_file(path, encoding='utf-8', compression=None):
         assert False, '{} not supported'.format(compression)
 
 
-def file_paths_of(path, pattern=".*\..*", progress=False):
+def file_paths_of(path, pattern=".*", progress=False):
     matcher = re.compile(pattern)
     for p, dirs, files in os.walk(path):
         for file_name in files:
@@ -343,7 +343,7 @@ def file_paths_of(path, pattern=".*\..*", progress=False):
                         log('no permission to open {} <== {}'.format(file_name, file_path))
 
 
-def open_files(path, encoding='utf-8', compression=None, pattern=".*\..*", progress=False):
+def open_files(path, encoding='utf-8', compression=None, pattern=".*", progress=False):
     for file_path in file_paths_of(path, pattern, progress):
         yield open_file(file_path, encoding, compression)
 
@@ -378,41 +378,62 @@ def load_txt(path, raw=False, encoding="utf-8", first_n=None, sample_p=1.0, samp
                 yield line.rstrip()
 
 
-def _build_table(rows, column_names=None, space=3):
-    assert space >= 1, 'column_gap_size must be >= 1'
+_COLLECTION_TYPES = [list, set, tuple, dict]
 
-    rows = [[str(r) for r in row] for row in rows]
 
+def _build_table(rows, space=3, cell_space=1, filler=' '):
+    space = max(space, 1)
+
+    _rows = []
+    rows_type = type_in(rows, _COLLECTION_TYPES)
+    if not rows_type:
+        return [str(rows)]
+    elif rows_type == 4:
+        for k, v in rows.items():
+            r = _build_table(v, cell_space, cell_space, filler)
+            _rows.append([k, r])
+        rows = _rows
+
+    data = []
     num_col = None
-    for row in rows:
+    for _row in rows:
+        row = _row
+        row_type = type_in(row, _COLLECTION_TYPES)
+        if not row_type:
+            row = [row]
+        # check rows
         if num_col is None:
             num_col = len(row)
         else:
             assert num_col == len(row), 'rows have different size'
+        row = [_build_table(item, cell_space, cell_space, filler)
+               if type_in(item, _COLLECTION_TYPES) else [str(item)] for item in row]
+        max_height = max(len(r) for r in row)
+        new_rows = [['' for _ in range(len(row))] for _ in range(max_height)]
+        for j, items in enumerate(row):
+            for i in range(len(items)):
+                new_rows[i][j] = items[i]
+        data.extend(new_rows)
 
-    if column_names is not None:
-        rows = [column_names] + [[str(r) for r in row] for row in rows]
-
-    sizes = [0] * num_col
-    for row in rows:
-        assert len(row) <= num_col
-        for i, item in enumerate(row):
-            sizes[i] = max(sizes[i], len(item))
+    column_width = [0 for _ in range(num_col)]
+    for d in data:
+        for i in range(num_col):
+            column_width[i] = max(column_width[i], len(d[i]))
 
     res = []
-    for row in rows:
-        stuff = []
-        for i in range(num_col - 1):
-            stuff.append(row[i])
-            stuff.append(' ' * (space + sizes[i] - len(row[i])))
-        stuff.append(row[-1])
-        line = ''.join(stuff)
-        res.append(line)
+    for d in data:
+        row = []
+        for idx in range(num_col - 1):
+            item = d[idx]
+            row.append(item)
+            row.append(filler * (space + column_width[idx] - len(item)))
+        row.append(d[-1])
+        res.append(''.join(row))
     return res
 
 
-def print_table(rows, column_names=None, space=3, level=INFO, no_print=False):
-    res = _build_table(rows, column_names, space)
+def print_table(rows, space=3, cell_space=1, filler=' ', level=INFO, no_print=False):
+    res = _build_table(rows, space, cell_space, filler)
     if not no_print:
         print_iter(res, level=level)
     return res
@@ -422,30 +443,30 @@ def type_in(data, types):
     if isinstance(types, list):
         for idx, _type in enumerate(types):
             if isinstance(data, _type):
-                return idx
-    return None
+                return idx + 1
+    return 0
 
 
-def prints(data, indent=4, width=80, shift=0, sep=',', quote='"', level=INFO, no_print=False):
+def prints(data, indent=4, width=80, shift=0, compact=False, sep=',', quote='"', level=INFO, no_print=False):
     if no_print:
         res = []
         with recorder(res):
-            _prints(data, indent, width, level, shift, None, sep, quote)
+            _prints(data, indent, width, level, shift, None, sep, quote, compact)
         return res
     else:
-        _prints(data, indent, width, level, shift, None, sep, quote)
+        _prints(data, indent, width, level, shift, None, sep, quote, compact)
         log('', level=level)
 
 
-def _prints(data, indent=4, width=80, level=INFO, shift=0, extra_indent=None, sep=',', quote='"'):
+def _prints(data, indent=4, width=80, level=INFO, shift=0, extra_indent=None, sep=',', quote='"', compact=False):
     sep_length = len(sep)
     shift_str = shift * ' '
 
     def is_short_data(_d):
         r = type_in(_d, [int, float, str])
-        if r == 2:
+        if r == 3:
             return not any(True for ch in _d if ch == '\n')
-        return r is not None
+        return r
 
     def put_quote(string):
         return quote + string + quote if isinstance(string, str) else str(string)
@@ -465,21 +486,45 @@ def _prints(data, indent=4, width=80, level=INFO, shift=0, extra_indent=None, se
             line = _shift * ' ' + line
         log_raw(line)
 
-    list_like_type = type_in(data, [list, tuple, set])
+    data_type = type_in(data, [list, tuple, set, dict, str])
     if is_short_data(data):
         log_raw(shift_str + put_quote(data))
-    elif isinstance(data, str):
-        for idx, s in enumerate(data.split('\n')):
+    elif data_type == 5:
+        _data = data.split('\n')
+        for idx, s in enumerate(_data):
             if idx == 0 and extra_indent is None:
                 log_raw('{}'.format(shift_str))
             elif idx != 0 or extra_indent is None:
                 log_raw('\n{}'.format(shift_str))
-            log_raw('{}'.format(quote + s + quote))
-    elif list_like_type is not None:
+            log_raw('{}{}{}{}'.format(quote, s, '\\n' if idx != len(_data) - 1 else '', quote))
+    elif data_type == 4:
+        marker_l = '{\n'
+        if extra_indent is None:
+            marker_l = shift_str + marker_l
+        log_raw(marker_l)
+        kv = data.items()
+        indent_str = indent * ' '
+        for idx, (k, v) in enumerate(kv):
+            if is_short_data(v):
+                log_raw('{}{}: {}'.format(shift_str + indent_str, put_quote(k), put_quote(v)))
+            else:
+                log_raw('{}{}: '.format(shift_str + indent_str, put_quote(k)))
+                v_indent = len(put_quote(k)) + 2 - indent
+                v_shift = shift + indent if isinstance(v, dict) else shift + indent * 2 + 1
+                if not compact:
+                    v_shift += v_indent - 1
+                    v_indent = 0
+                _prints(v, indent, width, level, v_shift, v_indent, sep, quote, compact)
+            if idx != len(kv) - 1:
+                log_raw(sep + '\n')
+            else:
+                log_raw('\n')
+        log_raw(shift_str + '}')
+    elif data_type in {1, 2, 3}:
         marker_l, marker_r = '[', ']'
-        if list_like_type == 1:
+        if data_type == 2:
             marker_l, marker_r = '(', ')'
-        elif list_like_type == 2:
+        elif data_type == 3:
             marker_l, marker_r = '{', '}'
         if extra_indent is None:
             marker_l = shift_str + marker_l
@@ -492,10 +537,10 @@ def _prints(data, indent=4, width=80, level=INFO, shift=0, extra_indent=None, se
         # group data
         for idx, d in enumerate(data):
             if is_short_data(d):
-                if cache_size > width:
+                str_d = put_quote(d)
+                if cache_size + len(str_d) + sep_length > width:
                     cache.append([])
                     cache_size = 0
-                str_d = put_quote(d)
                 if not cache or not isinstance(cache[-1], list):
                     cache.append([])
                 cache[-1].append(str_d)
@@ -508,29 +553,10 @@ def _prints(data, indent=4, width=80, level=INFO, shift=0, extra_indent=None, se
             if isinstance(d, list):
                 print_cache(d, shift + 1, 0 if idx == 0 else None)
             else:
-                _prints(data[d], indent, width, level, shift + 1, 0 if idx == 0 else None, sep, quote)
+                _prints(data[d], indent, width, level, shift + 1, 0 if idx == 0 else None, sep, quote, compact)
             if idx != len(cache) - 1:
                 log_raw('{}\n'.format(sep))
         log_raw(marker_r)
-    elif isinstance(data, dict):
-        marker_l = '{\n'
-        if extra_indent is None:
-            marker_l = shift_str + marker_l
-        log_raw(marker_l)
-        kv = data.items()
-        indent_str = indent * ' '
-        for idx, (k, v) in enumerate(kv):
-            if is_short_data(v):
-                log_raw('{}{}: {}'.format(shift_str + indent_str, put_quote(k), put_quote(v)))
-            else:
-                log_raw('{}{}: '.format(shift_str + indent_str, put_quote(k)))
-                v_indent = shift + indent if isinstance(v, dict) else shift + indent * 2 + 1
-                _prints(v, indent, width, level, v_indent, len(put_quote(k)) + 2 - indent, sep, quote)
-            if idx != len(kv) - 1:
-                log_raw(sep + '\n')
-            else:
-                log_raw('\n')
-        log_raw(shift_str + '}')
 
 
 def print_iter(data, level=INFO):
@@ -652,13 +678,17 @@ def exec_dir():
     return os.getcwd()
 
 
-if __name__ == '__main__':
+def mbp_info():
     with enclose('More Beautiful Python', 30):
-        _rows = [
+        rows = [
             ['examples', 'https://github.com/sudongqi/MoreBeautifulPython/blob/main/examples.py'],
             ['execution_directory', exec_dir()],
             ['library_path', lib_path()],
             ['cpu_count', CPU_COUNT],
             ['version', VERSION]
         ]
-        print_table(_rows)
+        print_table(rows)
+
+
+if __name__ == '__main__':
+    mbp_info()
