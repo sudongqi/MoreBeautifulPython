@@ -311,6 +311,14 @@ def main():
     with enclose('tables inside table'):
         rows = [['total', 140], ['stats', [['a: ', 70], ['b: ', 20], ['c: ', 50]]]]
         print_table(rows)
+    '''
+    ========== tables inside table ==========
+    total   140
+    stats   a:  70
+            b:  20
+            c:  50
+    =========================================
+    '''
 
     # get 3 key statistics from an iterator at once
     with enclose('simple statistics'):
