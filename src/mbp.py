@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.3.1'
+VERSION = '1.3.2'
 
 __all__ = [
     # Alternative for multiprocessing
@@ -150,8 +150,9 @@ class recorder(object):
         if self.raw:
             self.tape.append(buffer_value)
         else:
-            buffer_value = buffer_value.rstrip().split('\n')
-            self.tape.extend(buffer_value)
+            if buffer_value:
+                buffer_value = buffer_value.rstrip().split('\n')
+                self.tape.extend(buffer_value)
         self.logger.__exit__(_type, value, _traceback)
 
 
@@ -643,8 +644,11 @@ class enclose(object):
     def __exit__(self, _type, value, _traceback):
         if self.aligned:
             self.recorder.__exit__(_type, value, _traceback)
-            max_line_length = max(len(msg) for msg in self.tape)
-            max_line_length = max(max_line_length, len(self.msg))
+
+            max_line_length = len(self.msg)
+            if self.tape:
+                max_line_length = max(len(msg) for msg in self.tape)
+            log('\n' * self.top_margin, end='', level=self.level)
             top_line = print_line(self.msg, max_line_length, char=self.char, no_print=True)
             self.top_line_size = len(top_line)
             log(top_line, level=self.level)
