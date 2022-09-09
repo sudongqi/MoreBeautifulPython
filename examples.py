@@ -63,14 +63,25 @@ def main():
     '''
 
     # enclose() generate two text separators that enclose the execution
-    with enclose(text_or_length='enclose()', wing_size=4, bottom_margin=1, char='=', use_timer=False):
-        log('your first line')
-        log('your second line')
+    with enclose('enclose()', width=25, bottom_margin=1, char='=', use_timer=False):
+        [log('this is line {}'.format(i)) for i in range(3)]
     '''
-    ==== enclose() ====
-    your first line
-    your second line
-    ===================
+    ======== enclose() ========
+    this is line 0
+    this is line 1
+    this is line 2
+    ===========================
+    '''
+
+    # when width=None, the width will be calculated automatically based on the captured content
+    with enclose():
+        [log('this is line {}'.format(i)) for i in range(3)]
+    '''
+    ================
+    this is line 0
+    this is line 1
+    this is line 2
+    ================
     '''
 
     # enclose_timer() == enclose(timer=True)
@@ -80,21 +91,26 @@ def main():
         for d in iterate(range(1000), first_n=100, sample_p=0.1, report_n=3):
             log(test_f(d, running_time=0.1))
     '''
-    ====================
-    2
-    58
-    66
-    3/1000 ==> 9.369 items/s
+    ==========================
+    12
+    34
+    40
+    3/1000 ==> 9.398 items/s
+    46
+    74
+    84
+    6/1000 ==> 9.163 items/s
     94
     104
-    118
-    6/1000 ==> 9.182 items/s
-    126
-    148
-    184
-    9/1000 ==> 9.144 items/s
-    ====================
-    took 974.987 ms
+    114
+    9/1000 ==> 9.173 items/s
+    144
+    156
+    178
+    12/1000 ==> 9.115 items/s
+    192
+    ==========================
+    took 1414.292 ms
     '''
 
     # Workers() is more flexible than multiprocessing.Pool()
@@ -105,24 +121,24 @@ def main():
         [workers.get_res() for _ in range(n_task)]
         workers.terminate()
     '''
-    ========== Workers() ==========
+    ============================= Workers() =============================
     started worker-0
     started worker-1
     started worker-2
     started worker-3
-    worker-1 completed task-1
-    worker-0 completed task-0
     worker-3 completed task-3
     worker-2 completed task-2
-    worker-3 completed task-6
+    worker-0 completed task-0
+    worker-1 failed task-1 : AssertionError('simulated failure (30.0%)')
+    worker-1 completed task-1
+    worker-3 completed task-4
+    worker-2 completed task-6
+    worker-1 completed task-7
+    worker-0 failed task-5 : AssertionError('simulated failure (30.0%)')
     worker-0 completed task-5
-    worker-1 failed task-4 : AssertionError('simulated failure (30.0%)')
-    worker-1 completed task-4
-    worker-2 failed task-7 : AssertionError('simulated failure (30.0%)')
-    worker-2 completed task-7
     terminated 4 workers
-    ===============================
-    took 499.086 ms
+    =====================================================================
+    took 498.836 ms
     '''
 
     # similarly, we can use work() to process tasks from an iterator
@@ -132,17 +148,17 @@ def main():
         for r in work(f=test_f, tasks=tasks, ordered=True, ignore_error=True, res_only=False):
             log(r)
     '''
-    ========== work() ==========
-    {'worker_id': 1, 'task_id': 0, 'res': 0}
-    {'worker_id': 0, 'task_id': 1, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
-    {'worker_id': 4, 'task_id': 2, 'res': 4}
-    {'worker_id': 2, 'task_id': 3, 'res': 6}
-    {'worker_id': 3, 'task_id': 4, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
-    {'worker_id': 5, 'task_id': 5, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
-    {'worker_id': 6, 'task_id': 6, 'res': 12}
-    {'worker_id': 8, 'task_id': 7, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
-    ============================
-    took 346.133 ms
+    ============================================== work() ==============================================
+    {'worker_id': 0, 'task_id': 0, 'res': 0}
+    {'worker_id': 3, 'task_id': 1, 'res': 2}
+    {'worker_id': 1, 'task_id': 2, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+    {'worker_id': 2, 'task_id': 3, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+    {'worker_id': 4, 'task_id': 4, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+    {'worker_id': 6, 'task_id': 5, 'res': 10}
+    {'worker_id': 7, 'task_id': 6, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+    {'worker_id': 5, 'task_id': 7, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+    ====================================================================================================
+    took 347.536 ms
     '''
 
     with enclose("work() with cache_inp"):
@@ -164,9 +180,9 @@ def main():
             list(work(test_f2, num_workers=1, ordered=True, tasks=tasks, built_inp={'vec': build_vec}))
     '''
     ========== work() with cache_inp ==========
-    work() ==> took 1889.645 ms
-    work() with cached_inp ==> took 165.947 ms
-    work() with built_inp ==> took 135.059 ms
+    work() ==> took 1913.248 ms
+    work() with cached_inp ==> took 109.892 ms
+    work() with built_inp ==> took 134.579 ms
     ===========================================
     '''
 
@@ -188,16 +204,16 @@ def main():
         # file_name_of() == os.path.basename()
         log(file_name_of(__file__))
     '''
-    ========== path ==========
+    ==================== path ====================
     C:\\Users\sudon\MoreBeautifulPython
     C:\\Users\sudon\MoreBeautifulPython\a\b\c.file
     C:\\Users
     C:\\Users\sudon\MoreBeautifulPython\hello.txt
     C:\\Users\sudon\MoreBeautifulPython
-    c:\\users\sudon\morebeautifulpython\src\mbp.py
+    C:\\Users\sudon\MoreBeautifulPython\src\mbp.py
     C:\\Users\data
     examples.py
-    ==========================
+    ==============================================
     '''
 
     # open_files() return all files and their paths under a directory
@@ -205,12 +221,12 @@ def main():
         for f in open_files(this_dir(), pattern='.*\.py', progress=True):
             pass
     '''
-    ========== open_files() ==========
+    ================================== open_files() ==================================
     found build_and_push.py <== C:\\Users\sudon\MoreBeautifulPython\build_and_push.py
     found examples.py <== C:\\Users\sudon\MoreBeautifulPython\examples.py
     found mbp.py <== C:\\Users\sudon\MoreBeautifulPython\src\mbp.py
     found __init__.py <== C:\\Users\sudon\MoreBeautifulPython\src\__init__.py
-    ==================================
+    ==================================================================================
     '''
 
     # prints() is a superior pprint()
@@ -224,9 +240,9 @@ def main():
                        'c': {'d': nested_list, 'e': long_strings, 'f': {'a longer key': long_list}}}
         prints(hybrid_dict)
     '''
-    ========== prints() ==========
+    ================================================== prints() ==================================================
     {
-        "a": [{"abc","bcd"},
+        "a": [{"bcd","abc"},
               0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,
               30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,
               56,57,58,59,60,61,62,63,64,65,66,67,68,69,
@@ -254,7 +270,7 @@ def main():
             }
         }
     }
-    ==============================
+    ==============================================================================================================
     '''
 
     # recorder() save all logs into a list
@@ -266,10 +282,10 @@ def main():
         tape[0] = tape[0][::-1]
         print_iter(tape)
     '''
-    ========== recorder() ==========
+    ===== recorder() =====
     1 2 3 4 5 6 7 8 9
     ok
-    ================================
+    ======================
     '''
 
     # load_jsonl() return an iterator of dictionary
@@ -286,11 +302,11 @@ def main():
     with enclose('print_list()'):
         print_iter(data)
     '''
-    ========== print_list() ==========
+    ============= print_list() =============
     {'id': 1, 'name': 'Jackson', 'age': 43}
     {'id': 2, 'name': 'Zunaira', 'age': 24}
     {'id': 3, 'name': 'Lorelei', 'age': 72}
-    ==================================
+    ========================================
     '''
 
     # print_table() can adjust column width automatically
@@ -299,12 +315,12 @@ def main():
         column_names = list(data[0].keys())
         print_table([column_names] + rows, space=3)
     '''
-    ========== print_table() ==========
+    ===== print_table() =====
     id   name      age
     1    Jackson   43
     2    Zunaira   24
     3    Lorelei   72
-    ===================================
+    =========================
     '''
 
     # print_table() can also handle tables inside table
@@ -312,12 +328,12 @@ def main():
         rows = [['total', 140], ['stats', [['a: ', 70], ['b: ', 20], ['c: ', 50]]]]
         print_table(rows)
     '''
-    ========== tables inside table ==========
+    ===== tables inside table =====
     total   140
     stats   a:  70
             b:  20
             c:  50
-    =========================================
+    ===============================
     '''
 
     # get 3 key statistics from an iterator at once
@@ -326,11 +342,11 @@ def main():
         log(min_max_avg(load_jsonl(jsonl_file_path), key_f=lambda x: x['age']))
         log(avg(load_jsonl(jsonl_file_path), key_f=lambda x: x['age']))
     '''
-    ========== simple statistics ==========
+    ======= simple statistics =======
     (3, 24, 72, 46.333333333333336)
     (24, 72, 46.333333333333336)
     46.333333333333336
-    =======================================
+    =================================
     '''
 
 

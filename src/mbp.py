@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.3.0'
+VERSION = '1.3.1'
 
 __all__ = [
     # Alternative for multiprocessing
@@ -597,44 +597,68 @@ def _strip_and_add_spaces(s):
     return s
 
 
-def print_line(text_or_wing_size='', wing_size=10, char='-', level=INFO, no_print=False):
-    if isinstance(text_or_wing_size, int):
-        text_or_wing_size = ''
-        wing_size = text_or_wing_size
-    wing = char * wing_size
-    res = wing + _strip_and_add_spaces(text_or_wing_size) + wing
+_MIN_WING_SIZE = 5
+
+
+def print_line(text_or_width=20, width=20, char='-', level=INFO, no_print=False):
+    if isinstance(text_or_width, int):
+        res = char * text_or_width
+    else:
+        text_or_width = _strip_and_add_spaces(text_or_width)
+        wing_size = (width - len(text_or_width)) // 2
+        wing_size += 1
+        wing_size = max(wing_size, _MIN_WING_SIZE)
+        wing = char * wing_size
+        res = wing + text_or_width + wing
     if not no_print:
         log(res, level=level)
     return res
 
 
 class enclose(object):
-    def __init__(self, text_or_length='', wing_size=10, char='=', top_margin=0, bottom_margin=1, use_timer=False,
-                 level=INFO):
-        self.text_or_length = _strip_and_add_spaces(text_or_length)
-        self.wing_size = wing_size
+    def __init__(self, msg='', width=None, char='=', top_margin=0, bottom_margin=1, use_timer=False, level=INFO):
+        self.msg = _strip_and_add_spaces(msg)
+        self.width = width
         self.top_margin = top_margin
         self.bottom_margin = bottom_margin
         self.char = char
         self.start = None
         self.use_timer = use_timer
         self.level = level
+        self.aligned = width is None
+        if self.aligned:
+            self.tape = []
+            self.recorder = recorder(self.tape)
 
     def __enter__(self):
-        log('\n' * self.top_margin, end='', level=self.level)
-        print_line(self.text_or_length, self.wing_size, self.char, self.level)
+        if not self.aligned:
+            log('\n' * self.top_margin, end='', level=self.level)
+            top_line = print_line(self.msg, self.width, char=self.char, no_print=True)
+            self.top_line_size = len(top_line)
+            log(top_line, level=self.level)
+        else:
+            self.recorder.__enter__()
         self.start = time.time()
 
     def __exit__(self, _type, value, _traceback):
-        log(self.char * (self.wing_size * 2 + len(self.text_or_length)), level=self.level)
+        if self.aligned:
+            self.recorder.__exit__(_type, value, _traceback)
+            max_line_length = max(len(msg) for msg in self.tape)
+            max_line_length = max(max_line_length, len(self.msg))
+            top_line = print_line(self.msg, max_line_length, char=self.char, no_print=True)
+            self.top_line_size = len(top_line)
+            log(top_line, level=self.level)
+            print_iter(self.tape, level=self.level)
+        print_line(self.top_line_size, char=self.char, level=self.level)
+
         if self.use_timer:
             log('took {:.3f} ms'.format((time.time() - self.start) * 1000), level=self.level)
         log('\n' * self.bottom_margin, end='', level=self.level)
 
 
 class enclose_timer(enclose):
-    def __init__(self, text_or_length='', wing_size=10, char='=', top_margin=0, bottom_margin=1, level=INFO):
-        super().__init__(text_or_length, wing_size, char, top_margin, bottom_margin, True, level)
+    def __init__(self, text_or_length='', width=None, char='=', top_margin=0, bottom_margin=1, level=INFO):
+        super().__init__(text_or_length, width, char, top_margin, bottom_margin, True, level)
 
 
 def join_path(*args, **kwargs):
@@ -679,7 +703,7 @@ def exec_dir():
 
 
 def mbp_info():
-    with enclose('More Beautiful Python', 30):
+    with enclose('More Beautiful Python'):
         rows = [
             ['examples', 'https://github.com/sudongqi/MoreBeautifulPython/blob/main/examples.py'],
             ['execution_directory', exec_dir()],
