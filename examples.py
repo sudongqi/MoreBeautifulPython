@@ -1,18 +1,20 @@
 import sys
+import shutil
 import time
 import random
-from mbp import *
+
+# from mbp import * (for pip install version)
+from src.mbp import *
 
 
-# test function for multiprocessing
-def test_f(x, fail_rate=0, running_time=0.2):
+# test functions for multiprocessing
+def test_sleep_and_fail(x, fail_rate=0, running_time=0.2):
     time.sleep(running_time)
     assert random.random() > fail_rate, "simulated failure ({}%)".format(fail_rate * 100)
     return x * 2
 
 
-# test function 2 for multiprocessing
-def test_f2(idx, vec):
+def test_read_from_list(idx, vec):
     return vec[idx]
 
 
@@ -53,13 +55,14 @@ def main():
         with logger(level=SILENT, can_overwrite=False):
             log('==> this will never be printed')
 
-    # use timer() context manager to get execution time
-    with timer():
-        d = {i: i for i in range(100)}
-        for i in range(200000):
-            d.get(i, None)
+    # print_line() will draw a line with a message
+    print_line()
+    print_line(text_or_width=30)
+    print_line(text_or_width='line', width=50, char='=')
     '''
-    took 6.980 ms
+    --------------------
+    ------------------------------
+    ======================= line =======================
     '''
 
     # enclose() generate two text separators that enclose the execution
@@ -84,39 +87,53 @@ def main():
     ================
     '''
 
+    # recorder() save all logs into a list
+    with enclose('recorder()'):
+        tape = []
+        with recorder(tape):
+            log('9 8 7 6 5 4 3 2 1')
+            log('ok', end='')
+        tape[0] = tape[0][::-1]
+        print_iter(tape)
+    '''
+    ===== recorder() =====
+    1 2 3 4 5 6 7 8 9
+    ok
+    ======================
+    '''
+
+    # use timer() context manager to get execution time
+    with timer():
+        d = {i: i for i in range(100)}
+        for i in range(200000):
+            d.get(i, None)
+    '''
+    took 6.980 ms
+    '''
+
     # enclose_timer() == enclose(timer=True)
     with enclose_timer():
         # iterate() can customize iteration procedures
         # for example, sample 10% and report every 3 yield from the first 100 samples
-        for d in iterate(range(1000), first_n=100, sample_p=0.1, report_n=3):
-            log(test_f(d, running_time=0.1))
+        for d in iterate(range(1000), first_n=100, sample_p=0.05, report_n=2):
+            log(test_sleep_and_fail(d, running_time=0.1))
     '''
+   ==========================
+    2
+    56
+    2/1000 ==> 9.543 items/s
+    112
+    168
+    4/1000 ==> 9.173 items/s
+    188
     ==========================
-    12
-    34
-    40
-    3/1000 ==> 9.398 items/s
-    46
-    74
-    84
-    6/1000 ==> 9.163 items/s
-    94
-    104
-    114
-    9/1000 ==> 9.173 items/s
-    144
-    156
-    178
-    12/1000 ==> 9.115 items/s
-    192
-    ==========================
-    took 1414.292 ms
+    took 537.632 ms
     '''
 
     # Workers() is more flexible than multiprocessing.Pool()
     n_task = 8
     with enclose_timer('Workers()'):
-        workers = Workers(f=test_f, num_workers=4, progress=True, ignore_error=True)
+        workers = Workers(f=test_sleep_and_fail, num_workers=4, progress=True, ignore_error=True)
         [workers.add_task({'x': i, 'fail_rate': 0.3}) for _ in range(n_task)]
         [workers.get_res() for _ in range(n_task)]
         workers.terminate()
@@ -145,7 +162,7 @@ def main():
     # tasks can be iterator of tuple (need to specify all inputs) or dict
     with enclose_timer('work()'):
         tasks = iter([(i, 0.5, 0.2) for i in range(n_task)])
-        for r in work(f=test_f, tasks=tasks, ordered=True, ignore_error=True, res_only=False):
+        for r in work(f=test_sleep_and_fail, tasks=tasks, ordered=True, ignore_error=True, res_only=False):
             log(r)
     '''
     ============================================== work() ==============================================
@@ -165,9 +182,9 @@ def main():
         # use cached_inp = {'fixed_input': value, ...} to avoid pickling of heavy objects
         vec = [x for x in range(1000000)]
         with timer('work()'):
-            a = list(work(test_f2, num_workers=1, ordered=True, tasks=iter((i, vec) for i in range(30))))
+            a = list(work(test_read_from_list, num_workers=1, ordered=True, tasks=iter((i, vec) for i in range(30))))
         with timer('work() with cached_inp'):
-            b = list(work(test_f2, num_workers=1, ordered=True, tasks=iter({'idx': i} for i in range(30)),
+            b = list(work(test_read_from_list, num_workers=1, ordered=True, tasks=iter({'idx': i} for i in range(30)),
                           cached_inp={'vec': vec}))
         assert a == b
 
@@ -177,7 +194,7 @@ def main():
         # for objects that can not be pickled, use built_inp
         with timer('work() with built_inp'):
             tasks = iter({'idx': i} for i in range(30))
-            list(work(test_f2, num_workers=1, ordered=True, tasks=tasks, built_inp={'vec': build_vec}))
+            list(work(test_read_from_list, num_workers=1, ordered=True, tasks=tasks, built_inp={'vec': build_vec}))
     '''
     ========== work() with cache_inp ==========
     work() ==> took 1913.248 ms
@@ -186,47 +203,93 @@ def main():
     ===========================================
     '''
 
-    with enclose('path'):
-        # this_dir() return the directory of the current file
-        log(this_dir())
+    with enclose('pathing'):
         # path_join() == os.path.join()
         log(join_path(this_dir(), 'a', 'b', 'c.file'))
-        # dir_of() find the directory of a file
-        log(dir_of(__file__, go_up=2))
-        # dir_of() can also extend a path
-        log(dir_of(__file__, 0, 'hello.txt'))
-        # exec_dir() return the directory where you run your python command
+        # exec_dir() == os.getcwd()
         log(exec_dir())
         # lib_path() return the path of the mbp library
         log(lib_path())
-        # only_file_of() return the path of the only file in a folder
-        log(only_file_of(this_dir(2, 'data')))
-        # file_name_of() == os.path.basename()
+        # this_dir() return the directory of the current file
+        log(this_dir())
+        log(this_dir(go_up=1, go_to='AnotherProject/hello.txt'))
+        # only_file_of() return the path of the only file of the input directory
+        log(get_only_file_if_dir(this_dir(2, 'data')))
+        # dir_name_of() check and return the directory name of a path
+        log(dir_name_of(dir_of(__file__)))
+        # file_name_of() check and return the file name of a path
         log(file_name_of(__file__))
     '''
     ==================== path ====================
-    C:\\Users\sudon\MoreBeautifulPython
     C:\\Users\sudon\MoreBeautifulPython\a\b\c.file
-    C:\\Users
-    C:\\Users\sudon\MoreBeautifulPython\hello.txt
     C:\\Users\sudon\MoreBeautifulPython
     C:\\Users\sudon\MoreBeautifulPython\src\mbp.py
+    C:\\Users\sudon\MoreBeautifulPython
+    C:\\Users\sudon\AnotherProject/hello.txt
     C:\\Users\data
+    MoreBeautifulPython
     examples.py
     ==============================================
     '''
 
-    # open_files() return all files and their paths under a directory
+    # open_files() return all files under a directory
     with enclose('open_files()'):
-        for f in open_files(this_dir(), pattern='.*\.py', progress=True):
-            pass
+        for f in open_files(this_dir(), pattern=r'.*\.py'):
+            f.readlines()
     '''
-    ================================== open_files() ==================================
+    ================================ file_paths_of() ================================
     found build_and_push.py <== C:\\Users\sudon\MoreBeautifulPython\build_and_push.py
     found examples.py <== C:\\Users\sudon\MoreBeautifulPython\examples.py
     found mbp.py <== C:\\Users\sudon\MoreBeautifulPython\src\mbp.py
     found __init__.py <== C:\\Users\sudon\MoreBeautifulPython\src\__init__.py
-    ==================================================================================
+    =================================================================================
+    '''
+
+    # make_files() and make_dirs() create files and directory after creating paths
+    with enclose('make_files() and make_dirs()'):
+        test_dir = './test_dir'
+        make_files([join_path(test_dir, file_name) for file_name in ['a.txt', 'b.txt', 'c.txt']])
+        log('{} files under {}'.format(len(list(open_files(test_dir))), test_dir))
+        make_dirs(test_dir, overwrite=True)
+        log('{} files under {} (after overwrite)'.format(len(list(open_files(test_dir))), test_dir))
+        shutil.rmtree(test_dir)
+    '''
+    ======= make_files() and make_dirs() =======
+    found a.txt <== ./test_dir\a.txt
+    found b.txt <== ./test_dir\b.txt
+    found c.txt <== ./test_dir\c.txt
+    3 files under ./test_dir
+    0 files under ./test_dir (after overwrite)
+    ============================================
+    '''
+
+    # type_in() return the type idx of 1st argument defined by the 2nd argument
+    with enclose('type_in()'):
+        types = [int, dict, list, set]
+        # the return idx started at 1 because 0 is reserved for no match
+        idx = type_in([1, 2, 3], types) - 1
+        log(types[idx])
+        if not type_in("a string", types):
+            log('this type is not from the list')
+    '''
+    ========== type_in() ==========
+    <class 'list'>
+    this type is not from the list
+    ===============================
+    '''
+
+    # get_range() is a replacement for range(len())
+    with enclose('range syntax sugars'):
+        vec = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        log(list(get_range(vec)))
+        log(list(get_range(vec, 2, 4)))
+        log(list(get_items(vec, 0, -1, 2, reverse=True)))
+    '''
+    ===== range syntax sugars =====
+    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    [2, 3]
+    [8, 6, 4, 2, 0]
+    ===============================
     '''
 
     # prints() is a superior pprint()
@@ -273,32 +336,21 @@ def main():
     ==============================================================================================================
     '''
 
-    # recorder() save all logs into a list
-    with enclose('recorder()'):
-        tape = []
-        with recorder(tape):
-            log('9 8 7 6 5 4 3 2 1')
-            log('ok', end='')
-        tape[0] = tape[0][::-1]
-        print_iter(tape)
+    # debug() can trace back to the line of function call and use prints() to print the variable
+    # debug() is slow and should be used only for debug purposes.
+    debug(nested_list)
     '''
-    ===== recorder() =====
-    1 2 3 4 5 6 7 8 9
-    ok
-    ======================
+    ===== debug(nested_list) =====
+    [[[1,2,3],
+      [4,5,6]]]
+    ==============================
     '''
 
-    # load_jsonl() return an iterator of dictionary
+    # join_path() == os.path.join()
     jsonl_file_path = join_path(this_dir(), 'data.jsonl')
-    data = list(load_jsonl(jsonl_file_path))
-
-    # print_line() will draw a line
-    print_line()
-    '''
-    --------------------
-    '''
-
-    # print_iter() print items from an iterator one by one
+    # load_jsonl() return an iterator of dictionary
+    data = list(load_jsonl(join_path(this_dir(), 'data.jsonl')))
+    # print_iter(iterator) == [log(item) for item in iterator]
     with enclose('print_list()'):
         print_iter(data)
     '''
@@ -347,6 +399,12 @@ def main():
     (24, 72, 46.333333333333336)
     46.333333333333336
     =================================
+    '''
+
+    # curr_time() == str(datetime.now(timezone.utc))[:19]
+    log(curr_time())
+    '''
+    2022-09-09 22:45:19
     '''
 
 
