@@ -22,8 +22,7 @@ https://github.com/sudongqi/MoreBeautifulPython/blob/main/examples.py
 * replacement for logging
 * replacement for multiprocessing
 * syntax sugar for common utilities
-* tools for file system
-* tools for data loading & handling
+* tools for file system & data handling
 * tools for summarizations
 * tools for simple statistics
 

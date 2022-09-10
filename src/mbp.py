@@ -25,14 +25,13 @@ __all__ = [
     'Workers', 'work',
     # syntax sugar for common utilities
     'type_in', 'get_range', 'get_items', 'join_path', 'exec_dir', 'lib_path',
-    # tools for file system
+    # tools for file system & data handling
     'make_dirs', 'make_files', 'make_dirs_for',
     'traverse', 'this_dir', 'dir_of', 'get_only_file_if_dir', 'file_name_of', 'dir_name_of',
-    # tools for data loading & handling
     'load_txt', 'load_jsonl', 'load_json', 'save_json', 'save_jsonl',
     'iterate', 'open_file', 'all_file_paths_from', 'open_files',
     # tools for summarizations
-    'print_line', 'enclose', 'enclose_timer', 'error_msg', 'prints', 'debug', 'print_iter', 'print_table',
+    'print_line', 'enclose', 'enclose_timer', 'error_msg', 'prints', 'check', 'debug', 'print_iter', 'print_table',
     # tools for simple statistics
     'timer', 'curr_time', 'avg', 'min_max_avg', 'n_min_max_avg', 'CPU_COUNT'
 ]
@@ -76,52 +75,64 @@ class Logger:
         self.meta_info = True if name else meta_info
         self.sep = sep
 
-    def __call__(self, msg, level=INFO, file=None, end=None, flush=False):
+    def __call__(self, *messages, level=INFO, file=None, end=None, flush=False):
         if self.level <= level:
             _file = self.file if file is None else open_files_for_logger(file)
             for f in _file:
-                if self.meta_info:
-                    headers = [curr_time(), get_msg_level(level)]
-                    if self.prefix:
-                        headers.append(self.prefix)
-                    print(self.sep.join(headers), file=f, end=': ', flush=flush)
-                print(msg, file=f, end=end, flush=flush)
+                for message in messages:
+                    lines = str(message).split('\n')
+                    num_lines = len(lines)
+                    for idx, line in enumerate(lines):
+                        if self.meta_info:
+                            if idx == 0:
+                                headers = [curr_time(), get_msg_level(level)]
+                                if self.prefix:
+                                    headers.append(self.prefix)
+                                header = self.sep.join(headers) + ': '
+                                header_empty = len(header) * ' '
+                                print(header, file=f, end='', flush=flush)
+                            else:
+                                print(header_empty, file=f, end='', flush=flush)
+                        if idx == num_lines - 1:
+                            print(line, file=f, end=end, flush=flush)
+                        else:
+                            print(line, file=f, end=None, flush=flush)
 
 
-LOG = Logger()
-CONTEXT_LOGGER_SET = False
+_LOG = Logger()
+_CONTEXT_LOGGER_SET = False
 
 
 class logger(object):
     def __init__(self, name='', file=sys.stdout, level=INFO, meta_info=False, can_overwrite=True):
-        global LOG
-        global CONTEXT_LOGGER_SET
+        global _LOG
+        global _CONTEXT_LOGGER_SET
         self.logger_was_changed = False
-        if not CONTEXT_LOGGER_SET or not can_overwrite:
-            self.org_logger = LOG
-            LOG = Logger(name, file, level, meta_info)
+        if not _CONTEXT_LOGGER_SET or not can_overwrite:
+            self.org_logger = _LOG
+            _LOG = Logger(name, file, level, meta_info)
             self.logger_was_changed = True
-            CONTEXT_LOGGER_SET = True
+            _CONTEXT_LOGGER_SET = True
 
     def __enter__(self):
         pass
 
     def __exit__(self, _type, value, _traceback):
-        global LOG
-        global CONTEXT_LOGGER_SET
+        global _LOG
+        global _CONTEXT_LOGGER_SET
         if self.logger_was_changed:
-            LOG = self.org_logger
-            CONTEXT_LOGGER_SET = False
+            _LOG = self.org_logger
+            _CONTEXT_LOGGER_SET = False
 
 
 def set_global_logger(name='', file=sys.stdout, level=INFO, meta_info=False, sep=' '):
-    global LOG
-    LOG = Logger(name, file, level, meta_info, sep)
+    global _LOG
+    _LOG = Logger(name, file, level, meta_info, sep)
 
 
 def reset_global_logger():
-    global LOG
-    LOG = Logger()
+    global _LOG
+    _LOG = Logger()
 
 
 def get_logger(name='', file=sys.stdout, level=INFO, meta_info=False, sep=' '):
@@ -132,15 +143,15 @@ def curr_time():
     return str(datetime.now(timezone.utc))[:19]
 
 
-def log(msg, level=INFO, file=None, end=None, flush=False):
-    LOG(msg, level, file, end, flush)
+def log(*messages, level=INFO, file=None, end=None, flush=False):
+    _LOG(*messages, level=level, file=file, end=end, flush=flush)
 
 
 class recorder(object):
     def __init__(self, tape, raw=False):
         assert tape == [], '1st argument must be an empty list'
-        global LOG
-        global CONTEXT_LOGGER_SET
+        global _LOG
+        global _CONTEXT_LOGGER_SET
         self.buffer = StringIO()
         self.logger = logger(file=self.buffer, can_overwrite=False)
         self.tape = tape
@@ -262,7 +273,7 @@ class Workers:
                 assert False, err_msg
             if self.progress:
                 log(err_msg)
-        if self.progress:
+        elif self.progress:
             log('worker-{} completed task-{}'.format(res['worker_id'], res['task_id']))
         return res
 
@@ -470,12 +481,15 @@ def print_table(rows, space=3, cell_space=1, filler=' ', level=INFO, no_print=Fa
     return res
 
 
-def _prints(data, indent=4, width=80, level=INFO, shift=0, extra_indent=None, sep=',', quote='"', compact=False):
-    sep_length = len(sep)
-    # extra_indent=None,  shift
-    # extra_indent=0,     shift
-    # extra_indent>0,     less_shift
+def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep, compact):
+    """
+    extra_indent == None,  shift
+    extra_indent == 0,     no shift
+    extra_indent > 0,      no shift + shorter line
+    """
     shift_str = shift * ' '
+    sep_len = len(sep)
+    kv_sep_len = len(kv_sep)
 
     # int, float, single-line str
     def is_short_data(_d):
@@ -500,7 +514,10 @@ def _prints(data, indent=4, width=80, level=INFO, shift=0, extra_indent=None, se
 
     data_type = type_in(data, [list, tuple, set, dict, str])
     if is_short_data(data):
-        log_raw(shift_str + put_quote(data))
+        if extra_indent is None:
+            log_raw(shift_str + put_quote(data))
+        else:
+            log_raw(put_quote(data))
     elif data_type in {1, 2, 3}:
         marker_l, marker_r = '[', ']'
         if data_type == 2:
@@ -519,13 +536,13 @@ def _prints(data, indent=4, width=80, level=INFO, shift=0, extra_indent=None, se
         for idx, d in enumerate(data):
             if is_short_data(d):
                 str_d = put_quote(d)
-                if cache_size + len(str_d) + sep_length > width:
+                if cache_size + len(str_d) + sep_len > width:
                     cache.append([])
                     cache_size = 0
                 if not cache or not isinstance(cache[-1], list):
                     cache.append([])
                 cache[-1].append(str_d)
-                cache_size += len(str_d) + sep_length
+                cache_size += len(str_d) + sep_len
             else:
                 cache.append(idx)
                 cache_size = 0
@@ -534,7 +551,7 @@ def _prints(data, indent=4, width=80, level=INFO, shift=0, extra_indent=None, se
             if isinstance(d, list):
                 print_cache(d, shift + 1, 0 if idx == 0 else None)
             else:
-                _prints(data[d], indent, width, level, shift + 1, 0 if idx == 0 else None, sep, quote, compact)
+                _prints(data[d], indent, width, level, shift + 1, 0 if idx == 0 else None, sep, quote, kv_sep, compact)
             if idx != len(cache) - 1:
                 log_raw('{}\n'.format(sep))
         log_raw(marker_r)
@@ -546,16 +563,23 @@ def _prints(data, indent=4, width=80, level=INFO, shift=0, extra_indent=None, se
         kv = data.items()
         indent_str = indent * ' '
         for idx, (k, v) in enumerate(kv):
+            str_k = put_quote(k)
             if is_short_data(v):
-                log_raw('{}{}: {}'.format(shift_str + indent_str, put_quote(k), put_quote(v)))
+                log_raw('{}{}{}{}'.format(shift_str + indent_str, str_k, kv_sep, put_quote(v)))
             else:
-                log_raw('{}{}: '.format(shift_str + indent_str, put_quote(k)))
-                v_indent = len(put_quote(k)) + 2 - indent
-                v_shift = shift + indent if isinstance(v, dict) else shift + indent * 2 + 1
-                if not compact:
-                    v_shift += v_indent - 1
+                log_raw('{}{}{}'.format(shift_str + indent_str, str_k, kv_sep))
+                # for non-compact
+                if isinstance(v, dict):
+                    v_shift = shift + indent
                     v_indent = 0
-                _prints(v, indent, width, level, v_shift, v_indent, sep, quote, compact)
+                else:
+                    if compact:
+                        v_shift = shift + indent * 2 + 1
+                        v_indent = max(0, len(str_k) + kv_sep_len - indent - 1)
+                    else:
+                        v_shift = shift + indent + len(str_k) + kv_sep_len
+                        v_indent = 0
+                _prints(v, indent, width, level, v_shift, v_indent, sep, quote, kv_sep, compact)
             if idx != len(kv) - 1:
                 log_raw(sep + '\n')
             else:
@@ -571,25 +595,48 @@ def _prints(data, indent=4, width=80, level=INFO, shift=0, extra_indent=None, se
             log_raw('{}{}{}{}'.format(quote, s, '\\n' if idx != len(_data) - 1 else '', quote))
     else:
         data = str(data)
-        _prints(data, indent, width, level, shift, extra_indent, sep, quote, compact)
+        _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep, compact)
 
 
-def prints(data, indent=4, width=80, shift=0, compact=False, sep=',', quote='"', level=INFO, no_print=False):
+def prints(*data, indent=4, width=80, shift=0, extra_indent=None, compact=False, sep=',', quote='"', kv_sep=': ',
+           level=INFO, no_print=False):
     if no_print:
         res = []
         with recorder(res):
-            _prints(data, indent, width, level, shift, None, sep, quote, compact)
+            for d in data:
+                _prints(d, indent, width, level, shift, extra_indent, sep, quote, kv_sep, compact)
         return res
     else:
-        _prints(data, indent, width, level, shift, None, sep, quote, compact)
-        log('', level=level)
+        for d in data:
+            _prints(d, indent, width, level, shift, extra_indent, sep, quote, kv_sep, compact)
+            log('', level=level)
 
 
-def debug(var, width=None, char='-', level=INFO):
-    stack = inspect.stack()
-    var_name = stack[1].code_context[0].strip()
-    with enclose(var_name, width=width, char=char, level=level):
-        prints(var, level=level)
+def _check(*data, width, char, level, function_name):
+    if _LOG.level <= level:
+        stack = inspect.stack()
+        calling_code = stack[2].code_context[0].strip()
+        assert calling_code.startswith(function_name + '('), \
+            '"{}" ---> {}() should be used as a standalone statement'.format(calling_code, function_name)
+        with enclose(calling_code, width=width, char=char, level=level):
+            if len(data) > 1:
+                arguments = calling_code[6:-1]
+                assert re.fullmatch(r'[a-zA-Z0-9 ,_]*', arguments) is not None, \
+                    '"{}" ---> arguments of {}() must be references'.format(calling_code, function_name)
+                arguments = [d.strip() for d in arguments.split(',')[:len(data)]]
+                for k, v in zip(arguments, data):
+                    log(k, end=' = ')
+                    prints(v, shift=len(k) + 3, extra_indent=0)
+            else:
+                prints(data[0])
+
+
+def check(*data, width=None, char='-', level=INFO):
+    _check(*data, width=width, char=char, level=level, function_name='check')
+
+
+def debug(*data, width=None, char='-'):
+    _check(*data, width=width, char=char, level=DEBUG, function_name='debug')
 
 
 def print_iter(data, level=INFO):
@@ -636,10 +683,11 @@ def print_line(text_or_width=20, width=20, char='-', level=INFO, min_wing_size=5
     else:
         text_or_width = _strip_and_add_spaces(text_or_width)
         wing_size = (width - len(text_or_width)) // 2
-        wing_size += 1
         wing_size = max(wing_size, min_wing_size)
         wing = char * wing_size
         res = wing + text_or_width + wing
+        if len(res) < width:
+            res += char
     if not no_print:
         log(res, level=level)
     return res
@@ -673,10 +721,10 @@ class enclose(object):
     def __exit__(self, _type, value, _traceback):
         if self.aligned:
             self.recorder.__exit__(_type, value, _traceback)
-
             max_line_length = len(self.msg)
             if self.tape:
-                max_line_length = max(len(msg) for msg in self.tape)
+                # enclosed lines should be slightly longer than the longest content
+                max_line_length = max(len(msg) + 2 for msg in self.tape)
             log('\n' * self.top_margin, end='', level=self.level)
             top_line = print_line(self.msg, max_line_length, char=self.char, no_print=True)
             self.top_line_size = len(top_line)
