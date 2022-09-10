@@ -1,3 +1,4 @@
+import re
 import sys
 import shutil
 import time
@@ -11,7 +12,7 @@ from src.mbp import *
 def test_sleep_and_fail(x, fail_rate=0, running_time=0.2):
     time.sleep(running_time)
     assert random.random() > fail_rate, "simulated failure ({}%)".format(fail_rate * 100)
-    return x * 2
+    return x
 
 
 def test_read_from_list(idx, vec):
@@ -162,11 +163,11 @@ def main():
     '''
     ============================================== work() ===============================================
     {'worker_id': 0, 'task_id': 0, 'res': 0}
-    {'worker_id': 1, 'task_id': 1, 'res': 2}
-    {'worker_id': 3, 'task_id': 2, 'res': 4}
+    {'worker_id': 1, 'task_id': 1, 'res': 1}
+    {'worker_id': 3, 'task_id': 2, 'res': 2}
     {'worker_id': 4, 'task_id': 3, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
-    {'worker_id': 2, 'task_id': 4, 'res': 8}
-    {'worker_id': 5, 'task_id': 5, 'res': 10}
+    {'worker_id': 2, 'task_id': 4, 'res': 4}
+    {'worker_id': 5, 'task_id': 5, 'res': 5}
     =====================================================================================================
     took 342.720 ms
     '''
@@ -329,12 +330,36 @@ def main():
     ===============================================================================================================
     '''
 
+    # try_f() perform try-except routine and capture the result or error messages in a dictionary
+    with enclose('try_f()'):
+        prints(try_f(test_sleep_and_fail, 'input', fail_rate=1))
+        prints(try_f(test_sleep_and_fail, 'input', fail_rate=0))
+    '''
+    =================================================== try_f() ====================================================
+    {
+        "error": "AssertionError('simulated failure (100%)')",
+        "error_type": "AssertionError",
+        "error_msg": "simulated failure (100%)",
+        "traceback": "Traceback (most recent call last):\n"
+                     "  File "C:\\Users\sudon\MoreBeautifulPython\src\mbp.py", line 647, in try_f\n"
+                     "    res['res'] = f(*args[1:], **kwargs)\n"
+                     "  File "C:\\Users\sudon\MoreBeautifulPython\examples.py", line 14, in test_sleep_and_fail\n"
+                     "    assert random.random() > fail_rate, "simulated failure ({}%)".format(fail_rate * 100)\n"
+                     "AssertionError: simulated failure (100%)\n"
+                     ""
+    }
+    {
+        "res": "input"
+    }
+    ================================================================================================================
+    '''
+
     # check() can trace back to the original string of the function call and print the variable names and values
     # check() is slow and should be used only for inspection purposes.
     a = 123
-    check(a, multi_line, nested_list)
+    check(a, multi_line, nested_list)  # your comment
     '''
-    ----- check(a, multi_line, nested_list) -----
+    ----- check(a, multi_line, nested_list)  # your comment -----
     a = 123
     multi_line = "line1\n"
                  "*   line2\n"
@@ -342,8 +367,9 @@ def main():
                  ""
     nested_list = [[[1,2,3],
                     [4,5,6]]]
-    ---------------------------------------------
+    -------------------------------------------------------------
     '''
+
     # debug() == check(level=DEBUG)
     debug(multi_line, nested_list)
 

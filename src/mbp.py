@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.3.6'
+VERSION = '1.3.7'
 
 __all__ = [
     # replacement for logging
@@ -24,7 +24,7 @@ __all__ = [
     # replacement for multiprocessing
     'Workers', 'work',
     # syntax sugar for common utilities
-    'type_in', 'get_range', 'get_items', 'join_path', 'exec_dir', 'lib_path',
+    'try_f', 'type_in', 'get_range', 'get_items', 'join_path', 'exec_dir', 'lib_path',
     # tools for file system & data handling
     'make_dirs', 'make_files', 'make_dirs_for',
     'traverse', 'this_dir', 'dir_of', 'get_only_file_if_dir', 'file_name_of', 'dir_name_of',
@@ -171,7 +171,7 @@ class recorder(object):
         self.logger.__exit__(_type, value, _traceback)
 
 
-def error_msg(e, detailed=True, seperator='\n'):
+def error_msg(e, detailed=False, seperator='\n'):
     if not detailed:
         return repr(e)
     else:
@@ -612,18 +612,19 @@ def prints(*data, indent=4, width=80, shift=0, extra_indent=None, compact=False,
             log('', level=level)
 
 
+_VALID_REFERENCE_ARGUMENTS = r'\(([_a-zA-Z][_a-zA-Z0-9]*( *= *[_a-zA-Z0-9]+)?( *, *)?)+\)'
+
+
 def _check(*data, width, char, level, function_name):
     if _LOG.level <= level:
         stack = inspect.stack()
-        calling_code = stack[2].code_context[0].strip()
-        assert calling_code.startswith(function_name + '('), \
-            '"{}" ---> {}() should be used as a standalone statement'.format(calling_code, function_name)
-        with enclose(calling_code, width=width, char=char, level=level):
+        code_str = stack[2].code_context[0].strip()
+        r = re.search(function_name + _VALID_REFERENCE_ARGUMENTS, code_str)
+        assert r is not None, '{} ==> failed to extract arguments (expect references)'.format(code_str)
+        with enclose(code_str, width=width, char=char, level=level):
             if len(data) > 1:
-                arguments = calling_code[6:-1]
-                assert re.fullmatch(r'[a-zA-Z0-9 ,_]*', arguments) is not None, \
-                    '"{}" ---> arguments of {}() must be references'.format(calling_code, function_name)
-                arguments = [d.strip() for d in arguments.split(',')[:len(data)]]
+                arguments = [s.strip() for s in code_str[r.start(): r.end()][len(function_name) + 1:-1].split(',')]
+                print(arguments)
                 for k, v in zip(arguments, data):
                     log(k, end=' = ')
                     prints(v, shift=len(k) + 3, extra_indent=0)
@@ -637,6 +638,19 @@ def check(*data, width=None, char='-', level=INFO):
 
 def debug(*data, width=None, char='-'):
     _check(*data, width=width, char=char, level=DEBUG, function_name='debug')
+
+
+def try_f(*args, **kwargs):
+    res = {}
+    try:
+        f = args[0]
+        res['res'] = f(*args[1:], **kwargs)
+    except Exception as e:
+        res['error'] = error_msg(e)
+        res['error_type'] = res['error'].split('(')[0]
+        res['error_msg'] = res['error'][len(res['error_type']) + 2: -2]
+        res['traceback'] = error_msg(e, detailed=True)
+    return res
 
 
 def print_iter(data, level=INFO):
