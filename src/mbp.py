@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.3.4'
+VERSION = '1.3.5'
 
 __all__ = [
     # replacement for logging
@@ -768,6 +768,7 @@ def traverse(path, go_up=0, go_to=None, should_exist=False):
         n_res = res.parent
         assert n_res != res, '{} (go up {} times) ==> already reach root and cannot go up further'.format(o_res, go_up)
         res = n_res
+    res = str(res)
     if go_to is not None:
         res = join_path(res, go_to)
     assert not should_exist or os.path.exists(res), '{} ==> does not exist'.format(res)
