@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.3.3'
+VERSION = '1.3.4'
 
 __all__ = [
     # replacement for logging
@@ -30,7 +30,7 @@ __all__ = [
     'traverse', 'this_dir', 'dir_of', 'get_only_file_if_dir', 'file_name_of', 'dir_name_of',
     # tools for data loading & handling
     'load_txt', 'load_jsonl', 'load_json', 'save_json', 'save_jsonl',
-    'iterate', 'open_file', 'get_path_from', 'open_files',
+    'iterate', 'open_file', 'all_file_paths_from', 'open_files',
     # tools for summarizations
     'print_line', 'enclose', 'enclose_timer', 'error_msg', 'prints', 'debug', 'print_iter', 'print_table',
     # tools for simple statistics
@@ -325,7 +325,7 @@ def open_file(path, encoding='utf-8', compression=None):
         assert False, '{} not supported'.format(compression)
 
 
-def get_path_from(path, pattern=r".*", return_name=False):
+def all_file_paths_from(path, pattern=r".*", return_name=False):
     _is_dir_if_exist(path)
     matcher = re.compile(pattern)
     for p, dirs, files in os.walk(path):
@@ -338,7 +338,7 @@ def get_path_from(path, pattern=r".*", return_name=False):
 
 
 def open_files(path, encoding='utf-8', compression=None, pattern=r".*", progress=True):
-    for file_path, file_name in get_path_from(path, pattern, True):
+    for file_path, file_name in all_file_paths_from(path, pattern, True):
         try:
             yield open_file(file_path, encoding, compression)
             if progress:
