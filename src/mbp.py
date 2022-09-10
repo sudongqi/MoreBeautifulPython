@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.3.5'
+VERSION = '1.3.6'
 
 __all__ = [
     # replacement for logging
