@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.4.2'
+VERSION = '1.4.3'
 
 __all__ = [
     # replacement for logging
@@ -517,10 +517,12 @@ def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep,
 
     # int, float, single-line str
     def is_short_data(_d):
-        r = type_in(_d, [int, float, str])
+        if _d is None:
+            return True
+        r = type_in(_d, [int, float, str, bool])
         if r == 3:
             return not any(True for ch in _d if ch == '\n')
-        return r
+        return r is not None
 
     def put_quote(string):
         return quote + string + quote if isinstance(string, str) else str(string)
