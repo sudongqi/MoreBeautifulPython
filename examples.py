@@ -299,19 +299,17 @@ def main():
     '''
     ================================================== prints() ===================================================
     {
-        "a": [{"bcd","abc"},
+        "a": [{"abc","bcd"},
               0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,
               30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,
               56,57,58,59,60,61,62,63,64,65,66,67,68,69,
               (1,2,3),
               [["line1\n"
                 "*   line2\n"
-                "*   line3\n"
-                "",
+                "*   line3\n",
                 "line1\n"
                 "*   line2\n"
-                "*   line3\n"
-                ""]],
+                "*   line3\n"]],
               0,1,2],
         "": "empty_key",
         "c": {
@@ -331,27 +329,25 @@ def main():
     '''
 
     # try_f() perform try-except routine and capture the result or error messages in a dictionary
-    with enclose('try_f()'):
-        prints(try_f(test_sleep_and_fail, 'input', fail_rate=1))
-        prints(try_f(test_sleep_and_fail, 'input', fail_rate=0))
+    prints(try_f(test_sleep_and_fail, 'input', fail_rate=1))
     '''
-    =================================================== try_f() ====================================================
     {
         "error": "AssertionError('simulated failure (100%)')",
         "error_type": "AssertionError",
         "error_msg": "simulated failure (100%)",
         "traceback": "Traceback (most recent call last):\n"
-                     "  File "C:\\Users\sudon\MoreBeautifulPython\src\mbp.py", line 647, in try_f\n"
+                     "  File "C:\\Users\sudon\MoreBeautifulPython\src\mbp.py", line 670, in try_f\n"
                      "    res['res'] = f(*args[1:], **kwargs)\n"
                      "  File "C:\\Users\sudon\MoreBeautifulPython\examples.py", line 14, in test_sleep_and_fail\n"
                      "    assert random.random() > fail_rate, "simulated failure ({}%)".format(fail_rate * 100)\n"
                      "AssertionError: simulated failure (100%)\n"
-                     ""
     }
+    '''
+    prints(try_f(test_sleep_and_fail, 'input', fail_rate=0))
+    '''
     {
         "res": "input"
     }
-    ================================================================================================================
     '''
 
     # check() can trace back to the original string of the function call and print the variable names and values
@@ -359,15 +355,14 @@ def main():
     a = 123
     check(a, multi_line, nested_list)  # your comment
     '''
-    ----- check(a, multi_line, nested_list)  # your comment -----
+    ----- [main]: check(a, multi_line, nested_list)  # your comment -----
     a = 123
     multi_line = "line1\n"
                  "*   line2\n"
                  "*   line3\n"
-                 ""
     nested_list = [[[1,2,3],
                     [4,5,6]]]
-    -------------------------------------------------------------
+    ---------------------------------------------------------------------
     '''
 
     # debug() == check(level=DEBUG)
@@ -416,16 +411,13 @@ def main():
     '''
 
     # get 3 key statistics from an iterator at once
-    with enclose('simple statistics'):
-        log(n_min_max_avg(load_jsonl(jsonl_file_path), key_f=lambda x: x['age']))
-        log(min_max_avg(load_jsonl(jsonl_file_path), key_f=lambda x: x['age']))
-        log(avg(load_jsonl(jsonl_file_path), key_f=lambda x: x['age']))
+    log(n_min_max_avg(load_jsonl(jsonl_file_path), key_f=lambda x: x['age']))
+    log(min_max_avg(load_jsonl(jsonl_file_path), key_f=lambda x: x['age']))
+    log(avg(load_jsonl(jsonl_file_path), key_f=lambda x: x['age']))
     '''
-    ======= simple statistics =======
     (3, 24, 72, 46.333333333333336)
     (24, 72, 46.333333333333336)
     46.333333333333336
-    =================================
     '''
 
     # curr_time() == str(datetime.now(timezone.utc))[:19]

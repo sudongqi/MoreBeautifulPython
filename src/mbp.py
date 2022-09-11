@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.3.7'
+VERSION = '1.3.8'
 
 __all__ = [
     # replacement for logging
@@ -31,7 +31,8 @@ __all__ = [
     'load_txt', 'load_jsonl', 'load_json', 'save_json', 'save_jsonl',
     'iterate', 'open_file', 'all_file_paths_from', 'open_files',
     # tools for summarizations
-    'print_line', 'enclose', 'enclose_timer', 'error_msg', 'prints', 'check', 'debug', 'print_iter', 'print_table',
+    'print_line', 'enclose', 'enclose_timer', 'error_msg', 'prints', 'print_iter', 'print_table',
+    'check', 'debug', 'check_iter', 'debug_iter',
     # tools for simple statistics
     'timer', 'curr_time', 'avg', 'min_max_avg', 'n_min_max_avg', 'CPU_COUNT'
 ]
@@ -524,8 +525,11 @@ def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep,
             marker_l, marker_r = '(', ')'
         elif data_type == 3:
             marker_l, marker_r = '{', '}'
+            data = list(data)
         if extra_indent is None:
             marker_l = shift_str + marker_l
+
+        # handle empty string
         if not data:
             log_raw(marker_l + marker_r)
 
@@ -533,10 +537,12 @@ def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep,
         cache = []
         log_raw(marker_l)
         # group data
+        prev_d_type = type(data[0])
         for idx, d in enumerate(data):
+            d_type = type(d)
             if is_short_data(d):
                 str_d = put_quote(d)
-                if cache_size + len(str_d) + sep_len > width:
+                if cache_size + len(str_d) + sep_len > width or d_type != prev_d_type:
                     cache.append([])
                     cache_size = 0
                 if not cache or not isinstance(cache[-1], list):
@@ -546,6 +552,7 @@ def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep,
             else:
                 cache.append(idx)
                 cache_size = 0
+            prev_d_type = d_type
         # log
         for idx, d in enumerate(cache):
             if isinstance(d, list):
@@ -590,6 +597,8 @@ def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep,
         for idx, s in enumerate(_data):
             if idx == 0 and extra_indent is None:
                 log_raw('{}'.format(shift_str))
+            elif idx == len(_data) - 1 and not s:
+                continue
             elif idx != 0 or extra_indent is None:
                 log_raw('\n{}'.format(shift_str))
             log_raw('{}{}{}{}'.format(quote, s, '\\n' if idx != len(_data) - 1 else '', quote))
@@ -615,29 +624,43 @@ def prints(*data, indent=4, width=80, shift=0, extra_indent=None, compact=False,
 _VALID_REFERENCE_ARGUMENTS = r'\(([_a-zA-Z][_a-zA-Z0-9]*( *= *[_a-zA-Z0-9]+)?( *, *)?)+\)'
 
 
-def _check(*data, width, char, level, function_name):
+def _check(*data, width, char, level, function_name, use_print_iter=False):
     if _LOG.level <= level:
         stack = inspect.stack()
+        from_function = stack[2][3]
+        from_function = '?' if from_function == '<module>' else from_function
         code_str = stack[2].code_context[0].strip()
         r = re.search(function_name + _VALID_REFERENCE_ARGUMENTS, code_str)
         assert r is not None, '{} ==> failed to extract arguments (expect references)'.format(code_str)
-        with enclose(code_str, width=width, char=char, level=level):
-            if len(data) > 1:
-                arguments = [s.strip() for s in code_str[r.start(): r.end()][len(function_name) + 1:-1].split(',')]
-                print(arguments)
-                for k, v in zip(arguments, data):
-                    log(k, end=' = ')
-                    prints(v, shift=len(k) + 3, extra_indent=0)
+        with enclose('[{}]: '.format(from_function) + code_str, width=width, char=char, level=level):
+            if use_print_iter:
+                print_iter(data[0])
             else:
-                prints(data[0])
+                if len(data) > 1:
+                    arguments = [s.strip() for s in code_str[r.start(): r.end()][len(function_name) + 1:-1].split(',')]
+                    print(arguments)
+                    for k, v in zip(arguments, data):
+                        log(k, end=' = ')
+                        prints(v, shift=len(k) + 3, extra_indent=0)
+                else:
+                    assert len(data) == 1, 'expect only 1 iterator as argument'
+                    prints(data[0])
 
 
 def check(*data, width=None, char='-', level=INFO):
     _check(*data, width=width, char=char, level=level, function_name='check')
 
 
+def check_iter(*data, width=None, char='-', level=INFO):
+    _check(*data, width=width, char=char, level=level, function_name='check_iter', use_print_iter=True)
+
+
 def debug(*data, width=None, char='-'):
     _check(*data, width=width, char=char, level=DEBUG, function_name='debug')
+
+
+def debug_iter(*data, width=None, char='-'):
+    _check(*data, width=width, char=char, level=DEBUG, function_name='debug_iter', use_print_iter=True)
 
 
 def try_f(*args, **kwargs):
