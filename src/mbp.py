@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.4.1'
+VERSION = '1.4.2'
 
 __all__ = [
     # replacement for logging
@@ -560,12 +560,11 @@ def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep,
         cache = []
         log_raw(marker_l)
         # group data
-        prev_d_type = type(data[0])
         for idx, d in enumerate(data):
             d_type = type(d)
             if is_short_data(d):
                 str_d = put_quote(d)
-                if cache_size + len(str_d) + sep_len > width or d_type != prev_d_type:
+                if cache_size + len(str_d) + sep_len > width:
                     cache.append([])
                     cache_size = 0
                 if not cache or not isinstance(cache[-1], list):
@@ -575,7 +574,6 @@ def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep,
             else:
                 cache.append(idx)
                 cache_size = 0
-            prev_d_type = d_type
         # log
         for idx, d in enumerate(cache):
             if isinstance(d, list):
