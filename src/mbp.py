@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.4.3'
+VERSION = '1.4.4'
 
 __all__ = [
     # replacement for logging
@@ -522,7 +522,7 @@ def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep,
         r = type_in(_d, [int, float, str, bool])
         if r == 3:
             return not any(True for ch in _d if ch == '\n')
-        return r is not None
+        return r
 
     def put_quote(string):
         return quote + string + quote if isinstance(string, str) else str(string)
@@ -586,10 +586,15 @@ def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep,
                 log_raw('{}\n'.format(sep))
         log_raw(marker_r)
     elif data_type == 4:
-        marker_l = '{\n'
+        marker_l = '{'
+        marker_r = '}'
         if extra_indent is None:
             marker_l = shift_str + marker_l
-        log_raw(marker_l)
+
+        if not data:
+            return log_raw(marker_l + marker_r)
+        log_raw(marker_l + '\n')
+
         kv = data.items()
         indent_str = indent * ' '
         for idx, (k, v) in enumerate(kv):
@@ -614,7 +619,7 @@ def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep,
                 log_raw(sep + '\n')
             else:
                 log_raw('\n')
-        log_raw(shift_str + '}')
+        log_raw(shift_str + marker_r)
     elif data_type == 5:
         _data = data.split('\n')
         for idx, s in enumerate(_data):

@@ -2,6 +2,7 @@ import sys
 import shutil
 import time
 import random
+import collections
 
 # from mbp import * (for pip install version)
 from src.mbp import *
@@ -290,37 +291,53 @@ def main():
 
     # prints() is a superior pprint()
     with enclose("prints()"):
-        multi_line = "line1\n*   line2\n*   line3\n"
-        long_strings = ['-' * 60] * 3
+        class TestObject:
+            def __str__(self):
+                return 'this is a test object'
+
+        _tuple = (1, 2, 3, None)
+        _set = {'abc', 'bcd'}
+        _object = TestObject()
+        list_of_long_strings = ['-' * 60] * 3
+        short_list = ['a', 'b', 'c', 'd']
         long_list = [i for i in range(70)]
         nested_list = [[[1, 2, 3], [4, 5, 6]]]
-        hybrid_list = [{'abc', 'bcd'}] + long_list + [(1, 2, 3)] + [[[multi_line, multi_line]]] + [0, 1, 2]
-        hybrid_dict = {'a': hybrid_list, '': 'empty_key',
-                       'c': {'d': nested_list, 'e': long_strings, 'f': {'a longer key': long_list}}}
+        multi_lines = "line1\n\t\t- line2\n\t\t- line3\n"
+        hybrid_list = [_set, _tuple, long_list, short_list, {}, [], (),
+                       "string", None, True, False, (1, 2, 3), nested_list, multi_lines]
+        hybrid_dict = {'hybrid_dict': hybrid_list, '': 'empty key', 2048: 'number key', 'object': _object,
+                       'nested_dict': {'a': nested_list, 'b': list_of_long_strings,
+                                       'c': {'a longer key': long_list}}}
         prints(hybrid_dict)
     '''
     ================================================== prints() ===================================================
     {
-        "a": [{"abc","bcd"},
-              0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,
-              30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,
-              56,57,58,59,60,61,62,63,64,65,66,67,68,69,
-              (1,2,3),
-              [["line1\n"
-                "*   line2\n"
-                "*   line3\n",
-                "line1\n"
-                "*   line2\n"
-                "*   line3\n"]],
-              0,1,2],
-        "": "empty_key",
-        "c": {
-            "d": [[[1,2,3],
+        "hybrid_dict": [{"abc","bcd"},
+                        (1,2,3,None),
+                        [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,
+                         30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,
+                         56,57,58,59,60,61,62,63,64,65,66,67,68,69],
+                        ["a","b","c","d"],
+                        {},
+                        [],
+                        (),
+                        "string",None,True,False,
+                        (1,2,3),
+                        [[[1,2,3],
+                          [4,5,6]]],
+                        "line1\n"
+                        "		- line2\n"
+                        "		- line3\n"],
+        "": "empty key",
+        2048: "number key",
+        "object": "this is a test object",
+        "nested_dict": {
+            "a": [[[1,2,3],
                    [4,5,6]]],
-            "e": ["------------------------------------------------------------",
+            "b": ["------------------------------------------------------------",
                   "------------------------------------------------------------",
                   "------------------------------------------------------------"],
-            "f": {
+            "c": {
                 "a longer key": [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,
                                  30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,
                                  56,57,58,59,60,61,62,63,64,65,66,67,68,69]
@@ -355,7 +372,7 @@ def main():
     # check() can trace back to the original string of the function call and print the variable names and values
     # check() is slow and should be used only for inspection purposes.
     a = 123
-    check(a, multi_line, nested_list)  # your comment
+    check(a, multi_lines, nested_list)  # your comment
     '''
     ----- [main]: check(a, multi_line, nested_list)  # your comment -----
     a = 123
@@ -368,7 +385,7 @@ def main():
     '''
 
     # debug() == check(level=DEBUG)
-    debug(multi_line, nested_list)
+    debug(multi_lines, nested_list)
 
     # join_path() == os.path.join()
     jsonl_file_path = join_path(this_dir(), 'data.jsonl')
