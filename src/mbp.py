@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.4.4'
+VERSION = '1.4.5'
 
 __all__ = [
     # replacement for logging
@@ -659,8 +659,8 @@ def _check(*data, width, char, level, function_name, use_print_iter=False):
         from_function = '?' if from_function == '<module>' else from_function
         code_str = stack[2].code_context[0].strip()
         r = re.search(function_name + VALID_REFERENCE_ARGUMENTS_PATTERN, code_str)
-        arguments = [s.strip() for s in code_str[r.start(): r.end()][len(function_name) + 1:-1].split(',')]
         assert r is not None, '{} ==> failed to extract arguments (expect references)'.format(code_str)
+        arguments = [s.strip() for s in code_str[r.start(): r.end()][len(function_name) + 1:-1].split(',')]
         with enclose('[{}]: '.format(from_function) + code_str, width=width, char=char):
             if use_print_iter:
                 if len(data) > 1:
@@ -708,13 +708,17 @@ def try_f(*args, **kwargs):
 
 
 def print_iter(data, shift=0, level=INFO):
-    if shift <= 0:
-        for item in data:
-            log(item, level=level)
+    if not isinstance(data, Iterable):
+        log(shift * ' ', end='')
+        log(data, level=level)
     else:
-        for item in data:
-            log(shift * ' ', end='')
-            log(item, level=level)
+        if shift <= 0:
+            for item in data:
+                log(item, level=level)
+        else:
+            for item in data:
+                log(shift * ' ', end='')
+                log(item, level=level)
 
 
 def n_min_max_avg(data, key_f=None, first_n=None, sample_p=1.0, sample_seed=None):
