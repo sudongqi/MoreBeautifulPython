@@ -274,15 +274,18 @@ def main():
 
     # get_range() is a replacement for range(len())
     with enclose('get_range() and get_items()'):
-        vec = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        vec = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i']
+        vec_iter = iter(vec)
         log(list(get_range(vec)))
         log(list(get_range(vec, 2, 4)))
-        log(list(get_items(vec, 0, -1, 2, reverse=True)))
+        log(list(get_items(vec, 2, None, 2, reverse=True)))
+        log(list(get_items(vec_iter, 0, 5)))
     '''
     ===== get_range() and get_items() =====
-    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    [0, 1, 2, 3, 4, 5, 6, 7, 8]
     [2, 3]
-    [8, 6, 4, 2, 0]
+    ['i', 'g', 'e', 'c']
+    ['a', 'b', 'c', 'd', 'e']
     =======================================
     '''
 

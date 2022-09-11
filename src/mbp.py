@@ -11,11 +11,12 @@ import inspect
 import itertools
 import traceback
 from io import StringIO
+from collections.abc import Iterator, Iterable
 from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.3.8'
+VERSION = '1.3.9'
 
 __all__ = [
     # replacement for logging
@@ -401,25 +402,47 @@ def type_in(data, types):
     return 0
 
 
-def get_range(data, start=0, end=None, step=1, reverse=False):
-    assert step >= 1, 'step must be bigger or equal than 1'
+def _range_iterate(data, start, end=sys.maxsize, step=1):
+    assert not end < 0, 'end cannot be negative'
     start = max(start, 0)
-    if end is None:
-        end = len(data)
-    elif end > 0:
-        end = min(end, len(data))
+    step = max(step, 1)
+    for idx, item in enumerate(data):
+        if start <= idx < end and (idx - start) % step == 0:
+            yield idx, item
+
+
+def get_range(data, start=0, end=None, step=1, reverse=False):
+    assert isinstance(data, Iterable), 'data should be an Iterable'
+
+    if isinstance(data, Iterator):
+        assert not reverse, 'cannot set reverse=True when data is an Iterator'
+        for idx, _ in _range_iterate(data, start, end, step):
+            yield idx
     else:
-        end = len(data) + end
-    if reverse:
-        for i in range(end - 1, start - 1, -step):
-            yield i
-    else:
-        for i in range(start, end, step):
-            yield i
+        step = max(step, 1)
+        start = max(start, 0)
+        data_len = len(data)
+        if end is None:
+            end = data_len
+        elif end > 0:
+            end = min(end, data_len)
+        else:
+            end = max(0, data_len + end)
+        if reverse:
+            for i in range(end - 1, start - 1, -step):
+                yield i
+        else:
+            for i in range(start, end, step):
+                yield i
 
 
 def get_items(data, start=0, end=None, step=1, reverse=False):
-    assert isinstance(data, list), 'data must be a list'
+    assert isinstance(data, Iterable), 'input should be an Iterable'
+    if isinstance(data, Iterator):
+        assert not reverse, 'cannot set reverse=True when data is an Iterator'
+        for _, item in _range_iterate(data, start, end, step):
+            yield item
+
     for idx in get_range(data, start, end, step, reverse):
         yield data[idx]
 
@@ -631,19 +654,22 @@ def _check(*data, width, char, level, function_name, use_print_iter=False):
         from_function = '?' if from_function == '<module>' else from_function
         code_str = stack[2].code_context[0].strip()
         r = re.search(function_name + _VALID_REFERENCE_ARGUMENTS, code_str)
+        arguments = [s.strip() for s in code_str[r.start(): r.end()][len(function_name) + 1:-1].split(',')]
         assert r is not None, '{} ==> failed to extract arguments (expect references)'.format(code_str)
-        with enclose('[{}]: '.format(from_function) + code_str, width=width, char=char, level=level):
+        with enclose('[{}]: '.format(from_function) + code_str, width=width, char=char):
             if use_print_iter:
-                print_iter(data[0])
+                if len(data) == 0:
+                    print_iter(data[0])
+                else:
+                    for k, item in zip(arguments, get_items(data)):
+                        log(k + '=')
+                        print_iter(item)
             else:
                 if len(data) > 1:
-                    arguments = [s.strip() for s in code_str[r.start(): r.end()][len(function_name) + 1:-1].split(',')]
-                    print(arguments)
                     for k, v in zip(arguments, data):
                         log(k, end=' = ')
                         prints(v, shift=len(k) + 3, extra_indent=0)
                 else:
-                    assert len(data) == 1, 'expect only 1 iterator as argument'
                     prints(data[0])
 
 
