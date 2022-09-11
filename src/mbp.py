@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.4.0'
+VERSION = '1.4.1'
 
 __all__ = [
     # replacement for logging
@@ -554,7 +554,7 @@ def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep,
 
         # handle empty string
         if not data:
-            log_raw(marker_l + marker_r)
+            return log_raw(marker_l + marker_r)
 
         cache_size = 0 if extra_indent is None else extra_indent
         cache = []
