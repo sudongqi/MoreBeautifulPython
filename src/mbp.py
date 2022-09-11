@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.3.9'
+VERSION = '1.4.0'
 
 __all__ = [
     # replacement for logging
@@ -101,40 +101,40 @@ class Logger:
                             print(line, file=f, end=None, flush=flush)
 
 
-_LOG = Logger()
-_CONTEXT_LOGGER_SET = False
+LOGGER = Logger()
+CONTEXT_LOGGER_SET = False
 
 
 class logger(object):
     def __init__(self, name='', file=sys.stdout, level=INFO, meta_info=False, can_overwrite=True):
-        global _LOG
-        global _CONTEXT_LOGGER_SET
+        global LOGGER
+        global CONTEXT_LOGGER_SET
         self.logger_was_changed = False
-        if not _CONTEXT_LOGGER_SET or not can_overwrite:
-            self.org_logger = _LOG
-            _LOG = Logger(name, file, level, meta_info)
+        if not CONTEXT_LOGGER_SET or not can_overwrite:
+            self.org_logger = LOGGER
+            LOGGER = Logger(name, file, level, meta_info)
             self.logger_was_changed = True
-            _CONTEXT_LOGGER_SET = True
+            CONTEXT_LOGGER_SET = True
 
     def __enter__(self):
         pass
 
     def __exit__(self, _type, value, _traceback):
-        global _LOG
-        global _CONTEXT_LOGGER_SET
+        global LOGGER
+        global CONTEXT_LOGGER_SET
         if self.logger_was_changed:
-            _LOG = self.org_logger
-            _CONTEXT_LOGGER_SET = False
+            LOGGER = self.org_logger
+            CONTEXT_LOGGER_SET = False
 
 
 def set_global_logger(name='', file=sys.stdout, level=INFO, meta_info=False, sep=' '):
-    global _LOG
-    _LOG = Logger(name, file, level, meta_info, sep)
+    global LOGGER
+    LOGGER = Logger(name, file, level, meta_info, sep)
 
 
 def reset_global_logger():
-    global _LOG
-    _LOG = Logger()
+    global LOGGER
+    LOGGER = Logger()
 
 
 def get_logger(name='', file=sys.stdout, level=INFO, meta_info=False, sep=' '):
@@ -146,14 +146,14 @@ def curr_time():
 
 
 def log(*messages, level=INFO, file=None, end=None, flush=False):
-    _LOG(*messages, level=level, file=file, end=end, flush=flush)
+    LOGGER(*messages, level=level, file=file, end=end, flush=flush)
 
 
 class recorder(object):
     def __init__(self, tape, raw=False):
         assert tape == [], '1st argument must be an empty list'
-        global _LOG
-        global _CONTEXT_LOGGER_SET
+        global LOGGER
+        global CONTEXT_LOGGER_SET
         self.buffer = StringIO()
         self.logger = logger(file=self.buffer, can_overwrite=False)
         self.tape = tape
@@ -391,7 +391,7 @@ def save_jsonl(data, path, encoding='utf-8'):
             f.write(json.dumps(d, ensure_ascii=False) + '\n')
 
 
-_COLLECTION_TYPES = [list, set, tuple, dict]
+COLLECTION_TYPES = [list, set, tuple, dict]
 
 
 def type_in(data, types):
@@ -451,7 +451,7 @@ def _build_table(rows, space=3, cell_space=1, filler=' '):
     space = max(space, 1)
 
     _rows = []
-    rows_type = type_in(rows, _COLLECTION_TYPES)
+    rows_type = type_in(rows, COLLECTION_TYPES)
     if not rows_type:
         return [str(rows)]
     elif rows_type == 4:
@@ -464,7 +464,7 @@ def _build_table(rows, space=3, cell_space=1, filler=' '):
     num_col = None
     for _row in rows:
         row = _row
-        row_type = type_in(row, _COLLECTION_TYPES)
+        row_type = type_in(row, COLLECTION_TYPES)
         if not row_type:
             row = [row]
         # check rows
@@ -473,7 +473,7 @@ def _build_table(rows, space=3, cell_space=1, filler=' '):
         else:
             assert num_col == len(row), 'rows have different size'
         row = [_build_table(item, cell_space, cell_space, filler)
-               if type_in(item, _COLLECTION_TYPES) else [str(item)] for item in row]
+               if type_in(item, COLLECTION_TYPES) else [str(item)] for item in row]
         max_height = max(len(r) for r in row)
         new_rows = [['' for _ in range(len(row))] for _ in range(max_height)]
         for j, items in enumerate(row):
@@ -644,26 +644,26 @@ def prints(*data, indent=4, width=80, shift=0, extra_indent=None, compact=False,
             log('', level=level)
 
 
-_VALID_REFERENCE_ARGUMENTS = r'\(([_a-zA-Z][_a-zA-Z0-9]*( *= *[_a-zA-Z0-9]+)?( *, *)?)+\)'
+VALID_REFERENCE_ARGUMENTS_PATTERN = r'\(([_a-zA-Z][_a-zA-Z0-9]*( *= *[_a-zA-Z0-9]+)?( *, *)?)+\)'
 
 
 def _check(*data, width, char, level, function_name, use_print_iter=False):
-    if _LOG.level <= level:
+    if LOGGER.level <= level:
         stack = inspect.stack()
         from_function = stack[2][3]
         from_function = '?' if from_function == '<module>' else from_function
         code_str = stack[2].code_context[0].strip()
-        r = re.search(function_name + _VALID_REFERENCE_ARGUMENTS, code_str)
+        r = re.search(function_name + VALID_REFERENCE_ARGUMENTS_PATTERN, code_str)
         arguments = [s.strip() for s in code_str[r.start(): r.end()][len(function_name) + 1:-1].split(',')]
         assert r is not None, '{} ==> failed to extract arguments (expect references)'.format(code_str)
         with enclose('[{}]: '.format(from_function) + code_str, width=width, char=char):
             if use_print_iter:
-                if len(data) == 0:
-                    print_iter(data[0])
-                else:
+                if len(data) > 1:
                     for k, item in zip(arguments, get_items(data)):
-                        log(k + '=')
-                        print_iter(item)
+                        log(k, end=' = \n')
+                        print_iter(item, shift=4)
+                else:
+                    print_iter(data[0])
             else:
                 if len(data) > 1:
                     for k, v in zip(arguments, data):
@@ -702,9 +702,14 @@ def try_f(*args, **kwargs):
     return res
 
 
-def print_iter(data, level=INFO):
-    for item in data:
-        log(item, level=level)
+def print_iter(data, shift=0, level=INFO):
+    if shift <= 0:
+        for item in data:
+            log(item, level=level)
+    else:
+        for item in data:
+            log(shift * ' ', end='')
+            log(item, level=level)
 
 
 def n_min_max_avg(data, key_f=None, first_n=None, sample_p=1.0, sample_seed=None):
