@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.4.5'
+VERSION = '1.4.6'
 
 __all__ = [
     # replacement for logging
@@ -771,9 +771,11 @@ def print_line(text_or_width=20, width=20, char='-', level=INFO, min_wing_size=5
 
 
 class enclose(object):
-    def __init__(self, msg='', width=None, char='=', top_margin=0, bottom_margin=1, use_timer=False, level=INFO):
+    def __init__(self, msg='', width=None, max_width=80, char='=', top_margin=0, bottom_margin=1, use_timer=False,
+                 level=INFO):
         self.msg = _strip_and_add_spaces(msg)
         self.width = width
+        self.max_width = max_width
         self.top_margin = top_margin
         self.bottom_margin = bottom_margin
         self.char = char
@@ -802,6 +804,7 @@ class enclose(object):
             if self.tape:
                 # enclosed lines should be slightly longer than the longest content
                 max_line_length = max(len(msg) + 2 for msg in self.tape)
+            max_line_length = min(self.max_width, max_line_length)
             log('\n' * self.top_margin, end='', level=self.level)
             top_line = print_line(self.msg, max_line_length, char=self.char, no_print=True)
             self.top_line_size = len(top_line)
@@ -815,8 +818,9 @@ class enclose(object):
 
 
 class enclose_timer(enclose):
-    def __init__(self, text_or_length='', width=None, char='=', top_margin=0, bottom_margin=1, level=INFO):
-        super().__init__(text_or_length, width, char, top_margin, bottom_margin, True, level)
+    def __init__(self, text_or_length='', width=None, max_width=80, char='=', top_margin=0, bottom_margin=1,
+                 level=INFO):
+        super().__init__(text_or_length, width, max_width, char, top_margin, bottom_margin, True, level)
 
 
 def join_path(*args, **kwargs):

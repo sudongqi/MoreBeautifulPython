@@ -161,15 +161,15 @@ def main():
         for r in work(f=test_sleep_and_fail, tasks=tasks, ordered=True, ignore_error=True, res_only=False):
             log(r)
     '''
-    ============================================== work() ===============================================
-    {'worker_id': 0, 'task_id': 0, 'res': 0}
-    {'worker_id': 1, 'task_id': 1, 'res': 1}
-    {'worker_id': 3, 'task_id': 2, 'res': 2}
-    {'worker_id': 4, 'task_id': 3, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
-    {'worker_id': 2, 'task_id': 4, 'res': 4}
-    {'worker_id': 5, 'task_id': 5, 'res': 5}
-    =====================================================================================================
-    took 342.720 ms
+    ==================================== work() ====================================
+    {'worker_id': 1, 'task_id': 0, 'res': 0}
+    {'worker_id': 2, 'task_id': 1, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+    {'worker_id': 0, 'task_id': 2, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+    {'worker_id': 3, 'task_id': 3, 'res': 3}
+    {'worker_id': 5, 'task_id': 4, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
+    {'worker_id': 4, 'task_id': 5, 'res': 5}
+    ================================================================================
+    took 345.680 ms
     '''
 
     with enclose("work() with cache_inp"):
@@ -231,12 +231,12 @@ def main():
         for f in open_files(this_dir(), pattern=r'.*\.py'):
             f.readlines()
     '''
-    ================================== open_files() ==================================
+    ================================= open_files() =================================
     found build_and_push.py <== C:\\Users\sudon\MoreBeautifulPython\build_and_push.py
     found examples.py <== C:\\Users\sudon\MoreBeautifulPython\examples.py
     found mbp.py <== C:\\Users\sudon\MoreBeautifulPython\src\mbp.py
     found __init__.py <== C:\\Users\sudon\MoreBeautifulPython\src\__init__.py
-    ==================================================================================
+    ================================================================================
     '''
 
     # make_files() and make_dirs() create files and directory after creating paths
@@ -310,9 +310,9 @@ def main():
                                        'c': {'a longer key': long_list}}}
         prints(hybrid_dict)
     '''
-    ================================================== prints() ===================================================
+    =================================== prints() ===================================
     {
-        "hybrid_dict": [{"abc","bcd"},
+        "hybrid_dict": [{"bcd","abc"},
                         (1,2,3,None),
                         [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,
                          30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,
@@ -344,7 +344,7 @@ def main():
             }
         }
     }
-    ===============================================================================================================
+    ================================================================================
     '''
 
     # try_f() perform try-except routine and capture the result or error messages in a dictionary
