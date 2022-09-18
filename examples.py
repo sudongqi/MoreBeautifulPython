@@ -2,7 +2,6 @@ import sys
 import shutil
 import time
 import random
-import collections
 
 # from mbp import * (for pip install version)
 from src.mbp import *
@@ -372,20 +371,18 @@ def main():
     # check() can trace back to the original string of the function call and print the variable names and values
     # check() is slow and should be used only for inspection purposes.
     a = 123
-    check(a, multi_lines, nested_list)  # your comment
+    debug(a, multi_lines, nested_list, level=INFO)  # your comment
     '''
-    ----- [main]: check(a, multi_line, nested_list)  # your comment -----
+    ----- [main]: debug(a, multi_lines, nested_list, level=INFO)  # your comment -----
     a = 123
-    multi_line = "line1\n"
-                 "*   line2\n"
-                 "*   line3\n"
+    multi_lines = line1
+            - line2
+            - line3
+    
     nested_list = [[[1,2,3],
                     [4,5,6]]]
-    ---------------------------------------------------------------------
+    ----------------------------------------------------------------------------------
     '''
-
-    # debug() == check(level=DEBUG)
-    debug(multi_lines, nested_list)
 
     # join_path() == os.path.join()
     jsonl_file_path = join_path(this_dir(), 'data.jsonl')

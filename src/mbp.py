@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.4.6'
+VERSION = '1.4.7'
 
 __all__ = [
     # replacement for logging
@@ -32,8 +32,7 @@ __all__ = [
     'load_txt', 'load_jsonl', 'load_json', 'save_json', 'save_jsonl',
     'iterate', 'open_file', 'all_file_paths_from', 'open_files',
     # tools for summarizations
-    'print_line', 'enclose', 'enclose_timer', 'error_msg', 'prints', 'print_iter', 'print_table',
-    'check', 'debug', 'check_iter', 'debug_iter',
+    'print_line', 'enclose', 'enclose_timer', 'error_msg', 'prints', 'print_iter', 'print_table', 'debug', 'debug_iter',
     # tools for simple statistics
     'timer', 'curr_time', 'avg', 'min_max_avg', 'n_min_max_avg', 'CPU_COUNT'
 ]
@@ -544,6 +543,7 @@ def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep,
             log_raw(shift_str + put_quote(data))
         else:
             log_raw(put_quote(data))
+    # collection
     elif data_type in {1, 2, 3}:
         marker_l, marker_r = '[', ']'
         if data_type == 2:
@@ -585,6 +585,7 @@ def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep,
             if idx != len(cache) - 1:
                 log_raw('{}\n'.format(sep))
         log_raw(marker_r)
+    # dictionary
     elif data_type == 4:
         marker_l = '{'
         marker_r = '}'
@@ -620,6 +621,7 @@ def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep,
             else:
                 log_raw('\n')
         log_raw(shift_str + marker_r)
+    # multi-lines string
     elif data_type == 5:
         _data = data.split('\n')
         for idx, s in enumerate(_data):
@@ -673,25 +675,23 @@ def _check(*data, width, char, level, function_name, use_print_iter=False):
                 if len(data) > 1:
                     for k, v in zip(arguments, data):
                         log(k, end=' = ')
-                        prints(v, shift=len(k) + 3, extra_indent=0)
+                        if isinstance(v, str):
+                            log(v)
+                        else:
+                            prints(v, shift=len(k) + 3, extra_indent=0)
                 else:
-                    prints(data[0])
+                    if isinstance(data[0], str):
+                        log(data[0])
+                    else:
+                        prints(data[0])
 
 
-def check(*data, width=None, char='-', level=INFO):
-    _check(*data, width=width, char=char, level=level, function_name='check')
+def debug(*data, width=None, char='-', level=DEBUG):
+    _check(*data, width=width, char=char, level=level, function_name='debug')
 
 
-def check_iter(*data, width=None, char='-', level=INFO):
-    _check(*data, width=width, char=char, level=level, function_name='check_iter', use_print_iter=True)
-
-
-def debug(*data, width=None, char='-'):
-    _check(*data, width=width, char=char, level=DEBUG, function_name='debug')
-
-
-def debug_iter(*data, width=None, char='-'):
-    _check(*data, width=width, char=char, level=DEBUG, function_name='debug_iter', use_print_iter=True)
+def debug_iter(*data, width=None, char='-', level=DEBUG):
+    _check(*data, width=width, char=char, level=level, function_name='debug_iter', use_print_iter=True)
 
 
 def try_f(*args, **kwargs):
