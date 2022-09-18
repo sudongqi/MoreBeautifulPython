@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.4.7'
+VERSION = '1.4.8'
 
 __all__ = [
     # replacement for logging
@@ -675,15 +675,9 @@ def _check(*data, width, char, level, function_name, use_print_iter=False):
                 if len(data) > 1:
                     for k, v in zip(arguments, data):
                         log(k, end=' = ')
-                        if isinstance(v, str):
-                            log(v)
-                        else:
-                            prints(v, shift=len(k) + 3, extra_indent=0)
+                        prints(v, shift=len(k) + 3, extra_indent=0)
                 else:
-                    if isinstance(data[0], str):
-                        log(data[0])
-                    else:
-                        prints(data[0])
+                    log(data[0]) if isinstance(data[0], str) else prints(data[0])
 
 
 def debug(*data, width=None, char='-', level=DEBUG):
