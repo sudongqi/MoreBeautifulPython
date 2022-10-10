@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 
-VERSION = '1.4.8'
+VERSION = '1.4.9'
 
 __all__ = [
     # replacement for logging
@@ -140,8 +140,12 @@ def get_logger(name='', file=sys.stdout, level=INFO, meta_info=False, sep=' '):
     return Logger(name, file, level, meta_info, sep)
 
 
-def curr_time():
-    return str(datetime.now(timezone.utc))[:19]
+def curr_time(breakdown=False):
+    res = str(datetime.now(timezone.utc))[:19]
+    if not breakdown:
+        return res
+    #      year      month     day        hour        minute      second
+    return res[0:4], res[5:7], res[8:10], res[11:13], res[14:16], res[17:19]
 
 
 def log(*messages, level=INFO, file=None, end=None, flush=False):
