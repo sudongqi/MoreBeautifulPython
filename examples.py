@@ -241,7 +241,7 @@ def main():
     # make_files() and make_dirs() create files and directory after creating paths
     with enclose('make_files() and make_dirs()'):
         test_dir = './test_dir'
-        make_files(*[join_path(test_dir, file_name) for file_name in ['a.txt', 'b.txt', 'c.txt']])
+        make_files([join_path(test_dir, file_name) for file_name in ['a.txt', 'b.txt', 'c.txt']])
         log('{} files under {}'.format(len(list(open_files(test_dir))), test_dir))
         make_dirs(test_dir, overwrite=True)
         log('{} files under {} (after overwrite)'.format(len(list(open_files(test_dir))), test_dir))

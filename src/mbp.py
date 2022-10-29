@@ -15,8 +15,9 @@ from collections.abc import Iterator, Iterable
 from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
+from wcwidth import wcswidth
 
-VERSION = '1.4.9'
+VERSION = '1.5.0'
 
 __all__ = [
     # replacement for logging
@@ -30,7 +31,7 @@ __all__ = [
     'make_dirs', 'make_files', 'make_dirs_for',
     'traverse', 'this_dir', 'dir_of', 'get_only_file_if_dir', 'file_name_of', 'dir_name_of',
     'load_txt', 'load_jsonl', 'load_json', 'save_json', 'save_jsonl',
-    'iterate', 'open_file', 'all_file_paths_from', 'open_files',
+    'iterate', 'open_file', 'file_paths_under', 'open_files',
     # tools for summarizations
     'print_line', 'enclose', 'enclose_timer', 'error_msg', 'prints', 'print_iter', 'print_table', 'debug', 'debug_iter',
     # tools for simple statistics
@@ -142,10 +143,10 @@ def get_logger(name='', file=sys.stdout, level=INFO, meta_info=False, sep=' '):
 
 def curr_time(breakdown=False):
     res = str(datetime.now(timezone.utc))[:19]
-    if not breakdown:
-        return res
-    #      year      month     day        hour        minute      second
-    return res[0:4], res[5:7], res[8:10], res[11:13], res[14:16], res[17:19]
+    if breakdown:
+        #      year      month     day        hour        minute      second
+        return res[0:4], res[5:7], res[8:10], res[11:13], res[14:16], res[17:19]
+    return res
 
 
 def log(*messages, level=INFO, file=None, end=None, flush=False):
@@ -341,27 +342,25 @@ def open_file(path, encoding='utf-8', compression=None):
         assert False, '{} not supported'.format(compression)
 
 
-def all_file_paths_from(path, pattern=r".*", return_name=False):
+def file_paths_under(path, pattern=r".*"):
     _is_dir_if_exist(path)
     matcher = re.compile(pattern)
     for p, dirs, files in os.walk(path):
         for file_name in files:
             if matcher.fullmatch(file_name):
-                if return_name:
-                    yield join_path(p, file_name), file_name
-                else:
-                    yield join_path(p, file_name)
+                full_path = join_path(p, file_name)
+                yield full_path, full_path[len(path):], file_name
 
 
 def open_files(path, encoding='utf-8', compression=None, pattern=r".*", progress=True):
-    for file_path, file_name in all_file_paths_from(path, pattern, True):
+    for full_path, _, file_name in file_paths_under(path, pattern):
         try:
-            yield open_file(file_path, encoding, compression)
+            yield open_file(full_path, encoding, compression)
             if progress:
-                log('found {} <== {}'.format(file_name, file_path))
+                log('found {} <== {}'.format(file_name, full_path))
         except PermissionError:
             if progress:
-                log('no permission to open {} <== {}'.format(file_name, file_path))
+                log('no permission to open {} <== {}'.format(file_name, full_path))
 
 
 def load_txt(path, raw=False, encoding="utf-8", first_n=None, sample_p=1.0, sample_seed=None, report_n=None,
@@ -487,7 +486,7 @@ def _build_table(rows, space=3, cell_space=1, filler=' '):
     column_width = [0 for _ in range(num_col)]
     for d in data:
         for i in range(num_col):
-            column_width[i] = max(column_width[i], len(d[i]))
+            column_width[i] = max(column_width[i], wcswidth(d[i]))
 
     res = []
     for d in data:
@@ -495,7 +494,7 @@ def _build_table(rows, space=3, cell_space=1, filler=' '):
         for idx in range(num_col - 1):
             item = d[idx]
             row.append(item)
-            row.append(filler * (space + column_width[idx] - len(item)))
+            row.append(filler * (space + column_width[idx] - wcswidth(item)))
         row.append(d[-1])
         res.append(''.join(row))
     return res
