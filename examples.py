@@ -402,11 +402,11 @@ def main():
     # print_table() can adjust column width automatically
     with enclose('print_table()'):
         rows = [list(d.values()) for d in data]
-        column_names = list(data[0].keys())
-        print_table([column_names] + rows, space=3)
+        print_table(rows, headers=list(data[0].keys()), space=3)
     '''
     ===== print_table() =====
     id   name      age
+    ------------------
     1    Jackson   43
     2    Zunaira   24
     3    Lorelei   72
