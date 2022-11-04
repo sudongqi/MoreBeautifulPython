@@ -17,7 +17,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.1'
+VERSION = '1.5.2'
 
 __all__ = [
     # replacement for logging
@@ -504,8 +504,9 @@ def print_table(rows, headers=None, headers_sep='-', space=3, cell_space=1, fill
     if headers is not None:
         rows = [headers] + rows
     res = _build_table(rows, space, cell_space, filler)
+    headers_sep_line = headers_sep * len(res[0])
     if headers is not None:
-        res.insert(1, headers_sep * max(len(r) for r in res))
+        res = [headers_sep_line, res[0], headers_sep_line] + res[1:] + [headers_sep_line]
     if not no_print:
         print_iter(res, level=level)
     return res
