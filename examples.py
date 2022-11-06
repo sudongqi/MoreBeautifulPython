@@ -2,7 +2,6 @@ import sys
 import shutil
 import time
 import random
-
 # from mbp import * (for pip install version)
 from src.mbp import *
 
@@ -354,31 +353,28 @@ def main():
         "error_type": "AssertionError",
         "error_msg": "simulated failure (100%)",
         "traceback": "Traceback (most recent call last):\n"
-                     "  File "C:\\Users\sudon\MoreBeautifulPython\src\mbp.py", line 670, in try_f\n"
+                     "  File "C:\\Users\sudon\MoreBeautifulPython\src\mbp.py", line 708, in try_f\n"
                      "    res['res'] = f(*args[1:], **kwargs)\n"
-                     "  File "C:\\Users\sudon\MoreBeautifulPython\examples.py", line 14, in test_sleep_and_fail\n"
+                     "  File "C:\\Users\sudon\MoreBeautifulPython\examples.py", line 13, in test_sleep_and_fail\n"
                      "    assert random.random() > fail_rate, "simulated failure ({}%)".format(fail_rate * 100)\n"
                      "AssertionError: simulated failure (100%)\n"
     }
     '''
-    prints(try_f(test_sleep_and_fail, 'input', fail_rate=0))
+    log(try_f(test_sleep_and_fail, 'input', fail_rate=0))
     '''
-    {
-        "res": "input"
-    }
+    {'res': 'input'}
     '''
 
-    # check() can trace back to the original string of the function call and print the variable names and values
-    # check() is slow and should be used only for inspection purposes.
+    # debug() can trace back to the original string of the function call and print the variable names and values
+    # debug() is slow and should be used only for inspection purposes.
     a = 123
     debug(a, multi_lines, nested_list, level=INFO)  # your comment
     '''
     ----- [main]: debug(a, multi_lines, nested_list, level=INFO)  # your comment -----
     a = 123
-    multi_lines = line1
-            - line2
-            - line3
-    
+    multi_lines = "line1\n"
+                  "		- line2\n"
+                  "		- line3\n"
     nested_list = [[[1,2,3],
                     [4,5,6]]]
     ----------------------------------------------------------------------------------
@@ -387,59 +383,70 @@ def main():
     # join_path() == os.path.join()
     jsonl_file_path = join_path(this_dir(), 'data.jsonl')
     # load_jsonl() return an iterator of dictionary
-    data = list(load_jsonl(join_path(this_dir(), 'data.jsonl')))
+    data = list(load_jsonl(jsonl_file_path))
+
     # print_iter(iterator) == [log(item) for item in iterator]
     with enclose('print_list()'):
         print_iter(data)
     '''
-    ============= print_list() ==============
-    {'id': 1, 'name': 'Jackson', 'age': 43}
-    {'id': 2, 'name': 'Zunaira', 'age': 24}
-    {'id': 3, 'name': 'Lorelei', 'age': 72}
-    =========================================
+    ================= print_list() =================
+    {'id': 1, 'name': 'Jean', 'city': 'Mondstadt'}
+    {'id': 2, 'name': 'Xingqiu', 'city': 'Liyue'}
+    {'id': 3, 'name': 'Ganyu', 'city': 'Liyue'}
+    {'id': 4, 'name': 'Ayaka', 'city': 'Inazuma'}
+    {'id': 5, 'name': 'Nilou', 'city': 'Sumeru'}
+    ================================================
     '''
 
     # print_table() can adjust column width automatically
-    with enclose('print_table()'):
-        rows = [list(d.values()) for d in data]
-        print_table(rows, headers=list(data[0].keys()), space=3)
+    rows = [list(d.values()) for d in data]
+    headers = list(data[0].keys())
+    print_table(rows, headers=headers, space=3)
     '''
-    ===== print_table() =====
-    id   name      age
-    ------------------
-    1    Jackson   43
-    2    Zunaira   24
-    3    Lorelei   72
-    =========================
-    '''
-
-    # print_table() can also handle tables inside table
-    with enclose('tables inside table'):
-        rows = [['total', 140], ['stats', [['a: ', 70], ['b: ', 20], ['c: ', 50]]]]
-        print_table(rows)
-    '''
-    ===== tables inside table =====
-    total   140
-    stats   a:  70
-            b:  20
-            c:  50
-    ===============================
+    -------------------
+    id   name      city
+    -------------------
+    1    Jean      Mondstadt
+    2    Xingqiu   Liyue
+    3    Ganyu     Liyue
+    4    Ayaka     Inazuma
+    5    Nilou     Sumeru
+    -------------------
     '''
 
+    # print_table() can also pad a row, and handle tables inside table (if item is a list, dict, set, or tuple)
+    rows += [[6, 'Paimon'], ['', 'summary', [['num characters', 6], ['num cities', 4]]]]
+    print_table(rows, headers)
+    '''
+    -------------------
+    1    Jean      Mondstadt
+    2    Xingqiu   Liyue
+    3    Ganyu     Liyue
+    4    Ayaka     Inazuma
+    5    Nilou     Sumeru
+    6    Paimon
+         summary   num characters 6
+                   num cities     4
+    -------------------
+    '''
+
+    numbers = [1, 2, 3, 4, 5]
     # get 3 key statistics from an iterator at once
-    log(n_min_max_avg(load_jsonl(jsonl_file_path), key_f=lambda x: x['age']))
-    log(min_max_avg(load_jsonl(jsonl_file_path), key_f=lambda x: x['age']))
-    log(avg(load_jsonl(jsonl_file_path), key_f=lambda x: x['age']))
+    log(n_min_max_avg(numbers))
+    log(min_max_avg(numbers))
+    log(avg(numbers))
     '''
-    (3, 24, 72, 46.333333333333336)
-    (24, 72, 46.333333333333336)
-    46.333333333333336
+    (5, 1, 5, 3.0)
+    (1, 5, 3.0)
+    3.0
     '''
 
     # curr_time() == str(datetime.now(timezone.utc))[:19]
     log(curr_time())
+    log(curr_time(breakdown=True))
     '''
     2022-09-10 20:53:53
+    ('2022', '11', '06', '23', '24', '00')
     '''
 
 

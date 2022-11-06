@@ -17,7 +17,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.2'
+VERSION = '1.5.3'
 
 __all__ = [
     # replacement for logging
@@ -393,9 +393,6 @@ def save_jsonl(data, path, encoding='utf-8'):
             f.write(json.dumps(d, ensure_ascii=False) + '\n')
 
 
-COLLECTION_TYPES = [list, set, tuple, dict]
-
-
 def type_in(data, types):
     assert isinstance(types, list), 'types must be a list'
     for idx, _type in enumerate(types):
@@ -449,33 +446,41 @@ def get_items(data, start=0, end=None, step=1, reverse=False):
         yield data[idx]
 
 
-def _build_table(rows, space=3, cell_space=1, filler=' '):
+COLLECTION_TYPES = [list, set, tuple, dict]
+
+
+def _build_table(rows, space=3, sub_table_space=1, filler=' '):
     space = max(space, 1)
 
-    _rows = []
     rows_type = type_in(rows, COLLECTION_TYPES)
     if not rows_type:
         return [str(rows)]
     elif rows_type == 4:
+        _rows = []
         for k, v in rows.items():
-            r = _build_table(v, cell_space, cell_space, filler)
+            r = _build_table(v, sub_table_space, sub_table_space, filler)
             _rows.append([k, r])
         rows = _rows
 
-    data = []
-    num_col = None
-    for _row in rows:
-        row = _row
+    # calculate max column width
+    num_col = -1
+    _rows = []
+    for row in rows:
         row_type = type_in(row, COLLECTION_TYPES)
         if not row_type:
             row = [row]
-        # check rows
-        if num_col is None:
-            num_col = len(row)
-        else:
-            assert num_col == len(row), 'rows have different size'
-        row = [_build_table(item, cell_space, cell_space, filler)
-               if type_in(item, COLLECTION_TYPES) else [str(item)] for item in row]
+        num_col = max(num_col, len(row))
+        _rows.append(row)
+    rows = _rows
+
+    data = []
+    for row in rows:
+        if len(row) != num_col:
+            row += [''] * (num_col - len(row))
+
+        row = [_build_table(item, sub_table_space, sub_table_space, filler)
+               if type_in(item, COLLECTION_TYPES) else [str(item)]
+               for item in row]
         max_height = max(len(r) for r in row)
         new_rows = [['' for _ in range(len(row))] for _ in range(max_height)]
         for j, items in enumerate(row):
