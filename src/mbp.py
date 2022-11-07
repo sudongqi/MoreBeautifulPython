@@ -17,7 +17,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.6'
+VERSION = '1.5.7'
 
 __all__ = [
     # replacement for logging
@@ -713,7 +713,7 @@ def debug(*data, f=prints, stop=False, level=DEBUG, width=None, char='-'):
                     log(v)
             else:
                 assert False, 'debug() does not support f = {}'.format(f.__name__)
-        assert not stop, "debug(abort=True)"
+        assert not stop, "debug(stop=True)"
 
 
 def try_f(*args, **kwargs):
