@@ -17,7 +17,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.4'
+VERSION = '1.5.5'
 
 __all__ = [
     # replacement for logging
@@ -29,11 +29,11 @@ __all__ = [
     'try_f', 'type_in', 'get_range', 'get_items', 'join_path', 'exec_dir', 'lib_path',
     # tools for file system & data handling
     'make_dirs', 'make_files', 'make_dirs_for',
-    'traverse', 'this_dir', 'dir_of', 'get_only_file_if_dir', 'file_name_of', 'dir_name_of',
+    'traverse', 'this_dir', 'dir_of', 'get_only_file_if_dir', 'get_file_name', 'get_dir_name',
     'load_txt', 'load_jsonl', 'load_json', 'save_json', 'save_jsonl',
     'iterate', 'open_file', 'file_paths_under', 'open_files',
     # tools for summarizations
-    'print_line', 'enclose', 'enclose_timer', 'error_msg', 'prints', 'print_iter', 'print_table', 'debug', 'debug_iter',
+    'print_line', 'enclose', 'enclose_timer', 'error_msg', 'prints', 'print_iter', 'print_table', 'debug',
     # tools for simple statistics
     'timer', 'curr_time', 'avg', 'min_max_avg', 'n_min_max_avg', 'CPU_COUNT'
 ]
@@ -664,41 +664,56 @@ def prints(*data, indent=4, width=80, shift=0, extra_indent=None, compact=False,
             log('', level=level)
 
 
+def print_iter(data, shift=0, level=INFO):
+    if not isinstance(data, Iterable):
+        log(shift * ' ', end='')
+        log(data, level=level)
+    else:
+        if shift <= 0:
+            for item in data:
+                log(item, level=level)
+        else:
+            for item in data:
+                log(shift * ' ', end='')
+                log(item, level=level)
+
+
 VALID_REFERENCE_ARGUMENTS_PATTERN = r'\(([_a-zA-Z][_a-zA-Z0-9]*( *= *[_a-zA-Z0-9]+)?( *, *)?)+\)'
 
 
-def _check(*data, width, char, level, function_name, use_print_iter=False):
+def debug(*data, f=prints, abort=False, level=DEBUG, width=None, char='-'):
     if LOGGER.level <= level:
+
         stack = inspect.stack()
-        from_function = stack[2][3]
-        from_function = '?' if from_function == '<module>' else from_function
-        code_str = stack[2].code_context[0].strip()
-        r = re.search(function_name + VALID_REFERENCE_ARGUMENTS_PATTERN, code_str)
-        assert r is not None, '{} ==> failed to extract arguments (expect references)'.format(code_str)
-        arguments = [s.strip() for s in code_str[r.start(): r.end()][len(function_name) + 1:-1].split(',')]
-        with enclose('[{}]: '.format(from_function) + code_str, width=width, char=char):
-            if use_print_iter:
-                if len(data) > 1:
-                    for k, item in zip(arguments, get_items(data)):
-                        log(k, end=' = \n')
-                        print_iter(item, shift=4)
-                else:
-                    print_iter(data[0])
-            else:
+        filename = get_file_name(stack[1][1])
+        function_name = ' [{}]'.format(stack[1][3]) if stack[1][3] != '<module>' else ''
+
+        code_str = stack[1].code_context[0].strip()
+        r = re.search('debug' + VALID_REFERENCE_ARGUMENTS_PATTERN, code_str)
+        assert len(data) >= 1, '{} ==> debug() need at least 1 argument'.format(code_str)
+        assert r is not None, '{} ==> debug() can only take named arguments'.format(code_str)
+        arguments = [s.strip() for s in code_str[r.start(): r.end()][len('debug') + 1:-1].split(',')]
+
+        with enclose('{}{}: {}'.format(filename, function_name, code_str), width=width, char=char):
+            if f == prints:
+                for k, v in zip(arguments, data):
+                    log(k, end=': ')
+                    prints(v, shift=len(k) + 2, extra_indent=0)
+            elif f == print_iter:
                 if len(data) > 1:
                     for k, v in zip(arguments, data):
-                        log(k, end=' = ')
-                        prints(v, shift=len(k) + 3, extra_indent=0)
+                        log(k, end=': \n')
+                        print_iter(v, shift=4)
                 else:
-                    log(data[0]) if isinstance(data[0], str) else prints(data[0])
-
-
-def debug(*data, width=None, char='-', level=DEBUG):
-    _check(*data, width=width, char=char, level=level, function_name='debug')
-
-
-def debug_iter(*data, width=None, char='-', level=DEBUG):
-    _check(*data, width=width, char=char, level=level, function_name='debug_iter', use_print_iter=True)
+                    print_iter(data[0])
+            elif f == log:
+                for k, v in zip(arguments, data):
+                    v = str(v)
+                    log(k, end=(': ' + ('\n' if '\n' in v else '')))
+                    log(v)
+            else:
+                assert False, 'debug() does not support f = {}'.format(f.__name__)
+        assert not abort, "debug(abort=True)"
 
 
 def try_f(*args, **kwargs):
@@ -712,20 +727,6 @@ def try_f(*args, **kwargs):
         res['error_msg'] = res['error'][len(res['error_type']) + 2: -2]
         res['traceback'] = error_msg(e, detailed=True)
     return res
-
-
-def print_iter(data, shift=0, level=INFO):
-    if not isinstance(data, Iterable):
-        log(shift * ' ', end='')
-        log(data, level=level)
-    else:
-        if shift <= 0:
-            for item in data:
-                log(item, level=level)
-        else:
-            for item in data:
-                log(shift * ' ', end='')
-                log(item, level=level)
 
 
 def n_min_max_avg(data, key_f=None, first_n=None, sample_p=1.0, sample_seed=None):
@@ -880,13 +881,13 @@ def make_dirs_for(path, overwrite=False):
         make_dirs(dir_of(path), overwrite)
 
 
-def file_name_of(path):
+def get_file_name(path):
     path = Path(os.path.abspath(path))
     _is_file_if_exist(path)
     return os.path.basename(path)
 
 
-def dir_name_of(path):
+def get_dir_name(path):
     path = Path(os.path.abspath(path))
     _is_dir_if_exist(path)
     return os.path.basename(path)

@@ -207,10 +207,10 @@ def main():
         log(this_dir(go_up=1, go_to='AnotherProject/hello.txt'))
         # only_file_of() return the path of the only file of the input directory
         log(get_only_file_if_dir(this_dir(2, 'data')))
-        # dir_name_of() check and return the directory name of a path
-        log(dir_name_of(dir_of(__file__)))
-        # file_name_of() check and return the file name of a path
-        log(file_name_of(__file__))
+        # get_dir_name() check and return the directory name of a path
+        log(get_dir_name(dir_of(__file__)))
+        # get_file_name() check and return the file name of a path
+        log(get_file_name(__file__))
     '''
     =================== pathing ===================
     C:\\Users\sudon\MoreBeautifulPython\a\b\c.file
@@ -365,19 +365,35 @@ def main():
     {'res': 'input'}
     '''
 
-    # debug() can trace back to the original string of the function call and print the variable names and values
+    # debug() can trace back to the original function call and print the variable names with their values
     # debug() is slow and should be used only for inspection purposes.
     a = 123
-    debug(a, multi_lines, nested_list, level=INFO)  # your comment
+    b = [1, 2, 3, 4]
+    c = 'line1\nline2\nline3'
+
+    # nothing happen because the current LOGGER.level = INFO
+    debug(a)
+
+    # this will print to the console but not to ./log
+    with logger(level=DEBUG):
+        debug(a, b, c)
+        debug(b, f=print_iter)
     '''
-    ----- [main]: debug(a, multi_lines, nested_list, level=INFO)  # your comment -----
-    a = 123
-    multi_lines = "line1\n"
-                  "		- line2\n"
-                  "		- line3\n"
-    nested_list = [[[1,2,3],
-                    [4,5,6]]]
-    ----------------------------------------------------------------------------------
+    ----- examples.py [main]: debug(a, b, c) -----
+    a: 123
+    b: [1,2,3,4]
+    c: "line1\n"
+       "line2\n"
+       "line3"
+    ----------------------------------------------
+    
+    ----- examples.py [main]: debug(b, f=print_iter) -----
+    b:
+        1
+        2
+        3
+        4
+    ------------------------------------------------------
     '''
 
     # join_path() == os.path.join()
