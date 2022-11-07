@@ -57,8 +57,8 @@ def main():
 
     # print_line() will draw a line with am optional message
     print_line()
-    print_line(text_or_width=30)
-    print_line(text_or_width='optional message', width=30, char='=')
+    print_line(30)
+    print_line(30, text='optional message', char='=')
     '''
     --------------------
     ------------------------------

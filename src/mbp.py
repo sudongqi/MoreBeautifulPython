@@ -17,7 +17,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.3'
+VERSION = '1.5.4'
 
 __all__ = [
     # replacement for logging
@@ -761,15 +761,15 @@ def _strip_and_add_spaces(s):
     return s
 
 
-def print_line(text_or_width=20, width=20, char='-', level=INFO, min_wing_size=5, no_print=False):
-    if isinstance(text_or_width, int):
-        res = char * text_or_width
+def print_line(width=20, text=None, char='-', level=INFO, min_wing_size=5, no_print=False):
+    if text is None:
+        res = char * width
     else:
-        text_or_width = _strip_and_add_spaces(text_or_width)
-        wing_size = (width - len(text_or_width)) // 2
+        text = _strip_and_add_spaces(text)
+        wing_size = (width - len(text)) // 2
         wing_size = max(wing_size, min_wing_size)
         wing = char * wing_size
-        res = wing + text_or_width + wing
+        res = wing + text + wing
         if len(res) < width:
             res += char
     if not no_print:
@@ -797,7 +797,7 @@ class enclose(object):
     def __enter__(self):
         if not self.aligned:
             log('\n' * self.top_margin, end='', level=self.level)
-            top_line = print_line(self.msg, self.width, char=self.char, no_print=True)
+            top_line = print_line(self.width, self.msg, char=self.char, no_print=True)
             self.top_line_size = len(top_line)
             log(top_line, level=self.level)
         else:
@@ -813,11 +813,11 @@ class enclose(object):
                 max_line_length = max(len(msg) + 2 for msg in self.tape)
             max_line_length = min(self.max_width, max_line_length)
             log('\n' * self.top_margin, end='', level=self.level)
-            top_line = print_line(self.msg, max_line_length, char=self.char, no_print=True)
+            top_line = print_line(max_line_length, self.msg, char=self.char, no_print=True)
             self.top_line_size = len(top_line)
             log(top_line, level=self.level)
             print_iter(self.tape, level=self.level)
-        print_line(self.top_line_size, char=self.char, level=self.level)
+        print_line(width=self.top_line_size, char=self.char, level=self.level)
 
         if self.use_timer:
             log('took {:.3f} ms'.format((time.time() - self.start) * 1000), level=self.level)
