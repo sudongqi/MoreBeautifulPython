@@ -17,7 +17,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.7'
+VERSION = '1.5.8'
 
 __all__ = [
     # replacement for logging
@@ -681,7 +681,7 @@ def print_iter(data, shift=0, level=INFO):
 VALID_REFERENCE_ARGUMENTS_PATTERN = r'\(([_a-zA-Z][_a-zA-Z0-9]*( *= *[_a-zA-Z0-9]+)?( *, *)?)+\)'
 
 
-def debug(*data, f=prints, stop=False, level=DEBUG, width=None, char='-'):
+def debug(*data, iter_data=False, stop=False, level=DEBUG, width=None, char='-'):
     if LOGGER.level <= level:
 
         stack = inspect.stack()
@@ -695,24 +695,21 @@ def debug(*data, f=prints, stop=False, level=DEBUG, width=None, char='-'):
         arguments = [s.strip() for s in code_str[r.start(): r.end()][len('debug') + 1:-1].split(',')]
 
         with enclose('{}{}: {}'.format(filename, function_name, code_str), width=width, char=char):
-            if f == prints:
-                for k, v in zip(arguments, data):
-                    log(k, end=': ')
-                    prints(v, shift=len(k) + 2, extra_indent=0)
-            elif f == print_iter:
+            if iter_data:
                 if len(data) > 1:
                     for k, v in zip(arguments, data):
                         log(k, end=': \n')
                         print_iter(v, shift=4)
                 else:
                     print_iter(data[0])
-            elif f == log:
-                for k, v in zip(arguments, data):
-                    v = str(v)
-                    log(k, end=(': ' + ('\n' if '\n' in v else '')))
-                    log(v)
             else:
-                assert False, 'debug() does not support f = {}'.format(f.__name__)
+                if len(data) > 1:
+                    for k, v in zip(arguments, data):
+                        log(k, end=': ')
+                        prints(v, shift=len(k) + 2, extra_indent=0)
+                else:
+                    data = data[0]
+                    log(data) if isinstance(data, str) else prints(data)
         assert not stop, "debug(stop=True)"
 
 

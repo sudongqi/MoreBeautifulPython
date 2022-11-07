@@ -376,9 +376,14 @@ def main():
 
     # this will print to the console but not to ./log
     with logger(level=DEBUG):
+        debug(a)
         debug(a, b, c)
-        debug(b, f=print_iter)
+        debug(b, iter_data=True)
     '''
+    ----- examples.py [main]: debug(a) -----
+    123
+    ----------------------------------------
+    
     ----- examples.py [main]: debug(a, b, c) -----
     a: 123
     b: [1,2,3,4]
@@ -387,13 +392,12 @@ def main():
        "line3"
     ----------------------------------------------
     
-    ----- examples.py [main]: debug(b, f=print_iter) -----
-    b:
-        1
-        2
-        3
-        4
-    ------------------------------------------------------
+    ----- examples.py [main]: debug(b, iter_data=True) -----
+    1
+    2
+    3
+    4
+    --------------------------------------------------------
     '''
 
     # join_path() == os.path.join()
