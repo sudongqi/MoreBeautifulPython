@@ -17,7 +17,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.8'
+VERSION = '1.5.9'
 
 __all__ = [
     # replacement for logging
@@ -26,12 +26,11 @@ __all__ = [
     # replacement for multiprocessing
     'Workers', 'work',
     # syntax sugar for common utilities
-    'try_f', 'type_in', 'get_range', 'get_items', 'join_path', 'exec_dir', 'lib_path',
+    'try_f', 'type_of', 'range_of', 'items_of', 'jp', 'join_path', 'run_dir', 'lib_path',
     # tools for file system & data handling
-    'make_dirs', 'make_files', 'make_dirs_for',
-    'traverse', 'this_dir', 'dir_of', 'get_only_file_if_dir', 'get_file_name', 'get_dir_name',
-    'load_txt', 'load_jsonl', 'load_json', 'save_json', 'save_jsonl',
-    'iterate', 'open_file', 'file_paths_under', 'open_files',
+    'load_txt', 'load_jsonl', 'load_json', 'save_json', 'save_jsonl', 'iterate', 'open_file',
+    'traverse', 'this_dir', 'dir_of', 'get_only_sub_path', 'file_basename', 'dir_basename',
+    'init_dirs', 'init_files', 'init_dirs_for', 'files_under', 'open_files',
     # tools for summarizations
     'print_line', 'enclose', 'enclose_timer', 'error_msg', 'prints', 'print_iter', 'print_table', 'debug',
     # tools for simple statistics
@@ -64,7 +63,7 @@ def open_files_for_logger(file):
     for i in range(len(res)):
         f = res[i]
         if isinstance(f, str):
-            make_dirs_for(f)
+            init_dirs_for(f)
             res[i] = open(f, 'w', encoding='utf-8')
     return res
 
@@ -177,12 +176,12 @@ class recorder(object):
         self.logger.__exit__(_type, value, _traceback)
 
 
-def error_msg(e, detailed=False, seperator='\n'):
+def error_msg(e, detailed=False, sep='\n'):
     if not detailed:
         return repr(e)
     else:
         res = traceback.format_exc()
-        return res.replace('\n', seperator)
+        return res.replace('\n', sep)
 
 
 class Worker(Process):
@@ -342,18 +341,19 @@ def open_file(path, encoding='utf-8', compression=None):
         assert False, '{} not supported'.format(compression)
 
 
-def file_paths_under(path, pattern=r".*"):
+def files_under(path, pattern=r".*"):
+    # return  iterator of (absolute_path, relative_path, file_name)
     _is_dir_if_exist(path)
     matcher = re.compile(pattern)
     for p, dirs, files in os.walk(path):
         for file_name in files:
             if matcher.fullmatch(file_name):
                 full_path = join_path(p, file_name)
-                yield full_path, full_path[len(path):], file_name
+                yield os.path.abspath(full_path), full_path[len(path):], file_name
 
 
 def open_files(path, encoding='utf-8', compression=None, pattern=r".*", progress=True):
-    for full_path, _, file_name in file_paths_under(path, pattern):
+    for full_path, _, file_name in files_under(path, pattern):
         try:
             yield open_file(full_path, encoding, compression)
             if progress:
@@ -393,7 +393,7 @@ def save_jsonl(data, path, encoding='utf-8'):
             f.write(json.dumps(d, ensure_ascii=False) + '\n')
 
 
-def type_in(data, types):
+def type_of(data, types):
     assert isinstance(types, list), 'types must be a list'
     for idx, _type in enumerate(types):
         if isinstance(data, _type):
@@ -410,9 +410,10 @@ def _range_iterate(data, start, end=sys.maxsize, step=1):
             yield idx, item
 
 
-def get_range(data, start=0, end=None, step=1, reverse=False):
-    assert isinstance(data, Iterable), 'data should be an Iterable'
+def range_of(data, start=0, end=None, step=1, reverse=False):
+    # replace of ==> for i in range(data)
 
+    assert isinstance(data, Iterable), 'data should be an Iterable'
     if isinstance(data, Iterator):
         assert not reverse, 'cannot set reverse=True when data is an Iterator'
         for idx, _ in _range_iterate(data, start, end, step):
@@ -435,14 +436,14 @@ def get_range(data, start=0, end=None, step=1, reverse=False):
                 yield i
 
 
-def get_items(data, start=0, end=None, step=1, reverse=False):
+def items_of(data, start=0, end=None, step=1, reverse=False):
     assert isinstance(data, Iterable), 'input should be an Iterable'
     if isinstance(data, Iterator):
         assert not reverse, 'cannot set reverse=True when data is an Iterator'
         for _, item in _range_iterate(data, start, end, step):
             yield item
 
-    for idx in get_range(data, start, end, step, reverse):
+    for idx in range_of(data, start, end, step, reverse):
         yield data[idx]
 
 
@@ -452,7 +453,7 @@ COLLECTION_TYPES = [list, set, tuple, dict]
 def _build_table(rows, space=3, sub_table_space=1, filler=' '):
     space = max(space, 1)
 
-    rows_type = type_in(rows, COLLECTION_TYPES)
+    rows_type = type_of(rows, COLLECTION_TYPES)
     if not rows_type:
         return [str(rows)]
     elif rows_type == 4:
@@ -466,7 +467,7 @@ def _build_table(rows, space=3, sub_table_space=1, filler=' '):
     num_col = -1
     _rows = []
     for row in rows:
-        row_type = type_in(row, COLLECTION_TYPES)
+        row_type = type_of(row, COLLECTION_TYPES)
         if not row_type:
             row = [row]
         num_col = max(num_col, len(row))
@@ -479,7 +480,7 @@ def _build_table(rows, space=3, sub_table_space=1, filler=' '):
             row += [''] * (num_col - len(row))
 
         row = [_build_table(item, sub_table_space, sub_table_space, filler)
-               if type_in(item, COLLECTION_TYPES) else [str(item)]
+               if type_of(item, COLLECTION_TYPES) else [str(item)]
                for item in row]
         max_height = max(len(r) for r in row)
         new_rows = [['' for _ in range(len(row))] for _ in range(max_height)]
@@ -531,7 +532,7 @@ def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep,
     def is_short_data(_d):
         if _d is None:
             return True
-        r = type_in(_d, [int, float, str, bool])
+        r = type_of(_d, [int, float, str, bool])
         if r == 3:
             return not any(True for ch in _d if ch == '\n')
         return r
@@ -550,7 +551,7 @@ def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep,
             line = _shift * ' ' + line
         log_raw(line)
 
-    data_type = type_in(data, [list, tuple, set, dict, str])
+    data_type = type_of(data, [list, tuple, set, dict, str])
     if is_short_data(data):
         if extra_indent is None:
             log_raw(shift_str + put_quote(data))
@@ -681,11 +682,11 @@ def print_iter(data, shift=0, level=INFO):
 VALID_REFERENCE_ARGUMENTS_PATTERN = r'\(([_a-zA-Z][_a-zA-Z0-9]*( *= *[_a-zA-Z0-9]+)?( *, *)?)+\)'
 
 
-def debug(*data, iter_data=False, stop=False, level=DEBUG, width=None, char='-'):
+def debug(*data, mode=print, stop=False, level=DEBUG, width=None, char='-'):
     if LOGGER.level <= level:
 
         stack = inspect.stack()
-        filename = get_file_name(stack[1][1])
+        filename = file_basename(stack[1][1])
         function_name = ' [{}]'.format(stack[1][3]) if stack[1][3] != '<module>' else ''
 
         code_str = stack[1].code_context[0].strip()
@@ -695,14 +696,21 @@ def debug(*data, iter_data=False, stop=False, level=DEBUG, width=None, char='-')
         arguments = [s.strip() for s in code_str[r.start(): r.end()][len('debug') + 1:-1].split(',')]
 
         with enclose('{}{}: {}'.format(filename, function_name, code_str), width=width, char=char):
-            if iter_data:
+            if mode == log or mode == print:
+                if len(data) > 1:
+                    for k, v in zip(arguments, data):
+                        log(k, end=': ')
+                        log(v)
+                else:
+                    log(data)
+            elif mode == print_iter:
                 if len(data) > 1:
                     for k, v in zip(arguments, data):
                         log(k, end=': \n')
                         print_iter(v, shift=4)
                 else:
                     print_iter(data[0])
-            else:
+            elif mode == prints:
                 if len(data) > 1:
                     for k, v in zip(arguments, data):
                         log(k, end=': ')
@@ -710,6 +718,8 @@ def debug(*data, iter_data=False, stop=False, level=DEBUG, width=None, char='-')
                 else:
                     data = data[0]
                     log(data) if isinstance(data, str) else prints(data)
+            else:
+                assert False, 'mode: {} not supported'.format(mode)
         assert not stop, "debug(stop=True)"
 
 
@@ -828,6 +838,10 @@ class enclose_timer(enclose):
         super().__init__(text_or_length, width, max_width, char, top_margin, bottom_margin, True, level)
 
 
+def jp(*args, **kwargs):
+    return os.path.join(*args, **kwargs)
+
+
 def join_path(*args, **kwargs):
     return os.path.join(*args, **kwargs)
 
@@ -836,7 +850,7 @@ def lib_path():
     return str(Path(__file__).absolute())
 
 
-def exec_dir():
+def run_dir():
     return os.getcwd()
 
 
@@ -850,8 +864,8 @@ def _is_dir_if_exist(path):
         assert os.path.isdir(path), '{} ==> already exist but it\'s a file'.format(path)
 
 
-def make_dirs(path, overwrite=False):
-    paths = path if isinstance(path, list) else [path]
+def init_dirs(path_or_paths, overwrite=False):
+    paths = path_or_paths if isinstance(path_or_paths, list) else [path_or_paths]
     for path in paths:
         path = Path(os.path.abspath(path))
         _is_dir_if_exist(path)
@@ -860,31 +874,31 @@ def make_dirs(path, overwrite=False):
         os.makedirs(path, exist_ok=True)
 
 
-def make_files(path, overwrite=False):
-    paths = path if isinstance(path, list) else [path]
+def init_files(path_or_paths, overwrite=False):
+    paths = path_or_paths if isinstance(path_or_paths, list) else [path_or_paths]
     for path in paths:
         _is_file_if_exist(path)
         if overwrite and os.path.exists(path):
             os.remove(path)
-        make_dirs_for(path)
+        init_dirs_for(path)
         open(path, 'a').close()
 
 
-def make_dirs_for(path, overwrite=False):
-    paths = path if isinstance(path, list) else [path]
+def init_dirs_for(path_or_paths, overwrite=False):
+    paths = path_or_paths if isinstance(path_or_paths, list) else [path_or_paths]
     for path in paths:
         path = Path(os.path.abspath(path))
         _is_file_if_exist(path)
-        make_dirs(dir_of(path), overwrite)
+        init_dirs(dir_of(path), overwrite)
 
 
-def get_file_name(path):
+def file_basename(path):
     path = Path(os.path.abspath(path))
     _is_file_if_exist(path)
     return os.path.basename(path)
 
 
-def get_dir_name(path):
+def dir_basename(path):
     path = Path(os.path.abspath(path))
     _is_dir_if_exist(path)
     return os.path.basename(path)
@@ -922,7 +936,7 @@ def this_dir(go_up=0, go_to=None, should_exist=False):
     return traverse(caller_module.__file__, go_up + 1, go_to, should_exist)
 
 
-def get_only_file_if_dir(dir_path):
+def get_only_sub_path(dir_path):
     if os.path.isdir(dir_path):
         sub_paths = os.listdir(dir_path)
         assert len(sub_paths) == 1, 'there are more than one files/dirs in {}'.format(dir_path)
@@ -934,7 +948,7 @@ def mbp_info():
     with enclose('More Beautiful Python'):
         rows = [
             ['examples', 'https://github.com/sudongqi/MoreBeautifulPython/blob/main/examples.py'],
-            ['execution_directory', exec_dir()],
+            ['execution_directory', run_dir()],
             ['library_path', lib_path()],
             ['cpu_count', CPU_COUNT],
             ['version', VERSION]

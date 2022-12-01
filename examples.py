@@ -1,3 +1,4 @@
+import os
 import sys
 import shutil
 import time
@@ -199,18 +200,18 @@ def main():
         # path_join() == os.path.join()
         log(join_path(this_dir(), 'a', 'b', 'c.file'))
         # exec_dir() == os.getcwd()
-        log(exec_dir())
+        log(run_dir())
         # lib_path() return the path of the mbp library
         log(lib_path())
         # this_dir() return the directory of the current file
         log(this_dir())
         log(this_dir(go_up=1, go_to='AnotherProject/hello.txt'))
         # only_file_of() return the path of the only file of the input directory
-        log(get_only_file_if_dir(this_dir(2, 'data')))
+        log(get_only_sub_path(this_dir(2, 'data')))
         # get_dir_name() check and return the directory name of a path
-        log(get_dir_name(dir_of(__file__)))
+        log(dir_basename(dir_of(__file__)))
         # get_file_name() check and return the file name of a path
-        log(get_file_name(__file__))
+        log(file_basename(__file__))
     '''
     =================== pathing ===================
     C:\\Users\sudon\MoreBeautifulPython\a\b\c.file
@@ -230,7 +231,7 @@ def main():
             f.readlines()
     '''
     ================================= open_files() =================================
-    found build_and_push.py <== C:\\Users\sudon\MoreBeautifulPython\build_and_push.py
+    found sync.py <== C:\\Users\sudon\MoreBeautifulPython\sync.py
     found examples.py <== C:\\Users\sudon\MoreBeautifulPython\examples.py
     found mbp.py <== C:\\Users\sudon\MoreBeautifulPython\src\mbp.py
     found __init__.py <== C:\\Users\sudon\MoreBeautifulPython\src\__init__.py
@@ -238,15 +239,15 @@ def main():
     '''
 
     # make_files() and make_dirs() create files and directory after creating paths
-    with enclose('make_files() and make_dirs()'):
+    with enclose('init_files() and init_dirs()'):
         test_dir = './test_dir'
-        make_files([join_path(test_dir, file_name) for file_name in ['a.txt', 'b.txt', 'c.txt']])
+        init_files([join_path(test_dir, file_name) for file_name in ['a.txt', 'b.txt', 'c.txt']])
         log('{} files under {}'.format(len(list(open_files(test_dir))), test_dir))
-        make_dirs(test_dir, overwrite=True)
+        init_dirs(test_dir, overwrite=True)
         log('{} files under {} (after overwrite)'.format(len(list(open_files(test_dir))), test_dir))
         shutil.rmtree(test_dir)
     '''
-    ======= make_files() and make_dirs() =======
+    ======= init_files() and init_dirs() =======
     found a.txt <== ./test_dir\a.txt
     found b.txt <== ./test_dir\b.txt
     found c.txt <== ./test_dir\c.txt
@@ -259,9 +260,9 @@ def main():
     with enclose('type_in()'):
         types = [int, dict, list, set]
         # the return idx started at 1 because 0 is reserved for no match
-        idx = type_in([1, 2, 3], types) - 1
+        idx = type_of([1, 2, 3], types) - 1
         log(types[idx])
-        if not type_in("a string", types):
+        if not type_of("a string", types):
             log('this type is not from the list')
     '''
     ========== type_in() ===========
@@ -270,16 +271,17 @@ def main():
     ================================
     '''
 
-    # get_range() is a replacement for range(len())
-    with enclose('get_range() and get_items()'):
+    # for i in range_of(data)              ==   for i in range(len(data))
+    # for d in items_of(data, 1, 5, 2)     ==   for d in itertools.islice(data, start=1, end=, step=2)
+    with enclose('range_of() and items_of()'):
         vec = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i']
         vec_iter = iter(vec)
-        log(list(get_range(vec)))
-        log(list(get_range(vec, 2, 4)))
-        log(list(get_items(vec, 2, None, 2, reverse=True)))
-        log(list(get_items(vec_iter, 0, 5)))
+        log(list(range_of(vec)))
+        log(list(range_of(vec, 2, 4)))
+        log(list(items_of(vec, 2, None, 2, reverse=True)))
+        log(list(items_of(vec_iter, 0, 5)))
     '''
-    ===== get_range() and get_items() =====
+    ===== range_of() and items_of() =====
     [0, 1, 2, 3, 4, 5, 6, 7, 8]
     [2, 3]
     ['i', 'g', 'e', 'c']
@@ -378,7 +380,7 @@ def main():
     with logger(level=DEBUG):
         debug(a)
         debug(a, b, c)
-        debug(b, iter_data=True)
+        debug(b, mode=print_iter)
     '''
     ----- examples.py [main]: debug(a) -----
     123
@@ -392,16 +394,18 @@ def main():
        "line3"
     ----------------------------------------------
     
-    ----- examples.py [main]: debug(b, iter_data=True) -----
+    ----- examples.py [main]: debug(b, mode=print_iter) -----
     1
     2
     3
     4
-    --------------------------------------------------------
+    ---------------------------------------------------------
     '''
 
-    # join_path() == os.path.join()
-    jsonl_file_path = join_path(this_dir(), 'data.jsonl')
+    # os.path.join() == join_path() == jp()
+    jsonl_file_path = os.path.join(this_dir(), 'data.jsonl')
+    assert jsonl_file_path == jp(this_dir(), 'data.jsonl') == join_path(this_dir(), 'data.jsonl')
+
     # load_jsonl() return an iterator of dictionary
     data = list(load_jsonl(jsonl_file_path))
 
