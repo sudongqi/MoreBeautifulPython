@@ -17,7 +17,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.9'
+VERSION = '1.5.10'
 
 __all__ = [
     # replacement for logging
@@ -682,7 +682,7 @@ def print_iter(data, shift=0, level=INFO):
 VALID_REFERENCE_ARGUMENTS_PATTERN = r'\(([_a-zA-Z][_a-zA-Z0-9]*( *= *[_a-zA-Z0-9]+)?( *, *)?)+\)'
 
 
-def debug(*data, mode=print, stop=False, level=DEBUG, width=None, char='-'):
+def debug(*data, mode=prints, stop=False, level=DEBUG, width=None, char='-'):
     if LOGGER.level <= level:
 
         stack = inspect.stack()
@@ -702,7 +702,7 @@ def debug(*data, mode=print, stop=False, level=DEBUG, width=None, char='-'):
                         log(k, end=': ')
                         log(v)
                 else:
-                    log(data)
+                    log(data[0])
             elif mode == print_iter:
                 if len(data) > 1:
                     for k, v in zip(arguments, data):
