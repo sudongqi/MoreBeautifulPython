@@ -18,6 +18,7 @@ def run_process(command):
 def test_log():
     exit_code, out, err = run_process([sys.executable, 'example_log.py'])
     assert exit_code == 0
-    assert out.decode() == 'this is from the global logger\n'
+    NL ='\r\n' if sys.platform == 'win32' else '\n'
+    assert out.decode() == f'this is from the global logger{NL}'
     assert err.decode() == ''
 
