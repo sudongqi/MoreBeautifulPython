@@ -18,6 +18,6 @@ def run_process(command):
 def test_log():
     exit_code, out, err = run_process([sys.executable, 'example_log.py'])
     assert exit_code == 0
-    assert out == b'this is from the global logger\n'
-    assert err == b''
+    assert out.decode() == 'this is from the global logger\n'
+    assert err.decode() == ''
 
