@@ -17,7 +17,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.10'
+VERSION = '1.5.11'
 
 __all__ = [
     # replacement for logging
@@ -682,7 +682,27 @@ def print_iter(data, shift=0, level=INFO):
 VALID_REFERENCE_ARGUMENTS_PATTERN = r'\(([_a-zA-Z][_a-zA-Z0-9]*( *= *[_a-zA-Z0-9]+)?( *, *)?)+\)'
 
 
-def debug(*data, mode=prints, stop=False, level=DEBUG, width=None, char='-'):
+def to_rows(strings, width=50):
+    res = [[]]
+    curr = 0
+    for item in strings:
+        item_width = wcswidth(item)
+        if curr + item_width < width:
+            res[-1].append(item)
+            curr += item_width
+        elif curr == 0:
+            res[-1].append(item)
+            res.append([])
+        else:
+            res.append([])
+            res[-1].append(item)
+            curr = item_width
+    res = [r for r in res if r]
+    assert sum(len(r) for r in res) == len(strings)
+    return [''.join(r) for r in res]
+
+
+def debug(*data, mode=prints, stop=False, level=DEBUG, max_width=80, char='-'):
     if LOGGER.level <= level:
 
         stack = inspect.stack()
@@ -695,12 +715,13 @@ def debug(*data, mode=prints, stop=False, level=DEBUG, width=None, char='-'):
         assert r is not None, '{} ==> debug() can only take named arguments'.format(code_str)
         arguments = [s.strip() for s in code_str[r.start(): r.end()][len('debug') + 1:-1].split(',')]
 
-        with enclose('{}{}: {}'.format(filename, function_name, code_str), width=width, char=char):
-            if mode == log or mode == print:
+        with enclose('{}{}: {}'.format(filename, function_name, code_str), char=char):
+            if mode == log or mode == print or mode == print_table:
                 if len(data) > 1:
+                    rows = []
                     for k, v in zip(arguments, data):
-                        log(k, end=': ')
-                        log(v)
+                        rows.append([k + ': ', to_rows(str(v), width=max_width)])
+                    print_table(rows)
                 else:
                     log(data[0])
             elif mode == print_iter:
