@@ -17,22 +17,29 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.11'
+VERSION = '1.5.12'
 
 __all__ = [
     # replacement for logging
     'log', 'logger', 'get_logger', 'set_global_logger', 'reset_global_logger', 'recorder',
+    # logging levels
     'NOTSET', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL', 'SILENT',
     # replacement for multiprocessing
     'Workers', 'work',
     # syntax sugar for common utilities
-    'try_f', 'type_of', 'range_of', 'items_of', 'jp', 'join_path', 'run_dir', 'lib_path',
-    # tools for file system & data handling
+    'try_f', 'type_of', 'range_of', 'items_of', 'jpath', 'run_dir', 'lib_path',
+    # handling data files
     'load_txt', 'load_jsonl', 'load_json', 'save_json', 'save_jsonl', 'iterate', 'open_file',
-    'traverse', 'this_dir', 'dir_of', 'get_only_sub_path', 'file_basename', 'dir_basename',
-    'init_dirs', 'init_files', 'init_dirs_for', 'files_under', 'open_files',
+    # handling paths
+    'unwrap_file', 'unwrap_dir', 'file_basename', 'dir_basename',
+    # tools for file system
+    'traverse', 'this_dir', 'dir_of', 'init_dirs', 'init_files', 'init_dirs_for', 'iterate_files', 'open_files',
+    # handling string
+    'break_string',
+    # tools for debug
+    'enclose', 'enclose_timer', 'error_msg', 'debug',
     # tools for summarizations
-    'print_line', 'enclose', 'enclose_timer', 'error_msg', 'prints', 'print_iter', 'print_table', 'debug',
+    'prints', 'print_iter', 'print_table', 'print_line',
     # tools for simple statistics
     'timer', 'curr_time', 'avg', 'min_max_avg', 'n_min_max_avg', 'CPU_COUNT'
 ]
@@ -181,7 +188,7 @@ def error_msg(e, detailed=False, sep='\n'):
         return repr(e)
     else:
         res = traceback.format_exc()
-        return res.replace('\n', sep)
+        return _np(res.replace('\n', sep))
 
 
 class Worker(Process):
@@ -341,19 +348,19 @@ def open_file(path, encoding='utf-8', compression=None):
         assert False, '{} not supported'.format(compression)
 
 
-def files_under(path, pattern=r".*"):
+def iterate_files(path, pattern=r".*"):
     # return  iterator of (absolute_path, relative_path, file_name)
-    _is_dir_if_exist(path)
+    _is_dir_and_exist(path)
     matcher = re.compile(pattern)
     for p, dirs, files in os.walk(path):
         for file_name in files:
             if matcher.fullmatch(file_name):
-                full_path = join_path(p, file_name)
-                yield os.path.abspath(full_path), full_path[len(path):], file_name
+                full_path = jpath(p, file_name)
+                yield _np(os.path.abspath(full_path)), _np(full_path[len(path):]), file_name
 
 
 def open_files(path, encoding='utf-8', compression=None, pattern=r".*", progress=True):
-    for full_path, _, file_name in files_under(path, pattern):
+    for full_path, _, file_name in iterate_files(path, pattern):
         try:
             yield open_file(full_path, encoding, compression)
             if progress:
@@ -682,23 +689,23 @@ def print_iter(data, shift=0, level=INFO):
 VALID_REFERENCE_ARGUMENTS_PATTERN = r'\(([_a-zA-Z][_a-zA-Z0-9]*( *= *[_a-zA-Z0-9]+)?( *, *)?)+\)'
 
 
-def to_rows(strings, width=50):
+def break_string(string, width=50):
     res = [[]]
     curr = 0
-    for item in strings:
-        item_width = wcswidth(item)
+    for ch in string:
+        item_width = wcswidth(ch)
         if curr + item_width < width:
-            res[-1].append(item)
+            res[-1].append(ch)
             curr += item_width
         elif curr == 0:
-            res[-1].append(item)
+            res[-1].append(ch)
             res.append([])
         else:
             res.append([])
-            res[-1].append(item)
+            res[-1].append(ch)
             curr = item_width
     res = [r for r in res if r]
-    assert sum(len(r) for r in res) == len(strings)
+    assert sum(len(r) for r in res) == len(string)
     return [''.join(r) for r in res]
 
 
@@ -720,7 +727,7 @@ def debug(*data, mode=prints, stop=False, level=DEBUG, max_width=80, char='-'):
                 if len(data) > 1:
                     rows = []
                     for k, v in zip(arguments, data):
-                        rows.append([k + ': ', to_rows(str(v), width=max_width)])
+                        rows.append([k + ': ', break_string(str(v), width=max_width)])
                     print_table(rows)
                 else:
                     log(data[0])
@@ -859,28 +866,28 @@ class enclose_timer(enclose):
         super().__init__(text_or_length, width, max_width, char, top_margin, bottom_margin, True, level)
 
 
-def jp(*args, **kwargs):
-    return os.path.join(*args, **kwargs)
+def _np(path):
+    return path.replace(os.sep, '/')
 
 
-def join_path(*args, **kwargs):
-    return os.path.join(*args, **kwargs)
+def jpath(*args, **kwargs):
+    return _np(os.path.join(*args, **kwargs))
 
 
 def lib_path():
-    return str(Path(__file__).absolute())
+    return _np(str(Path(__file__).absolute()))
 
 
 def run_dir():
-    return os.getcwd()
+    return _np(os.getcwd())
 
 
-def _is_file_if_exist(path):
+def _is_file_and_exist(path):
     if os.path.exists(path):
         assert os.path.isfile(path), '{} ==> already exist but it\'s a directory'.format(path)
 
 
-def _is_dir_if_exist(path):
+def _is_dir_and_exist(path):
     if os.path.exists(path):
         assert os.path.isdir(path), '{} ==> already exist but it\'s a file'.format(path)
 
@@ -889,7 +896,7 @@ def init_dirs(path_or_paths, overwrite=False):
     paths = path_or_paths if isinstance(path_or_paths, list) else [path_or_paths]
     for path in paths:
         path = Path(os.path.abspath(path))
-        _is_dir_if_exist(path)
+        _is_dir_and_exist(path)
         if overwrite and os.path.exists(path):
             shutil.rmtree(path)
         os.makedirs(path, exist_ok=True)
@@ -898,7 +905,7 @@ def init_dirs(path_or_paths, overwrite=False):
 def init_files(path_or_paths, overwrite=False):
     paths = path_or_paths if isinstance(path_or_paths, list) else [path_or_paths]
     for path in paths:
-        _is_file_if_exist(path)
+        _is_file_and_exist(path)
         if overwrite and os.path.exists(path):
             os.remove(path)
         init_dirs_for(path)
@@ -909,19 +916,19 @@ def init_dirs_for(path_or_paths, overwrite=False):
     paths = path_or_paths if isinstance(path_or_paths, list) else [path_or_paths]
     for path in paths:
         path = Path(os.path.abspath(path))
-        _is_file_if_exist(path)
+        _is_file_and_exist(path)
         init_dirs(dir_of(path), overwrite)
 
 
 def file_basename(path):
     path = Path(os.path.abspath(path))
-    _is_file_if_exist(path)
+    _is_file_and_exist(path)
     return os.path.basename(path)
 
 
 def dir_basename(path):
     path = Path(os.path.abspath(path))
-    _is_dir_if_exist(path)
+    _is_dir_and_exist(path)
     return os.path.basename(path)
 
 
@@ -939,9 +946,9 @@ def traverse(path, go_up=0, go_to=None, should_exist=False):
         res = n_res
     res = str(res)
     if go_to is not None:
-        res = join_path(res, go_to)
+        res = jpath(res, go_to)
     assert not should_exist or os.path.exists(res), '{} ==> does not exist'.format(res)
-    return res
+    return _np(res)
 
 
 def dir_of(path):
@@ -957,12 +964,21 @@ def this_dir(go_up=0, go_to=None, should_exist=False):
     return traverse(caller_module.__file__, go_up + 1, go_to, should_exist)
 
 
-def get_only_sub_path(dir_path):
-    if os.path.isdir(dir_path):
-        sub_paths = os.listdir(dir_path)
-        assert len(sub_paths) == 1, 'there are more than one files/dirs in {}'.format(dir_path)
-        return join_path(dir_path, sub_paths[0])
-    return dir_path
+def unwrap_file(path):
+    if os.path.isdir(path):
+        sub_paths = os.listdir(path)
+        assert len(sub_paths) == 1, 'there are more than one files/dirs in {}'.format(path)
+        return unwrap_file(jpath(path, sub_paths[0]))
+    return _np(path)
+
+
+def unwrap_dir(path):
+    if os.path.isdir(path):
+        sub_paths = os.listdir(path)
+        if len(sub_paths) == 1 and os.path.isdir(jpath(path, sub_paths[0])):
+            return unwrap_dir(jpath(path, sub_paths[0]))
+        return _np(path)
+    assert False, '{} is not a directory'.format(path)
 
 
 def mbp_info():

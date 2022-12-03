@@ -197,8 +197,8 @@ def main():
     '''
 
     with enclose('pathing'):
-        # path_join() == os.path.join()
-        log(join_path(this_dir(), 'a', 'b', 'c.file'))
+        # jpath() == os.path.join()
+        log(jpath(this_dir(), 'a', 'b', 'c.file'))
         # exec_dir() == os.getcwd()
         log(run_dir())
         # lib_path() return the path of the mbp library
@@ -206,20 +206,17 @@ def main():
         # this_dir() return the directory of the current file
         log(this_dir())
         log(this_dir(go_up=1, go_to='AnotherProject/hello.txt'))
-        # only_file_of() return the path of the only file of the input directory
-        log(get_only_sub_path(this_dir(2, 'data')))
         # get_dir_name() check and return the directory name of a path
         log(dir_basename(dir_of(__file__)))
         # get_file_name() check and return the file name of a path
         log(file_basename(__file__))
     '''
     =================== pathing ===================
-    C:\\Users\sudon\MoreBeautifulPython\a\b\c.file
-    C:\\Users\sudon\MoreBeautifulPython
-    C:\\Users\sudon\MoreBeautifulPython\src\mbp.py
-    C:\\Users\sudon\MoreBeautifulPython
-    C:\\Users\sudon\AnotherProject/hello.txt
-    C:\\Users\data
+    C:/Users/sudon/MoreBeautifulPython/a/b/c.file
+    C:/Users/sudon/MoreBeautifulPython
+    C:/Users/sudon/MoreBeautifulPython/src/mbp.py
+    C:/Users/sudon/MoreBeautifulPython
+    C:/Users/sudon/AnotherProject/hello.txt
     MoreBeautifulPython
     examples.py
     ===============================================
@@ -230,30 +227,43 @@ def main():
         for f in open_files(this_dir(), pattern=r'.*\.py'):
             f.readlines()
     '''
-    ================================= open_files() =================================
-    found sync.py <== C:\\Users\sudon\MoreBeautifulPython\sync.py
-    found examples.py <== C:\\Users\sudon\MoreBeautifulPython\examples.py
-    found mbp.py <== C:\\Users\sudon\MoreBeautifulPython\src\mbp.py
-    found __init__.py <== C:\\Users\sudon\MoreBeautifulPython\src\__init__.py
-    ================================================================================
+    ============================== open_files() ==============================
+    found examples.py <== C:/Users/sudon/MoreBeautifulPython/examples.py
+    found sync.py <== C:/Users/sudon/MoreBeautifulPython/sync.py
+    found mbp.py <== C:/Users/sudon/MoreBeautifulPython/src/mbp.py
+    found __init__.py <== C:/Users/sudon/MoreBeautifulPython/src/__init__.py
+    ==========================================================================
     '''
 
-    # make_files() and make_dirs() create files and directory after creating paths
+    # init_files() and init_dirs() create files and directory after creating paths
     with enclose('init_files() and init_dirs()'):
         test_dir = './test_dir'
-        init_files([join_path(test_dir, file_name) for file_name in ['a.txt', 'b.txt', 'c.txt']])
+        init_files([jpath(test_dir, file_name) for file_name in ['a.txt', 'b.txt', 'c.txt']])
         log('{} files under {}'.format(len(list(open_files(test_dir))), test_dir))
         init_dirs(test_dir, overwrite=True)
         log('{} files under {} (after overwrite)'.format(len(list(open_files(test_dir))), test_dir))
         shutil.rmtree(test_dir)
     '''
-    ======= init_files() and init_dirs() =======
-    found a.txt <== ./test_dir\a.txt
-    found b.txt <== ./test_dir\b.txt
-    found c.txt <== ./test_dir\c.txt
+    ================== init_files() and init_dirs() ===================
+    found a.txt <== C:/Users/sudon/MoreBeautifulPython/test_dir/a.txt
+    found b.txt <== C:/Users/sudon/MoreBeautifulPython/test_dir/b.txt
+    found c.txt <== C:/Users/sudon/MoreBeautifulPython/test_dir/c.txt
     3 files under ./test_dir
     0 files under ./test_dir (after overwrite)
-    ============================================
+    ===================================================================
+    '''
+
+    # unwrap_file()/unwrap_dir() will unwrap all parent directories leading to a unique file/dir
+    with enclose('unwrap_path() and unwrap_dir()'):
+        init_files('./a/b/c/file')
+        log(unwrap_file('./a'))
+        log(unwrap_dir('./a'))
+        shutil.rmtree('./a')
+    '''
+    ===== unwrap_path() and unwrap_dir() =====
+    ./a/b/c/file
+    ./a/b/c
+    ==========================================
     '''
 
     # type_in() return the type idx of 1st argument defined by the 2nd argument
@@ -312,7 +322,7 @@ def main():
     '''
     =================================== prints() ===================================
     {
-        "hybrid_dict": [{"bcd","abc"},
+        "hybrid_dict": [{"abc","bcd"},
                         (1,2,3,None),
                         [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,
                          30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,
@@ -326,8 +336,8 @@ def main():
                         [[[1,2,3],
                           [4,5,6]]],
                         "line1\n"
-                        "		- line2\n"
-                        "		- line3\n"],
+                        "           - line2\n"
+                        "           - line3\n"],
         "": "empty key",
         2048: "number key",
         "object": "this is a test object",
@@ -355,9 +365,9 @@ def main():
         "error_type": "AssertionError",
         "error_msg": "simulated failure (100%)",
         "traceback": "Traceback (most recent call last):\n"
-                     "  File "C:\\Users\sudon\MoreBeautifulPython\src\mbp.py", line 708, in try_f\n"
+                     "  File "C:/Users/sudon/MoreBeautifulPython/src/mbp.py", line 758, in try_f\n"
                      "    res['res'] = f(*args[1:], **kwargs)\n"
-                     "  File "C:\\Users\sudon\MoreBeautifulPython\examples.py", line 13, in test_sleep_and_fail\n"
+                     "  File "C:/Users/sudon/MoreBeautifulPython/examples.py", line 13, in test_sleep_and_fail\n"
                      "    assert random.random() > fail_rate, "simulated failure ({}%)".format(fail_rate * 100)\n"
                      "AssertionError: simulated failure (100%)\n"
     }
@@ -402,11 +412,8 @@ def main():
     ---------------------------------------------------------
     '''
 
-    # os.path.join() == join_path() == jp()
-    jsonl_file_path = os.path.join(this_dir(), 'data.jsonl')
-    assert jsonl_file_path == jp(this_dir(), 'data.jsonl') == join_path(this_dir(), 'data.jsonl')
-
     # load_jsonl() return an iterator of dictionary
+    jsonl_file_path = jpath(this_dir(), 'data.jsonl')
     data = list(load_jsonl(jsonl_file_path))
 
     # print_iter(iterator) == [log(item) for item in iterator]
@@ -453,6 +460,9 @@ def main():
                    num cities     4
     -------------------
     '''
+
+    # break_string() break a long string into list of smaller (measured by wcswidth()) strings
+    log(break_string('a' * 20, width=5))
 
     numbers = [1, 2, 3, 4, 5]
     # get 3 key statistics from an iterator at once
