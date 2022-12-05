@@ -17,7 +17,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.12'
+VERSION = '1.5.13'
 
 __all__ = [
     # replacement for logging
@@ -165,7 +165,7 @@ class recorder(object):
         global LOGGER
         global CONTEXT_LOGGER_SET
         self.buffer = StringIO()
-        self.logger = logger(file=self.buffer, can_overwrite=False)
+        self.logger = logger(file=self.buffer, level=LOGGER.level, can_overwrite=False)
         self.tape = tape
         self.raw = raw
 
