@@ -17,7 +17,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.13'
+VERSION = '1.5.14'
 
 __all__ = [
     # replacement for logging
@@ -192,26 +192,27 @@ def error_msg(e, detailed=False, sep='\n'):
 
 
 class Worker(Process):
-    def __init__(self, f, inp, out, worker_id=None, cached_inp=None, built_inp=None, detailed_error=True,
+    def __init__(self, f, inp, out, worker_id=None, cache_inp=None, build_inp=None, detailed_error=True,
                  progress=True):
         super(Worker, self).__init__()
         self.worker_id = worker_id
         self.inp = inp
         self.out = out
         self.f = f
-        self.cached_inp = cached_inp
-        self.built_inp = None if built_inp is None else {k: v() for k, v in built_inp.items()}
+        self.cache_inp = cache_inp
+        self.built_inp = build_inp
         self.detailed_error = detailed_error
         if progress:
             log('started worker-{}'.format('?' if worker_id is None else worker_id))
 
     def run(self):
+        self.built_inp = None if self.built_inp is None else {k: v[0](*v[1:]) for k, v in self.built_inp.items()}
         while True:
             task_id, kwargs = self.inp.get()
             try:
                 if isinstance(kwargs, dict):
-                    if self.cached_inp is not None:
-                        kwargs.update(self.cached_inp)
+                    if self.cache_inp is not None:
+                        kwargs.update(self.cache_inp)
                     if self.built_inp is not None:
                         kwargs.update(self.built_inp)
                     res = self.f(**kwargs)
@@ -224,7 +225,7 @@ class Worker(Process):
 
 
 class Workers:
-    def __init__(self, f, num_workers=CPU_COUNT, cached_inp=None, built_inp=None, progress=True, ignore_error=False):
+    def __init__(self, f, num_workers=CPU_COUNT, cache_inp=None, build_inp=None, progress=True, ignore_error=False):
         self.inp = Queue()
         self.out = Queue()
         self.workers = []
@@ -233,7 +234,7 @@ class Workers:
         self.ignore_error = ignore_error
         self.f = f
         for i in range(num_workers):
-            worker = Worker(f, self.inp, self.out, i, cached_inp, built_inp, not ignore_error, progress)
+            worker = Worker(f, self.inp, self.out, i, cache_inp, build_inp, not ignore_error, progress)
             worker.start()
             self.workers.append(worker)
 
@@ -296,9 +297,9 @@ class Workers:
             log('terminated {} workers'.format(len(self.workers)))
 
 
-def work(f, tasks, num_workers=CPU_COUNT, cached_inp=None, built_inp=None, progress=False, ordered=False,
+def work(f, tasks, num_workers=CPU_COUNT, cache_inp=None, build_inp=None, progress=False, ordered=False,
          res_only=True, ignore_error=False):
-    workers = Workers(f, num_workers, cached_inp, built_inp, progress, ignore_error)
+    workers = Workers(f, num_workers, cache_inp, build_inp, progress, ignore_error)
     for d in workers.map(tasks, ordered, res_only):
         yield d
     workers.terminate()

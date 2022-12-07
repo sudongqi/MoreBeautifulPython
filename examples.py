@@ -18,6 +18,10 @@ def test_read_from_list(idx, vec):
     return vec[idx]
 
 
+def build_vec(size):
+    return [x for x in range(size)]
+
+
 def main():
     # log() include all functionality of print()
     log('this is from the global logger', end='\n')
@@ -173,26 +177,25 @@ def main():
 
     with enclose("work() with cache_inp"):
         # use cached_inp = {'fixed_input': value, ...} to avoid pickling of heavy objects
-        vec = [x for x in range(1000000)]
+        vec_size = 1000000
+        vec = [x for x in range(vec_size)]
         with timer('work()'):
             a = list(work(test_read_from_list, num_workers=1, ordered=True, tasks=iter((i, vec) for i in range(30))))
-        with timer('work() with cached_inp'):
+        with timer('work() with cache_inp'):
             b = list(work(test_read_from_list, num_workers=1, ordered=True, tasks=iter({'idx': i} for i in range(30)),
-                          cached_inp={'vec': vec}))
+                          cache_inp={'vec': vec}))
         assert a == b
 
-        def build_vec():
-            return [x for x in range(1000000)]
-
         # for objects that can not be pickled, use built_inp
-        with timer('work() with built_inp'):
+        with timer('work() with build_inp'):
             tasks = iter({'idx': i} for i in range(30))
-            list(work(test_read_from_list, num_workers=1, ordered=True, tasks=tasks, built_inp={'vec': build_vec}))
+            list(work(test_read_from_list, num_workers=1, ordered=True, tasks=tasks,
+                      build_inp={'vec': (build_vec, vec_size)}))
     '''
     ========== work() with cache_inp ==========
-    work() ==> took 1932.197 ms
-    work() with cached_inp ==> took 96.938 ms
-    work() with built_inp ==> took 129.255 ms
+    work() ==> took 1890.690 ms
+    work() with cache_inp ==> took 109.339 ms
+    work() with build_inp ==> took 109.322 ms
     ===========================================
     '''
 
