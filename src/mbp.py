@@ -17,7 +17,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.14'
+VERSION = '1.5.15'
 
 __all__ = [
     # replacement for logging
@@ -27,7 +27,7 @@ __all__ = [
     # replacement for multiprocessing
     'Workers', 'work',
     # syntax sugar for common utilities
-    'try_f', 'type_of', 'range_of', 'items_of', 'jpath', 'run_dir', 'lib_path',
+    'try_f', 'stop', 'type_of', 'range_of', 'items_of', 'jpath', 'run_dir', 'lib_path',
     # handling data files
     'load_txt', 'load_jsonl', 'load_json', 'save_json', 'save_jsonl', 'iterate', 'open_file',
     # handling paths
@@ -710,7 +710,11 @@ def break_string(string, width=50):
     return [''.join(r) for r in res]
 
 
-def debug(*data, mode=prints, stop=False, level=DEBUG, max_width=80, char='-'):
+def stop(message=''):
+    raise SystemExit(message)
+
+
+def debug(*data, mode=prints, level=DEBUG, max_width=80, char='-'):
     if LOGGER.level <= level:
 
         stack = inspect.stack()
@@ -749,7 +753,6 @@ def debug(*data, mode=prints, stop=False, level=DEBUG, max_width=80, char='-'):
                     log(data) if isinstance(data, str) else prints(data)
             else:
                 assert False, 'mode: {} not supported'.format(mode)
-        assert not stop, "debug(stop=True)"
 
 
 def try_f(*args, **kwargs):
