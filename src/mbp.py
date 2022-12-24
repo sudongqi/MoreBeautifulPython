@@ -17,7 +17,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.15'
+VERSION = '1.5.16'
 
 __all__ = [
     # replacement for logging
@@ -514,16 +514,17 @@ def _build_table(rows, space=3, sub_table_space=1, filler=' '):
     return res
 
 
-def print_table(rows, headers=None, headers_sep='-', space=3, cell_space=1, filler=' ', level=INFO, no_print=False):
+def print_table(rows, headers=None, headers_sep='-', space=3, cell_space=1, filler=' ', level=INFO, res=False):
     if headers is not None:
         rows = [headers] + rows
-    res = _build_table(rows, space, cell_space, filler)
-    headers_sep_line = headers_sep * len(res[0])
+    _res = _build_table(rows, space, cell_space, filler)
+    headers_sep_line = headers_sep * len(_res[0])
     if headers is not None:
-        res = [headers_sep_line, res[0], headers_sep_line] + res[1:] + [headers_sep_line]
-    if not no_print:
-        print_iter(res, level=level)
-    return res
+        _res = [headers_sep_line, _res[0], headers_sep_line] + _res[1:] + [headers_sep_line]
+    if not res:
+        print_iter(_res, level=level)
+    else:
+        return _res
 
 
 def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep, compact):
@@ -660,13 +661,13 @@ def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep,
 
 
 def prints(*data, indent=4, width=80, shift=0, extra_indent=None, compact=False, sep=',', quote='"', kv_sep=': ',
-           level=INFO, no_print=False):
-    if no_print:
+           level=INFO, res=False):
+    if res:
         res = []
         with recorder(res):
             for d in data:
                 _prints(d, indent, width, level, shift, extra_indent, sep, quote, kv_sep, compact)
-        return res
+        return '\n'.join(res)
     else:
         for d in data:
             _prints(d, indent, width, level, shift, extra_indent, sep, quote, kv_sep, compact)
@@ -801,20 +802,21 @@ def _strip_and_add_spaces(s):
     return s
 
 
-def print_line(width=20, text=None, char='-', level=INFO, min_wing_size=5, no_print=False):
+def print_line(width=20, text=None, char='-', level=INFO, min_wing_size=5, res=False):
     if text is None:
-        res = char * width
+        _res = char * width
     else:
         text = _strip_and_add_spaces(text)
         wing_size = (width - len(text)) // 2
         wing_size = max(wing_size, min_wing_size)
         wing = char * wing_size
-        res = wing + text + wing
-        if len(res) < width:
-            res += char
-    if not no_print:
-        log(res, level=level)
-    return res
+        _res = wing + text + wing
+        if len(_res) < width:
+            _res += char
+    if not res:
+        log(_res, level=level)
+    else:
+        return _res
 
 
 class enclose(object):
@@ -837,7 +839,7 @@ class enclose(object):
     def __enter__(self):
         if not self.aligned:
             log('\n' * self.top_margin, end='', level=self.level)
-            top_line = print_line(self.width, self.msg, char=self.char, no_print=True)
+            top_line = print_line(self.width, self.msg, char=self.char, res=True)
             self.top_line_size = len(top_line)
             log(top_line, level=self.level)
         else:
@@ -853,7 +855,7 @@ class enclose(object):
                 max_line_length = max(len(msg) + 2 for msg in self.tape)
             max_line_length = min(self.max_width, max_line_length)
             log('\n' * self.top_margin, end='', level=self.level)
-            top_line = print_line(max_line_length, self.msg, char=self.char, no_print=True)
+            top_line = print_line(max_line_length, self.msg, char=self.char, res=True)
             self.top_line_size = len(top_line)
             log(top_line, level=self.level)
             print_iter(self.tape, level=self.level)
