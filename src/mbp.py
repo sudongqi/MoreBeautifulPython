@@ -17,7 +17,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.16'
+VERSION = '1.5.17'
 
 __all__ = [
     # replacement for logging
@@ -688,9 +688,6 @@ def print_iter(data, shift=0, level=INFO):
                 log(item, level=level)
 
 
-VALID_REFERENCE_ARGUMENTS_PATTERN = r'\(([_a-zA-Z][_a-zA-Z0-9]*( *= *[_a-zA-Z0-9]+)?( *, *)?)+\)'
-
-
 def break_string(string, width=50):
     res = [[]]
     curr = 0
@@ -715,25 +712,27 @@ def stop(message=''):
     raise SystemExit(message)
 
 
-def debug(*data, mode=prints, level=DEBUG, max_width=80, char='-'):
+VALID_REFERENCE_ARGUMENTS_PATTERN = r'\(([_a-zA-Z][_a-zA-Z0-9]*( *= *[_a-zA-Z0-9]+)?( *, *)?)+\)'
+
+
+def debug(*data, mode=log, char='-', level=DEBUG):
     if LOGGER.level <= level:
 
         stack = inspect.stack()
+        lineno = stack[1].lineno
         filename = file_basename(stack[1][1])
-        function_name = ' [{}]'.format(stack[1][3]) if stack[1][3] != '<module>' else ''
+        function_name = '{}'.format(stack[1][3]) if stack[1][3] != '<module>' else '?'
 
         code_str = stack[1].code_context[0].strip()
-        r = re.search('debug' + VALID_REFERENCE_ARGUMENTS_PATTERN, code_str)
-        assert len(data) >= 1, '{} ==> debug() need at least 1 argument'.format(code_str)
-        assert r is not None, '{} ==> debug() can only take named arguments'.format(code_str)
-        arguments = [s.strip() for s in code_str[r.start(): r.end()][len('debug') + 1:-1].split(',')]
+        arguments = [a.strip() for a in code_str[6:-1].split(',') if '=' not in a]
+        assert len(data) == len(arguments), '{} ==> debug() can not take arguments with "," in it'.format(code_str)
 
-        with enclose('{}{}: {}'.format(filename, function_name, code_str), char=char):
+        with enclose('{} [{} {}]: {}'.format(filename, function_name, lineno, code_str), char=char):
             if mode == log or mode == print or mode == print_table:
                 if len(data) > 1:
                     rows = []
                     for k, v in zip(arguments, data):
-                        rows.append([k + ': ', break_string(str(v), width=max_width)])
+                        rows.append([k + ': ', str(v).split('\n')])
                     print_table(rows)
                 else:
                     log(data[0])
