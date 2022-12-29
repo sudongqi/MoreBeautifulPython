@@ -395,28 +395,28 @@ def main():
         debug(a, b, c, mode=prints)
         debug(b, mode=print_iter)
     '''
-    ----- [394] examples.py <main> ==> a, b, c -----
+    ----- [394] examples.py <main> -----
     a:  123
     b:  [1, 2, 3, 4]
     c:  line1
         line2
         line3
-    ------------------------------------------------
+    ------------------------------------
     
-    ----- [395] examples.py <main> ==> a, b, c -----
+    ----- [395] examples.py <main> -----
     a: 123
     b: [1,2,3,4]
     c: "line1\n"
        "line2\n"
        "line3"
-    ------------------------------------------------
+    ------------------------------------
     
-    ----- [396] examples.py <main> ==> b -----
+    ----- [396] examples.py <main>: b -----
     1
     2
     3
     4
-    ------------------------------------------
+    ---------------------------------------
     '''
 
     # load_jsonl() return an iterator of dictionary

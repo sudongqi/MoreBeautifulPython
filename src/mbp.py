@@ -17,7 +17,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.21'
+VERSION = '1.5.22'
 
 __all__ = [
     # replacement for logging
@@ -726,8 +726,9 @@ def debug(*data, mode=log, char='-', level=DEBUG):
         code_str = stack[1].code_context[0].strip()
         arguments = [a.strip() for a in code_str[6:-1].split(',') if '=' not in a]
         assert len(data) == len(arguments), '{} ==> debug() can not take arguments with "," in it'.format(code_str)
+        argument_str = '' if len(arguments) > 1 else ': {}'.format(arguments[0])
 
-        with enclose('[{}] {} <{}> ==> {}'.format(lineno, filename, function_name, ', '.join(arguments)), char=char):
+        with enclose('[{}] {} <{}>{}'.format(lineno, filename, function_name, argument_str), char=char):
             if mode == log or mode == print or mode == print_table:
                 if len(data) > 1:
                     rows = []
