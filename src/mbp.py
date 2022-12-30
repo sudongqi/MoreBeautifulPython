@@ -17,7 +17,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.22'
+VERSION = '1.5.23'
 
 __all__ = [
     # replacement for logging
@@ -458,7 +458,7 @@ def items_of(data, start=0, end=None, step=1, reverse=False):
 COLLECTION_TYPES = [list, set, tuple, dict]
 
 
-def _build_table(rows, space=3, sub_table_space=1, filler=' '):
+def _build_table(rows, space=3, cell_space=1, filler=' ', min_column_widths=None):
     space = max(space, 1)
 
     rows_type = type_of(rows, COLLECTION_TYPES)
@@ -467,7 +467,7 @@ def _build_table(rows, space=3, sub_table_space=1, filler=' '):
     elif rows_type == 4:
         _rows = []
         for k, v in rows.items():
-            r = _build_table(v, sub_table_space, sub_table_space, filler)
+            r = _build_table(v, cell_space, cell_space, filler)
             _rows.append([k, r])
         rows = _rows
 
@@ -487,7 +487,7 @@ def _build_table(rows, space=3, sub_table_space=1, filler=' '):
         if len(row) != num_col:
             row += [''] * (num_col - len(row))
 
-        row = [_build_table(item, sub_table_space, sub_table_space, filler)
+        row = [_build_table(item, cell_space, cell_space, filler)
                if type_of(item, COLLECTION_TYPES) else [str(item)]
                for item in row]
         max_height = max(len(r) for r in row)
@@ -501,6 +501,8 @@ def _build_table(rows, space=3, sub_table_space=1, filler=' '):
     for d in data:
         for i in range(num_col):
             column_width[i] = max(column_width[i], wcswidth(d[i]))
+            if min_column_widths is not None and i < len(min_column_widths) and min_column_widths[i] is not None:
+                column_width[i] = max(column_width[i], min_column_widths[i])
 
     res = []
     for d in data:
@@ -514,10 +516,11 @@ def _build_table(rows, space=3, sub_table_space=1, filler=' '):
     return res
 
 
-def print_table(rows, headers=None, headers_sep='-', space=3, cell_space=1, filler=' ', level=INFO, res=False):
+def print_table(rows, headers=None, headers_sep='-', space=3, cell_space=1, filler=' ', min_column_widths=None,
+                level=INFO, res=False):
     if headers is not None:
         rows = [headers] + rows
-    _res = _build_table(rows, space, cell_space, filler)
+    _res = _build_table(rows, space, cell_space, filler, min_column_widths)
     headers_sep_line = headers_sep * len(_res[0])
     if headers is not None:
         _res = [headers_sep_line, _res[0], headers_sep_line] + _res[1:] + [headers_sep_line]

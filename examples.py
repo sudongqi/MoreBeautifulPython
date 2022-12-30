@@ -453,20 +453,27 @@ def main():
     '''
 
     # print_table() can also pad a row, and handle tables inside table (if item is a list, dict, set, or tuple)
-    rows += [[6, 'Paimon'], ['', 'summary', [['num characters', 6], ['num cities', 4]]]]
-    print_table(rows, headers)
+    incomplete_row = [6, 'Paimon']
+    complex_row = ['', 'summary', [['num characters', 6],
+                                   ['num cities', 4]]]
+    rows += [incomplete_row, complex_row]
+    # print_table() calculate column width based on the longest item or use min_column_widths if applicable
+    print_table(rows, headers, min_column_widths=[None, 20])
     '''
-    -------------------
-    1    Jean      Mondstadt
-    2    Xingqiu   Liyue
-    3    Ganyu     Liyue
-    4    Ayaka     Inazuma
-    5    Nilou     Sumeru
+    --------------------------------
+    id   name                   city
+    --------------------------------
+    1    Jean                   Mondstadt
+    2    Xingqiu                Liyue
+    3    Ganyu                  Liyue
+    4    Ayaka                  Inazuma
+    5    Nilou                  Sumeru
     6    Paimon
-         summary   num characters 6
-                   num cities     4
-    -------------------
+         summary                num characters 6
+                                num cities     4
+    --------------------------------
     '''
+
 
     # break_string() break a long string into list of smaller (measured by wcswidth()) strings
     log(break_string('a' * 20, width=5))
