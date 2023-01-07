@@ -17,7 +17,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.23'
+VERSION = '1.5.24'
 
 __all__ = [
     # replacement for logging
@@ -718,12 +718,12 @@ def stop(message=''):
 VALID_REFERENCE_ARGUMENTS_PATTERN = r'\(([_a-zA-Z][_a-zA-Z0-9]*( *= *[_a-zA-Z0-9]+)?( *, *)?)+\)'
 
 
-def debug(*data, mode=log, char='-', level=DEBUG):
+def debug(*data, mode=None, char='-', level=DEBUG):
     if LOGGER.level <= level:
 
         stack = inspect.stack()
         lineno = stack[1].lineno
-        filename = file_basename(stack[1][1])
+        filename = file_basename(stack[1][1]).split('.')[0]
         function_name = '{}'.format(stack[1][3]) if stack[1][3] != '<module>' else '?'
 
         code_str = stack[1].code_context[0].strip()
@@ -731,8 +731,17 @@ def debug(*data, mode=log, char='-', level=DEBUG):
         assert len(data) == len(arguments), '{} ==> debug() can not take arguments with "," in it'.format(code_str)
         argument_str = '' if len(arguments) > 1 else ': {}'.format(arguments[0])
 
-        with enclose('[{}] {} <{}>{}'.format(lineno, filename, function_name, argument_str), char=char):
-            if mode == log or mode == print or mode == print_table:
+        with enclose('[{}] {}.{}{}'.format(lineno, filename, function_name, argument_str), char=char):
+            if mode is None:
+                if len(data) > 1:
+                    rows = []
+                    for k, v in zip(arguments, data):
+                        rows.append([k + ': ', str(v).split('\n')])
+                    print_table(rows, space=1)
+                else:
+                    data = data[0]
+                    log(data) if isinstance(data, str) else prints(data)
+            elif mode == log or mode == print or mode == print_table:
                 if len(data) > 1:
                     rows = []
                     for k, v in zip(arguments, data):
