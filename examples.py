@@ -39,9 +39,9 @@ def main():
     # logger() (as context manager) temporarily modify the global logger
     with logger(level=DEBUG, file=sys.stderr, name='__temp__', meta_info=True):
         # this message will be redirected to sys.stderr
-        log('this is from the temporary logger', level=CRITICAL)
+        log('this is from the temporary logger (level={})'.format(curr_logger_level()), level=CRITICAL)
     '''
-    2022-08-11 05:22:17 CRITICAL __temp__: this is from the temporary logger
+    2023-01-08 22:58:58 CRITICAL __temp__: this is from the temporary logger (level=10)
     '''
 
     # suppress all logs by setting level=SILENT

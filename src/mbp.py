@@ -17,11 +17,11 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.26'
+VERSION = '1.5.27'
 
 __all__ = [
     # replacement for logging
-    'log', 'logger', 'get_logger', 'set_global_logger', 'reset_global_logger', 'recorder',
+    'log', 'logger', 'get_logger', 'set_global_logger', 'curr_logger_level', 'reset_global_logger', 'recorder',
     # logging levels
     'NOTSET', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL', 'SILENT',
     # replacement for multiprocessing
@@ -136,6 +136,11 @@ class logger(object):
 def set_global_logger(name='', file=sys.stdout, level=INFO, meta_info=False, sep=' '):
     global LOGGER
     LOGGER = Logger(name, file, level, meta_info, sep)
+
+
+def curr_logger_level():
+    global LOGGER
+    return LOGGER.level
 
 
 def reset_global_logger():
