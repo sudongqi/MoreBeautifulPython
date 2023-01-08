@@ -17,13 +17,13 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.24'
+VERSION = '1.5.25'
 
 __all__ = [
     # replacement for logging
     'log', 'logger', 'get_logger', 'set_global_logger', 'reset_global_logger', 'recorder',
     # logging levels
-    'NOTSET', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL', 'SILENT',
+    'LOGGER', 'NOTSET', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL', 'SILENT',
     # replacement for multiprocessing
     'Workers', 'work',
     # syntax sugar for common utilities
