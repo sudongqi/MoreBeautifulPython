@@ -95,7 +95,7 @@ def main():
     # recorder() save all logs into a (passed-in) list
     with enclose('recorder()'):
         tape = []
-        with recorder(tape, level=DEBUG):
+        with recorder(tape, captured_level=DEBUG):
             log('9 8 7 6 5 4 3 2 1')
             log('ok')
             log('a debug message', level=DEBUG)
