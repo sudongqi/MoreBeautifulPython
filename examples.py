@@ -92,18 +92,20 @@ def main():
     ================
     '''
 
-    # recorder() save all logs into a list
+    # recorder() save all logs into a (passed-in) list
     with enclose('recorder()'):
         tape = []
-        with recorder(tape):
+        with recorder(tape, level=DEBUG):
             log('9 8 7 6 5 4 3 2 1')
-            log('ok', end='')
+            log('ok')
+            log('a debug message', level=DEBUG)
         tape[0] = tape[0][::-1]
         print_iter(tape)
     '''
     ===== recorder() =====
     1 2 3 4 5 6 7 8 9
     ok
+    a debug message
     ======================
     '''
 

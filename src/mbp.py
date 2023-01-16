@@ -17,7 +17,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.28'
+VERSION = '1.5.29'
 
 __all__ = [
     # replacement for logging
@@ -165,12 +165,10 @@ def log(*messages, level=INFO, file=None, end=None, flush=False):
 
 
 class recorder(object):
-    def __init__(self, tape, raw=False):
+    def __init__(self, tape, raw=False, level=INFO):
         assert tape == [], '1st argument must be an empty list'
-        global LOGGER
-        global CONTEXT_LOGGER_SET
         self.buffer = StringIO()
-        self.logger = logger(file=self.buffer, level=LOGGER.level, can_overwrite=False)
+        self.logger = logger(file=self.buffer, level=level, can_overwrite=False)
         self.tape = tape
         self.raw = raw
 
@@ -838,7 +836,7 @@ def print_line(width=20, text=None, char='-', level=INFO, min_wing_size=5, res=F
 
 class enclose(object):
     def __init__(self, msg='', width=None, max_width=80, char='=', top_margin=0, bottom_margin=1, use_timer=False,
-                 level=INFO):
+                 level=INFO, captured_level=INFO):
         self.msg = _strip_and_add_spaces(msg)
         self.width = width
         self.max_width = max_width
@@ -851,7 +849,7 @@ class enclose(object):
         self.aligned = width is None
         if self.aligned:
             self.tape = []
-            self.recorder = recorder(self.tape)
+            self.recorder = recorder(self.tape, level=captured_level)
 
     def __enter__(self):
         if not self.aligned:
