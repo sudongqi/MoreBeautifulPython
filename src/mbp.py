@@ -17,7 +17,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.30'
+VERSION = '1.5.31'
 
 __all__ = [
     # replacement for logging
@@ -393,9 +393,9 @@ def load_jsonl(path, encoding="utf-8", first_n=None, sample_p=1.0, sample_seed=N
             yield json.loads(line)
 
 
-def save_json(data, path, encoding='utf-8'):
+def save_json(data, path, indent=4, encoding='utf-8'):
     with open(path, 'w', encoding=encoding) as f:
-        return json.dump(data, f)
+        return json.dump(data, f, indent=indent)
 
 
 def save_jsonl(data, path, encoding='utf-8'):
