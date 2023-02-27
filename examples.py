@@ -8,13 +8,13 @@ from src.mbp import *
 
 
 # test functions for multiprocessing
-def test_sleep_and_fail(x, fail_rate=0, running_time=0.2):
-    time.sleep(running_time)
+def sleep_then_maybe_fail(x, duration=0.2, fail_rate=0):
+    time.sleep(duration)
     assert random.random() > fail_rate, "simulated failure ({}%)".format(fail_rate * 100)
     return x
 
 
-def test_read_from_list(idx, vec):
+def read_from_vec(idx, vec):
     return vec[idx]
 
 
@@ -109,13 +109,11 @@ def main():
     ======================
     '''
 
-    # use timer() context manager to get execution time
-    with timer():
-        d = {i: i for i in range(100)}
-        for i in range(200000):
-            d.get(i, None)
+    # use ctx_timer() is more accurate at measuring execution time
+    with timer('build_vec(100000)'):
+        build_vec(100000)
     '''
-    took 6.951 ms
+    build_vec(100000) ==> took 1.987 ms
     '''
 
     # enclose_timer() == enclose(timer=True)
@@ -123,7 +121,7 @@ def main():
         # iterate() can customize iteration procedures
         # for example, sample 10% and report every 3 yield from the first 100 samples
         for d in iterate(range(1000), first_n=100, sample_p=0.05, report_n=2):
-            log(test_sleep_and_fail(d, running_time=0.1))
+            log(sleep_then_maybe_fail(d, duration=0.1))
     '''
    ==========================
     18
@@ -139,7 +137,7 @@ def main():
     # Workers() is more flexible than multiprocessing.Pool()
     n_task = 6
     with enclose_timer('Workers()'):
-        workers = Workers(f=test_sleep_and_fail, num_workers=3, progress=True, ignore_error=True)
+        workers = Workers(f=sleep_then_maybe_fail, num_workers=3, progress=True, ignore_error=True)
         [workers.add_task({'x': i, 'fail_rate': 0.3}) for _ in range(n_task)]
         [workers.get_res() for _ in range(n_task)]
         workers.terminate()
@@ -163,7 +161,7 @@ def main():
     # tasks can be iterator of tuple (need to specify all inputs) or dict
     with enclose_timer('work()'):
         tasks = iter([(i, 0.5, 0.2) for i in range(n_task)])
-        for r in work(f=test_sleep_and_fail, tasks=tasks, ordered=True, ignore_error=True, res_only=False):
+        for r in work(f=sleep_then_maybe_fail, tasks=tasks, ordered=True, ignore_error=True, res_only=False):
             log(r)
     '''
     ==================================== work() ====================================
@@ -182,16 +180,16 @@ def main():
         vec_size = 1000000
         vec = [x for x in range(vec_size)]
         with timer('work()'):
-            a = list(work(test_read_from_list, num_workers=1, ordered=True, tasks=iter((i, vec) for i in range(30))))
+            a = list(work(read_from_vec, num_workers=1, ordered=True, tasks=iter((i, vec) for i in range(30))))
         with timer('work() with cache_inp'):
-            b = list(work(test_read_from_list, num_workers=1, ordered=True, tasks=iter({'idx': i} for i in range(30)),
+            b = list(work(read_from_vec, num_workers=1, ordered=True, tasks=iter({'idx': i} for i in range(30)),
                           cache_inp={'vec': vec}))
         assert a == b
 
         # for objects that can not be pickled, use built_inp
         with timer('work() with build_inp'):
             tasks = iter({'idx': i} for i in range(30))
-            list(work(test_read_from_list, num_workers=1, ordered=True, tasks=tasks,
+            list(work(read_from_vec, num_workers=1, ordered=True, tasks=tasks,
                       build_inp={'vec': (build_vec, vec_size)}))
     '''
     ========== work() with cache_inp ==========
@@ -363,7 +361,7 @@ def main():
     '''
 
     # try_f() perform try-except routine and capture the result or error messages in a dictionary
-    prints(try_f(test_sleep_and_fail, 'input', fail_rate=1))
+    prints(try_f(sleep_then_maybe_fail, 'input', fail_rate=1))
     '''
     {
         "error": "AssertionError('simulated failure (100%)')",
@@ -377,7 +375,7 @@ def main():
                      "AssertionError: simulated failure (100%)\n"
     }
     '''
-    log(try_f(test_sleep_and_fail, 'input', fail_rate=0))
+    log(try_f(sleep_then_maybe_fail, 'input', fail_rate=0))
     '''
     {'res': 'input'}
     '''
@@ -476,9 +474,8 @@ def main():
     --------------------------------
     '''
 
-
-    # break_string() break a long string into list of smaller (measured by wcswidth()) strings
-    log(break_string('a' * 20, width=5))
+    # shorten() break a long string into list of smaller (measured by wcswidth()) strings
+    log(shorten('a' * 20, width=5))
 
     numbers = [1, 2, 3, 4, 5]
     # get 3 key statistics from an iterator at once

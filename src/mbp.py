@@ -17,7 +17,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.31'
+VERSION = '1.5.32'
 
 __all__ = [
     # replacement for logging
@@ -35,7 +35,7 @@ __all__ = [
     # tools for file system
     'traverse', 'this_dir', 'dir_of', 'init_dirs', 'init_files', 'init_dirs_for', 'iterate_files', 'open_files',
     # handling string
-    'break_string',
+    'shorten',
     # tools for debug
     'enclose', 'enclose_timer', 'error_msg', 'debug',
     # tools for summarizations
@@ -318,8 +318,8 @@ class timer(object):
         self.start = time.time()
 
     def __exit__(self, _type, value, _traceback):
-        log('{}took {:.3f} ms'.format(
-            '' if self.msg == '' else self.msg + ' ==> ', (time.time() - self.start) * 1000), level=self.level)
+        duration = (time.time() - self.start) * 1000
+        log('{}took {:.3f} ms'.format('' if self.msg == '' else self.msg + ' ==> ', duration), level=self.level)
 
 
 def iterate(data, first_n=None, sample_p=1.0, sample_seed=None, report_n=None):
@@ -694,7 +694,7 @@ def print_iter(data, shift=0, level=INFO):
                 log(item, level=level)
 
 
-def break_string(string, width=50):
+def shorten(string, width=50):
     res = [[]]
     curr = 0
     for ch in string:
