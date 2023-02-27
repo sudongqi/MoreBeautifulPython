@@ -17,7 +17,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.32'
+VERSION = '1.5.33'
 
 __all__ = [
     # replacement for logging
@@ -35,7 +35,7 @@ __all__ = [
     # tools for file system
     'traverse', 'this_dir', 'dir_of', 'init_dirs', 'init_files', 'init_dirs_for', 'iterate_files', 'open_files',
     # handling string
-    'shorten',
+    'break_str',
     # tools for debug
     'enclose', 'enclose_timer', 'error_msg', 'debug',
     # tools for summarizations
@@ -694,7 +694,7 @@ def print_iter(data, shift=0, level=INFO):
                 log(item, level=level)
 
 
-def shorten(string, width=50):
+def break_str(string, width=50):
     res = [[]]
     curr = 0
     for ch in string:

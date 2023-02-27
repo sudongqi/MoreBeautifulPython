@@ -474,8 +474,8 @@ def main():
     --------------------------------
     '''
 
-    # shorten() break a long string into list of smaller (measured by wcswidth()) strings
-    log(shorten('a' * 20, width=5))
+    # break_str() break a long string into list of smaller (measured by wcswidth()) strings
+    log(break_str('a' * 20, width=5))
 
     numbers = [1, 2, 3, 4, 5]
     # get 3 key statistics from an iterator at once
