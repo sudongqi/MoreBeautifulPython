@@ -17,7 +17,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.33'
+VERSION = '1.5.34'
 
 __all__ = [
     # replacement for logging
@@ -41,11 +41,13 @@ __all__ = [
     # tools for summarizations
     'prints', 'print_iter', 'print_table', 'print_line',
     # tools for simple statistics
-    'timer', 'curr_time', 'avg', 'min_max_avg', 'n_min_max_avg', 'CPU_COUNT'
+    'timer', 'curr_time', 'avg', 'min_max_avg', 'n_min_max_avg', 'CPU_COUNT', 'MIN', 'MAX'
 ]
 
 NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, SILENT = 0, 10, 20, 30, 40, 50, 60
 CPU_COUNT = cpu_count()
+MIN = float('-inf')
+MAX = float('inf')
 
 
 def get_msg_level(level):
@@ -461,7 +463,7 @@ def items_of(data, start=0, end=None, step=1, reverse=False):
 COLLECTION_TYPES = [list, set, tuple, dict]
 
 
-def _build_table(rows, space=3, cell_space=1, filler=' ', min_column_widths=None):
+def _build_table(rows, space=3, cell_space=1, filler=' ', max_column_width=None, min_column_widths=None):
     space = max(space, 1)
 
     rows_type = type_of(rows, COLLECTION_TYPES)
@@ -489,7 +491,6 @@ def _build_table(rows, space=3, cell_space=1, filler=' ', min_column_widths=None
     for row in rows:
         if len(row) != num_col:
             row += [''] * (num_col - len(row))
-
         row = [_build_table(item, cell_space, cell_space, filler)
                if type_of(item, COLLECTION_TYPES) else [str(item)]
                for item in row]
@@ -503,6 +504,8 @@ def _build_table(rows, space=3, cell_space=1, filler=' ', min_column_widths=None
     column_width = [0 for _ in range(num_col)]
     for d in data:
         for i in range(num_col):
+            if max_column_width is not None and len(d[i]) > max_column_width - 3:
+                d[i] = d[i][:max_column_width - 3] + '...'
             column_width[i] = max(column_width[i], wcswidth(d[i]))
             if min_column_widths is not None and i < len(min_column_widths) and min_column_widths[i] is not None:
                 column_width[i] = max(column_width[i], min_column_widths[i])
@@ -519,11 +522,11 @@ def _build_table(rows, space=3, cell_space=1, filler=' ', min_column_widths=None
     return res
 
 
-def print_table(rows, headers=None, headers_sep='-', space=3, cell_space=1, filler=' ', min_column_widths=None,
-                level=INFO, res=False):
+def print_table(rows, headers=None, headers_sep='-', space=3, cell_space=1, filler=' ',
+                max_column_width=None, min_column_widths=None, level=INFO, res=False):
     if headers is not None:
         rows = [headers] + rows
-    _res = _build_table(rows, space, cell_space, filler, min_column_widths)
+    _res = _build_table(rows, space, cell_space, filler, max_column_width, min_column_widths)
     headers_sep_line = headers_sep * len(_res[0])
     if headers is not None:
         _res = [headers_sep_line, _res[0], headers_sep_line] + _res[1:] + [headers_sep_line]

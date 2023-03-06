@@ -473,6 +473,16 @@ def main():
                                 num cities     4
     --------------------------------
     '''
+    # use max_column_width to shorten a cell with long data (str)
+    print_table([[1, 2, '3' * 100], [1, '2' * 100, 3]], headers=['a', 'b', 'c'], max_column_width=10)
+    '''
+    ------------------
+    a   b            c
+    ------------------
+    1   2            3333333...
+    1   2222222...   3
+    ------------------
+    '''
 
     # break_str() break a long string into list of smaller (measured by wcswidth()) strings
     log(break_str('a' * 20, width=5))
