@@ -17,7 +17,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.34'
+VERSION = '1.5.35'
 
 __all__ = [
     # replacement for logging
@@ -27,15 +27,15 @@ __all__ = [
     # replacement for multiprocessing
     'Workers', 'work',
     # syntax sugar for common utilities
-    'try_f', 'stop', 'type_of', 'range_of', 'items_of', 'jpath', 'run_dir', 'lib_path',
+    'try_f', 'stop', 'type_of', 'range_', 'items_', 'jpath', 'run_dir', 'lib_path',
     # handling data files
     'load_txt', 'load_jsonl', 'load_json', 'save_json', 'save_jsonl', 'iterate', 'open_file',
     # handling paths
     'unwrap_file', 'unwrap_dir', 'file_basename', 'dir_basename',
     # tools for file system
-    'traverse', 'this_dir', 'dir_of', 'init_dirs', 'init_files', 'init_dirs_for', 'iterate_files', 'open_files',
+    'traverse', 'this_dir', 'dir_of', 'build_dirs', 'build_files', 'build_dirs_for', 'iterate_files', 'open_files',
     # handling string
-    'break_str',
+    'break_str', 'shorten',
     # tools for debug
     'enclose', 'enclose_timer', 'error_msg', 'debug',
     # tools for summarizations
@@ -72,38 +72,33 @@ def open_files_for_logger(file):
     for i in range(len(res)):
         f = res[i]
         if isinstance(f, str):
-            init_dirs_for(f)
+            build_dirs_for(f)
             res[i] = open(f, 'w', encoding='utf-8')
     return res
 
 
 class Logger:
-    def __init__(self, name='', file=sys.stdout, level=INFO, meta_info=False, sep=' '):
+    def __init__(self, name='', file=sys.stdout, level=INFO, verbose=False):
         self.level = level
         self.file = open_files_for_logger(file)
-        self.prefix = name
-        self.meta_info = True if name else meta_info
-        self.sep = sep
+        self.name = name
+        self.verbose = True if name else verbose
 
-    def __call__(self, *messages, level=INFO, file=None, end=None, flush=False):
+    def __call__(self, *data, level=INFO, file=None, end=None, flush=False):
         if self.level <= level:
-            _file = self.file if file is None else open_files_for_logger(file)
-            for f in _file:
-                for message in messages:
-                    lines = str(message).split('\n')
-                    num_lines = len(lines)
+            header = f'{curr_time()} {get_msg_level(level)} {self.name}:' \
+                if self.name != '' else f'{curr_time()} {get_msg_level(level)}:'
+            header_empty = len(header) * ' '
+            for f in (self.file if file is None else open_files_for_logger(file)):
+                for d in data:
+                    lines = str(d).split('\n')
                     for idx, line in enumerate(lines):
-                        if self.meta_info:
+                        if self.verbose:
                             if idx == 0:
-                                headers = [curr_time(), get_msg_level(level)]
-                                if self.prefix:
-                                    headers.append(self.prefix)
-                                header = self.sep.join(headers) + ': '
-                                header_empty = len(header) * ' '
                                 print(header, file=f, end='', flush=flush)
                             else:
                                 print(header_empty, file=f, end='', flush=flush)
-                        if idx == num_lines - 1:
+                        if idx == len(lines) - 1:
                             print(line, file=f, end=end, flush=flush)
                         else:
                             print(line, file=f, end=None, flush=flush)
@@ -114,13 +109,13 @@ CONTEXT_LOGGER_SET = False
 
 
 class logger(object):
-    def __init__(self, name='', file=sys.stdout, level=INFO, meta_info=False, can_overwrite=True):
+    def __init__(self, name='', file=sys.stdout, level=INFO, verbose=False, can_overwrite=True):
         global LOGGER
         global CONTEXT_LOGGER_SET
         self.logger_was_changed = False
         if not CONTEXT_LOGGER_SET or not can_overwrite:
             self.org_logger = LOGGER
-            LOGGER = Logger(name, file, level, meta_info)
+            LOGGER = Logger(name, file, level, verbose)
             self.logger_was_changed = True
             CONTEXT_LOGGER_SET = True
 
@@ -135,9 +130,9 @@ class logger(object):
             CONTEXT_LOGGER_SET = False
 
 
-def set_global_logger(name='', file=sys.stdout, level=INFO, meta_info=False, sep=' '):
+def set_global_logger(name='', file=sys.stdout, level=INFO, verbose=False):
     global LOGGER
-    LOGGER = Logger(name, file, level, meta_info, sep)
+    LOGGER = Logger(name, file, level, verbose)
 
 
 def curr_logger_level():
@@ -150,8 +145,8 @@ def reset_global_logger():
     LOGGER = Logger()
 
 
-def get_logger(name='', file=sys.stdout, level=INFO, meta_info=False, sep=' '):
-    return Logger(name, file, level, meta_info, sep)
+def get_logger(name='', file=sys.stdout, level=INFO, verbose=False):
+    return Logger(name, file, level, verbose)
 
 
 def curr_time(breakdown=False):
@@ -188,8 +183,8 @@ class recorder(object):
         self.logger.__exit__(_type, value, _traceback)
 
 
-def error_msg(e, detailed=False, sep='\n'):
-    if not detailed:
+def error_msg(e, verbose=False, sep='\n'):
+    if not verbose:
         return repr(e)
     else:
         res = traceback.format_exc()
@@ -197,8 +192,7 @@ def error_msg(e, detailed=False, sep='\n'):
 
 
 class Worker(Process):
-    def __init__(self, f, inp, out, worker_id=None, cache_inp=None, build_inp=None, detailed_error=True,
-                 progress=True):
+    def __init__(self, f, inp, out, worker_id=None, cache_inp=None, build_inp=None, verbose_error=True, progress=True):
         super(Worker, self).__init__()
         self.worker_id = worker_id
         self.inp = inp
@@ -206,7 +200,7 @@ class Worker(Process):
         self.f = f
         self.cache_inp = cache_inp
         self.built_inp = build_inp
-        self.detailed_error = detailed_error
+        self.verbose_error = verbose_error
         if progress:
             log('started worker-{}'.format('?' if worker_id is None else worker_id))
 
@@ -226,11 +220,12 @@ class Worker(Process):
                 self.out.put({'worker_id': self.worker_id, 'task_id': task_id, 'res': res})
             except Exception as e:
                 self.out.put({'worker_id': self.worker_id, 'task_id': task_id, 'res': None,
-                              'error': error_msg(e, self.detailed_error)})
+                              'error': error_msg(e, self.verbose_error)})
 
 
 class Workers:
-    def __init__(self, f, num_workers=CPU_COUNT, cache_inp=None, build_inp=None, progress=True, ignore_error=False):
+    def __init__(self, f, num_workers=CPU_COUNT, cache_inp=None, build_inp=None, progress=True, ignore_error=False,
+                 verbose_error=True):
         self.inp = Queue()
         self.out = Queue()
         self.workers = []
@@ -239,7 +234,7 @@ class Workers:
         self.ignore_error = ignore_error
         self.f = f
         for i in range(num_workers):
-            worker = Worker(f, self.inp, self.out, i, cache_inp, build_inp, not ignore_error, progress)
+            worker = Worker(f, self.inp, self.out, i, cache_inp, build_inp, verbose_error, progress)
             worker.start()
             self.workers.append(worker)
 
@@ -302,18 +297,18 @@ class Workers:
             log('terminated {} workers'.format(len(self.workers)))
 
 
-def work(f, tasks, num_workers=CPU_COUNT, cache_inp=None, build_inp=None, progress=False, ordered=False,
-         res_only=True, ignore_error=False):
-    workers = Workers(f, num_workers, cache_inp, build_inp, progress, ignore_error)
+def work(f, tasks, num_workers=CPU_COUNT, cache_inp=None, build_inp=None,
+         progress=False, ordered=False, res_only=True, ignore_error=False, verbose_error=False):
+    workers = Workers(f, num_workers, cache_inp, build_inp, progress, ignore_error, verbose_error)
     for d in workers.map(tasks, ordered, res_only):
         yield d
     workers.terminate()
 
 
 class timer(object):
-    def __init__(self, msg='', level=INFO):
+    def __init__(self, text='', level=INFO):
         self.start = None
-        self.msg = msg.strip()
+        self.msg = text.strip()
         self.level = level
 
     def __enter__(self):
@@ -337,10 +332,10 @@ def iterate(data, first_n=None, sample_p=1.0, sample_seed=None, report_n=None):
             counter += 1
             yield d
             if report_n is not None and counter % report_n == 0:
-                curr_time = time.time()
-                speed = report_n / (curr_time - prev_time) if curr_time - prev_time != 0 else 'inf'
+                current_time = time.time()
+                speed = report_n / (current_time - prev_time) if current_time - prev_time != 0 else 'inf'
                 log('{}/{} ==> {:.3f} items/s'.format(counter, total, speed))
-                prev_time = curr_time
+                prev_time = current_time
 
 
 def open_file(path, encoding='utf-8', compression=None):
@@ -384,26 +379,26 @@ def load_txt(path, raw=False, encoding="utf-8", first_n=None, sample_p=1.0, samp
                 yield line.rstrip()
 
 
-def load_json(path, encoding='utf-8', compression=None):
-    with open_file(path, encoding, compression) as f:
-        return json.load(f)
-
-
 def load_jsonl(path, encoding="utf-8", first_n=None, sample_p=1.0, sample_seed=None, report_n=None, compression=None):
     with open_file(path, encoding, compression) as f:
         for line in iterate(f, first_n, sample_p, sample_seed, report_n):
             yield json.loads(line)
 
 
-def save_json(data, path, indent=4, encoding='utf-8'):
-    with open(path, 'w', encoding=encoding) as f:
-        return json.dump(data, f, indent=indent)
+def load_json(path, encoding='utf-8', compression=None):
+    with open_file(path, encoding, compression) as f:
+        return json.load(f)
 
 
 def save_jsonl(data, path, encoding='utf-8'):
     with open(path, 'w', encoding=encoding) as f:
         for d in data:
             f.write(json.dumps(d, ensure_ascii=False) + '\n')
+
+
+def save_json(data, path, indent=4, encoding='utf-8'):
+    with open(path, 'w', encoding=encoding) as f:
+        return json.dump(data, f, indent=indent)
 
 
 def type_of(data, types):
@@ -423,7 +418,7 @@ def _range_iterate(data, start, end=sys.maxsize, step=1):
             yield idx, item
 
 
-def range_of(data, start=0, end=None, step=1, reverse=False):
+def range_(data, start=0, end=None, step=1, reverse=False):
     # replace of ==> for i in range(data)
 
     assert isinstance(data, Iterable), 'data should be an Iterable'
@@ -449,14 +444,14 @@ def range_of(data, start=0, end=None, step=1, reverse=False):
                 yield i
 
 
-def items_of(data, start=0, end=None, step=1, reverse=False):
+def items_(data, start=0, end=None, step=1, reverse=False):
     assert isinstance(data, Iterable), 'input should be an Iterable'
     if isinstance(data, Iterator):
         assert not reverse, 'cannot set reverse=True when data is an Iterator'
         for _, item in _range_iterate(data, start, end, step):
             yield item
 
-    for idx in range_of(data, start, end, step, reverse):
+    for idx in range_(data, start, end, step, reverse):
         yield data[idx]
 
 
@@ -505,7 +500,7 @@ def _build_table(rows, space=3, cell_space=1, filler=' ', max_column_width=None,
     for d in data:
         for i in range(num_col):
             if max_column_width is not None and len(d[i]) > max_column_width - 3:
-                d[i] = d[i][:max_column_width - 3] + '...'
+                d[i] = shorten(d[i], max_column_width)
             column_width[i] = max(column_width[i], wcswidth(d[i]))
             if min_column_widths is not None and i < len(min_column_widths) and min_column_widths[i] is not None:
                 column_width[i] = max(column_width[i], min_column_widths[i])
@@ -522,14 +517,15 @@ def _build_table(rows, space=3, cell_space=1, filler=' ', max_column_width=None,
     return res
 
 
-def print_table(rows, headers=None, headers_sep='-', space=3, cell_space=1, filler=' ',
+def print_table(rows, headers=None, name='', sep='-', space=3, cell_space=1, filler=' ',
                 max_column_width=None, min_column_widths=None, level=INFO, res=False):
     if headers is not None:
         rows = [headers] + rows
     _res = _build_table(rows, space, cell_space, filler, max_column_width, min_column_widths)
-    headers_sep_line = headers_sep * len(_res[0])
+    first_sep_line = print_line(text=name, width=len(_res[0]), char=sep, res=True)
+    sep_line = print_line(width=max(len(first_sep_line), len(_res[0])), char=sep, res=True)
     if headers is not None:
-        _res = [headers_sep_line, _res[0], headers_sep_line] + _res[1:] + [headers_sep_line]
+        _res = [first_sep_line, _res[0], sep_line] + _res[1:] + [sep_line]
     if not res:
         print_iter(_res, level=level)
     else:
@@ -697,11 +693,11 @@ def print_iter(data, shift=0, level=INFO):
                 log(item, level=level)
 
 
-def break_str(string, width=50):
+def break_str(string, width=50, measure_f=wcswidth):
     res = [[]]
     curr = 0
     for ch in string:
-        item_width = wcswidth(ch)
+        item_width = measure_f(ch)
         if curr + item_width < width:
             res[-1].append(ch)
             curr += item_width
@@ -715,6 +711,12 @@ def break_str(string, width=50):
     res = [r for r in res if r]
     assert sum(len(r) for r in res) == len(string)
     return [''.join(r) for r in res]
+
+
+def shorten(string, width=50):
+    if len(string) <= width:
+        return string
+    return string[:(width - 3)] + '...'
 
 
 def stop(message=''):
@@ -783,7 +785,7 @@ def try_f(*args, **kwargs):
         res['error'] = error_msg(e)
         res['error_type'] = res['error'].split('(')[0]
         res['error_msg'] = res['error'][len(res['error_type']) + 2: -2]
-        res['traceback'] = error_msg(e, detailed=True)
+        res['traceback'] = error_msg(e, verbose=True)
     return res
 
 
@@ -838,9 +840,9 @@ def print_line(width=20, text=None, char='-', level=INFO, min_wing_size=5, res=F
 
 
 class enclose(object):
-    def __init__(self, msg='', width=None, max_width=80, char='=', top_margin=0, bottom_margin=1, use_timer=False,
+    def __init__(self, text='', width=None, max_width=80, char='=', top_margin=0, bottom_margin=1, use_timer=False,
                  level=INFO, captured_level=INFO):
-        self.msg = _strip_and_add_spaces(msg)
+        self.text = _strip_and_add_spaces(text)
         self.width = width
         self.max_width = max_width
         self.top_margin = top_margin
@@ -857,7 +859,7 @@ class enclose(object):
     def __enter__(self):
         if not self.aligned:
             log('\n' * self.top_margin, end='', level=self.level)
-            top_line = print_line(self.width, self.msg, char=self.char, res=True)
+            top_line = print_line(self.width, self.text, char=self.char, res=True)
             self.top_line_size = len(top_line)
             log(top_line, level=self.level)
         else:
@@ -867,13 +869,13 @@ class enclose(object):
     def __exit__(self, _type, value, _traceback):
         if self.aligned:
             self.recorder.__exit__(_type, value, _traceback)
-            max_line_length = len(self.msg)
+            max_line_length = len(self.text)
             if self.tape:
                 # enclosed lines should be slightly longer than the longest content
                 max_line_length = max(len(msg) + 2 for msg in self.tape)
             max_line_length = min(self.max_width, max_line_length)
             log('\n' * self.top_margin, end='', level=self.level)
-            top_line = print_line(max_line_length, self.msg, char=self.char, res=True)
+            top_line = print_line(max_line_length, self.text, char=self.char, res=True)
             self.top_line_size = len(top_line)
             log(top_line, level=self.level)
             print_iter(self.tape, level=self.level)
@@ -885,9 +887,8 @@ class enclose(object):
 
 
 class enclose_timer(enclose):
-    def __init__(self, text_or_length='', width=None, max_width=80, char='=', top_margin=0, bottom_margin=1,
-                 level=INFO):
-        super().__init__(text_or_length, width, max_width, char, top_margin, bottom_margin, True, level)
+    def __init__(self, text='', width=None, max_width=80, char='=', top_margin=0, bottom_margin=1, level=INFO):
+        super().__init__(text, width, max_width, char, top_margin, bottom_margin, True, level)
 
 
 def _np(path):
@@ -916,7 +917,7 @@ def _is_dir_and_exist(path):
         assert os.path.isdir(path), '{} ==> already exist but it\'s a file'.format(path)
 
 
-def init_dirs(path_or_paths, overwrite=False):
+def build_dirs(path_or_paths, overwrite=False):
     paths = path_or_paths if isinstance(path_or_paths, list) else [path_or_paths]
     for path in paths:
         path = Path(os.path.abspath(path))
@@ -926,22 +927,22 @@ def init_dirs(path_or_paths, overwrite=False):
         os.makedirs(path, exist_ok=True)
 
 
-def init_files(path_or_paths, overwrite=False):
+def build_files(path_or_paths, overwrite=False):
     paths = path_or_paths if isinstance(path_or_paths, list) else [path_or_paths]
     for path in paths:
         _is_file_and_exist(path)
         if overwrite and os.path.exists(path):
             os.remove(path)
-        init_dirs_for(path)
+        build_dirs_for(path)
         open(path, 'a').close()
 
 
-def init_dirs_for(path_or_paths, overwrite=False):
+def build_dirs_for(path_or_paths, overwrite=False):
     paths = path_or_paths if isinstance(path_or_paths, list) else [path_or_paths]
     for path in paths:
         path = Path(os.path.abspath(path))
         _is_file_and_exist(path)
-        init_dirs(dir_of(path), overwrite)
+        build_dirs(dir_of(path), overwrite)
 
 
 def file_basename(path):

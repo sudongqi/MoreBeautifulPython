@@ -8,9 +8,9 @@ from src.mbp import *
 
 
 # test functions for multiprocessing
-def sleep_then_maybe_fail(x, duration=0.2, fail_rate=0):
+def sleep_then_maybe_fail(x, duration=0.2, fail_p=0):
     time.sleep(duration)
-    assert random.random() > fail_rate, "simulated failure ({}%)".format(fail_rate * 100)
+    assert random.random() > fail_p, "simulated failure ({}%)".format(fail_p * 100)
     return x
 
 
@@ -22,27 +22,25 @@ def build_vec(size):
     return [x for x in range(size)]
 
 
-def main():
+def fn(*functions):
+    return ' / '.join(f.__name__ + '()' for f in functions)
+
+
+def main(log_path='./log'):
     # log() include all functionality of print()
-    log('this is from the global logger', end='\n')
+    log('this is from the global logger')
 
     # from this point on, all log() will print to file at path "./log" as well as stdout
-    set_global_logger(file=['./log', sys.stdout])
+    set_global_logger(file=[log_path, sys.stdout])
 
     # get_logger() return a local logger just like logging.getLogger
-    my_log = get_logger(__name__, meta_info=True)
-    my_log('this is from the local logger', WARNING)
-    '''
-    2022-08-11 05:22:17 WARNING __main__: this is from the local logger
-    '''
+    my_logger = get_logger(__name__, verbose=True)
+    my_logger('this is from the local logger', level=WARNING)
 
     # logger() (as context manager) temporarily modify the global logger
-    with logger(level=DEBUG, file=sys.stderr, name='__temp__', meta_info=True):
+    with logger(level=DEBUG, file=sys.stderr, name='__temp__', verbose=True):
         # this message will be redirected to sys.stderr
         log('this is from the temporary logger (level={})'.format(curr_logger_level()), level=CRITICAL)
-    '''
-    2023-01-08 22:58:58 CRITICAL __temp__: this is from the temporary logger (level=10)
-    '''
 
     # suppress all logs by setting level=SILENT
     with logger(level=SILENT):
@@ -62,38 +60,19 @@ def main():
 
     # print_line() will draw a line with am optional message
     print_line()
-    print_line(30)
     print_line(30, text='optional message', char='=')
-    '''
-    --------------------
-    ------------------------------
-    ====== optional message ======
-    '''
+    log('\n')
 
     # enclose() generate two text separators that enclose the execution
-    with enclose('enclose()', width=30, bottom_margin=1, char='=', use_timer=False):
+    with enclose('header', width=30, bottom_margin=1, char='=', use_timer=False):
         [log('this is line {}'.format(i)) for i in range(3)]
-    '''
-    ========= enclose() ==========
-    this is line 0
-    this is line 1
-    this is line 2
-    ==============================
-    '''
 
     # when width=None, the width will be calculated automatically based on the captured content
     with enclose():
         [log('this is line {}'.format(i)) for i in range(3)]
-    '''
-    ================
-    this is line 0
-    this is line 1
-    this is line 2
-    ================
-    '''
 
     # recorder() save all logs into a (passed-in) list
-    with enclose('recorder()'):
+    with enclose(fn(recorder)):
         tape = []
         with recorder(tape, captured_level=DEBUG):
             log('9 8 7 6 5 4 3 2 1')
@@ -101,82 +80,35 @@ def main():
             log('a debug message', level=DEBUG)
         tape[0] = tape[0][::-1]
         print_iter(tape)
-    '''
-    ===== recorder() =====
-    1 2 3 4 5 6 7 8 9
-    ok
-    a debug message
-    ======================
-    '''
 
-    # use ctx_timer() is more accurate at measuring execution time
+    # timer() as a context manager
     with timer('build_vec(100000)'):
         build_vec(100000)
-    '''
-    build_vec(100000) ==> took 1.987 ms
-    '''
 
     # enclose_timer() == enclose(timer=True)
+    # iterate() can customize iteration procedures
+    # for example, sample 10% and report every 3 yield from the first 100 samples
     with enclose_timer():
-        # iterate() can customize iteration procedures
-        # for example, sample 10% and report every 3 yield from the first 100 samples
         for d in iterate(range(1000), first_n=100, sample_p=0.05, report_n=2):
             log(sleep_then_maybe_fail(d, duration=0.1))
-    '''
-   ==========================
-    18
-    72
-    2/1000 ==> 9.187 items/s
-    78
-    128
-    4/1000 ==> 9.237 items/s
-    ==========================
-    took 435.241 ms
-    '''
 
     # Workers() is more flexible than multiprocessing.Pool()
     n_task = 6
-    with enclose_timer('Workers()'):
+    with enclose_timer(fn(Workers)):
         workers = Workers(f=sleep_then_maybe_fail, num_workers=3, progress=True, ignore_error=True)
-        [workers.add_task({'x': i, 'fail_rate': 0.3}) for _ in range(n_task)]
+        [workers.add_task({'x': i, 'fail_p': 0.3}) for _ in range(n_task)]
         [workers.get_res() for _ in range(n_task)]
         workers.terminate()
-    '''
-    ============================= Workers() ==============================
-    started worker-0
-    started worker-1
-    started worker-2
-    worker-2 failed task-2 : AssertionError('simulated failure (30.0%)')
-    worker-1 failed task-1 : AssertionError('simulated failure (30.0%)')
-    worker-0 completed task-0
-    worker-2 completed task-4
-    worker-0 completed task-5
-    worker-1 failed task-3 : AssertionError('simulated failure (30.0%)')
-    terminated 3 workers
-    ======================================================================
-    took 495.347 ms
-    '''
 
     # similarly, we can use work() to process tasks from an iterator
     # tasks can be iterator of tuple (need to specify all inputs) or dict
-    with enclose_timer('work()'):
-        tasks = iter([(i, 0.5, 0.2) for i in range(n_task)])
+    with enclose_timer(fn(work)):
+        tasks = iter([(i, 0.2, 0.5) for i in range(n_task)])
         for r in work(f=sleep_then_maybe_fail, tasks=tasks, ordered=True, ignore_error=True, res_only=False):
             log(r)
-    '''
-    ==================================== work() ====================================
-    {'worker_id': 1, 'task_id': 0, 'res': 0}
-    {'worker_id': 2, 'task_id': 1, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
-    {'worker_id': 0, 'task_id': 2, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
-    {'worker_id': 3, 'task_id': 3, 'res': 3}
-    {'worker_id': 5, 'task_id': 4, 'res': None, 'error': "AssertionError('simulated failure (50.0%)')"}
-    {'worker_id': 4, 'task_id': 5, 'res': 5}
-    ================================================================================
-    took 345.680 ms
-    '''
 
-    with enclose("work() with cache_inp"):
-        # use cached_inp = {'fixed_input': value, ...} to avoid pickling of heavy objects
+    # use cached_inp = {'fixed_input': value, ...} to avoid pickling of heavy objects
+    with enclose(fn(work) + " with cache_inp"):
         vec_size = 1000000
         vec = [x for x in range(vec_size)]
         with timer('work()'):
@@ -191,119 +123,63 @@ def main():
             tasks = iter({'idx': i} for i in range(30))
             list(work(read_from_vec, num_workers=1, ordered=True, tasks=tasks,
                       build_inp={'vec': (build_vec, vec_size)}))
-    '''
-    ========== work() with cache_inp ==========
-    work() ==> took 1890.690 ms
-    work() with cache_inp ==> took 109.339 ms
-    work() with build_inp ==> took 109.322 ms
-    ===========================================
-    '''
 
-    with enclose('pathing'):
-        # jpath() == os.path.join()
+    # jpath() == os.path.join()
+    # run_dir() == os.getcwd()
+    # this_dir() return the directory of the current file
+    # dir_basename() check and return the directory name of a path
+    # file_basename() check and return the file name of a path
+    with enclose(fn(jpath, run_dir, lib_path, this_dir, dir_basename, file_basename)):
         log(jpath(this_dir(), 'a', 'b', 'c.file'))
-        # exec_dir() == os.getcwd()
         log(run_dir())
-        # lib_path() return the path of the mbp library
         log(lib_path())
-        # this_dir() return the directory of the current file
         log(this_dir())
         log(this_dir(go_up=1, go_to='AnotherProject/hello.txt'))
-        # get_dir_name() check and return the directory name of a path
         log(dir_basename(dir_of(__file__)))
-        # get_file_name() check and return the file name of a path
         log(file_basename(__file__))
-    '''
-    =================== pathing ===================
-    C:/Users/sudon/MoreBeautifulPython/a/b/c.file
-    C:/Users/sudon/MoreBeautifulPython
-    C:/Users/sudon/MoreBeautifulPython/src/mbp.py
-    C:/Users/sudon/MoreBeautifulPython
-    C:/Users/sudon/AnotherProject/hello.txt
-    MoreBeautifulPython
-    examples.py
-    ===============================================
-    '''
 
     # open_files() return all files under a directory
-    with enclose('open_files()'):
+    with enclose(fn(open_files)):
         for f in open_files(this_dir(), pattern=r'.*\.py'):
             f.readlines()
-    '''
-    ============================== open_files() ==============================
-    found examples.py <== C:/Users/sudon/MoreBeautifulPython/examples.py
-    found sync.py <== C:/Users/sudon/MoreBeautifulPython/sync.py
-    found mbp.py <== C:/Users/sudon/MoreBeautifulPython/src/mbp.py
-    found __init__.py <== C:/Users/sudon/MoreBeautifulPython/src/__init__.py
-    ==========================================================================
-    '''
 
-    # init_files() and init_dirs() create files and directory after creating paths
-    with enclose('init_files() and init_dirs()'):
+    # build_files() (or build_dirs()) create files (or directory) after creating paths
+    with enclose(fn(build_files, build_dirs)):
         test_dir = './test_dir'
-        init_files([jpath(test_dir, file_name) for file_name in ['a.txt', 'b.txt', 'c.txt']])
+        build_files([jpath(test_dir, file_name) for file_name in ['a.txt', 'b.txt', 'c.txt']])
         log('{} files under {}'.format(len(list(open_files(test_dir))), test_dir))
-        init_dirs(test_dir, overwrite=True)
+        build_dirs(test_dir, overwrite=True)
         log('{} files under {} (after overwrite)'.format(len(list(open_files(test_dir))), test_dir))
         shutil.rmtree(test_dir)
-    '''
-    ================== init_files() and init_dirs() ===================
-    found a.txt <== C:/Users/sudon/MoreBeautifulPython/test_dir/a.txt
-    found b.txt <== C:/Users/sudon/MoreBeautifulPython/test_dir/b.txt
-    found c.txt <== C:/Users/sudon/MoreBeautifulPython/test_dir/c.txt
-    3 files under ./test_dir
-    0 files under ./test_dir (after overwrite)
-    ===================================================================
-    '''
 
-    # unwrap_file()/unwrap_dir() will unwrap all parent directories leading to a unique file/dir
-    with enclose('unwrap_path() and unwrap_dir()'):
-        init_files('./a/b/c/file')
+    # unwrap_file() (or unwrap_dir()) will unwrap all parent directories leading to a unique file (or dir)
+    with enclose(fn(unwrap_file, unwrap_dir)):
+        build_files('./a/b/c/file')
         log(unwrap_file('./a'))
         log(unwrap_dir('./a'))
         shutil.rmtree('./a')
-    '''
-    ===== unwrap_path() and unwrap_dir() =====
-    ./a/b/c/file
-    ./a/b/c
-    ==========================================
-    '''
 
-    # type_in() return the type idx of 1st argument defined by the 2nd argument
-    with enclose('type_in()'):
+    # type_of() return the type idx of 1st argument defined by the 2nd argument
+    with enclose(fn(type_of)):
         types = [int, dict, list, set]
         # the return idx started at 1 because 0 is reserved for no match
         idx = type_of([1, 2, 3], types) - 1
         log(types[idx])
         if not type_of("a string", types):
             log('this type is not from the list')
-    '''
-    ========== type_in() ===========
-    <class 'list'>
-    this type is not from the list
-    ================================
-    '''
 
-    # for i in range_of(data)              ==   for i in range(len(data))
-    # for d in items_of(data, 1, 5, 2)     ==   for d in itertools.islice(data, start=1, end=, step=2)
-    with enclose('range_of() and items_of()'):
+    # for i in range_(data)              ==   for i in range(len(data))
+    # for d in items_(data, 1, 5, 2)     ==   for d in itertools.islice(data, start=1, end=, step=2)
+    with enclose(fn(range_, items_)):
         vec = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i']
         vec_iter = iter(vec)
-        log(list(range_of(vec)))
-        log(list(range_of(vec, 2, 4)))
-        log(list(items_of(vec, 2, None, 2, reverse=True)))
-        log(list(items_of(vec_iter, 0, 5)))
-    '''
-    ===== range_of() and items_of() =====
-    [0, 1, 2, 3, 4, 5, 6, 7, 8]
-    [2, 3]
-    ['i', 'g', 'e', 'c']
-    ['a', 'b', 'c', 'd', 'e']
-    =======================================
-    '''
+        log(list(range_(vec)))
+        log(list(range_(vec, 2, 4)))
+        log(list(items_(vec, 2, None, 2, reverse=True)))
+        log(list(items_(vec_iter, 0, 5)))
 
     # prints() is a superior pprint()
-    with enclose("prints()"):
+    with enclose(fn(prints)):
         class TestObject:
             def __str__(self):
                 return 'this is a test object'
@@ -322,63 +198,21 @@ def main():
                        'nested_dict': {'a': nested_list, 'b': list_of_long_strings,
                                        'c': {'a longer key': long_list}}}
         prints(hybrid_dict)
-    '''
-    =================================== prints() ===================================
-    {
-        "hybrid_dict": [{"abc","bcd"},
-                        (1,2,3,None),
-                        [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,
-                         30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,
-                         56,57,58,59,60,61,62,63,64,65,66,67,68,69],
-                        ["a","b","c","d"],
-                        {},
-                        [],
-                        (),
-                        "string",None,True,False,
-                        (1,2,3),
-                        [[[1,2,3],
-                          [4,5,6]]],
-                        "line1\n"
-                        "           - line2\n"
-                        "           - line3\n"],
-        "": "empty key",
-        2048: "number key",
-        "object": "this is a test object",
-        "nested_dict": {
-            "a": [[[1,2,3],
-                   [4,5,6]]],
-            "b": ["------------------------------------------------------------",
-                  "------------------------------------------------------------",
-                  "------------------------------------------------------------"],
-            "c": {
-                "a longer key": [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,
-                                 30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,
-                                 56,57,58,59,60,61,62,63,64,65,66,67,68,69]
-            }
-        }
-    }
-    ================================================================================
-    '''
 
     # try_f() perform try-except routine and capture the result or error messages in a dictionary
-    prints(try_f(sleep_then_maybe_fail, 'input', fail_rate=1))
-    '''
-    {
-        "error": "AssertionError('simulated failure (100%)')",
-        "error_type": "AssertionError",
-        "error_msg": "simulated failure (100%)",
-        "traceback": "Traceback (most recent call last):\n"
-                     "  File "C:/Users/sudon/MoreBeautifulPython/src/mbp.py", line 758, in try_f\n"
-                     "    res['res'] = f(*args[1:], **kwargs)\n"
-                     "  File "C:/Users/sudon/MoreBeautifulPython/examples.py", line 13, in test_sleep_and_fail\n"
-                     "    assert random.random() > fail_rate, "simulated failure ({}%)".format(fail_rate * 100)\n"
-                     "AssertionError: simulated failure (100%)\n"
-    }
-    '''
-    log(try_f(sleep_then_maybe_fail, 'input', fail_rate=0))
-    '''
-    {'res': 'input'}
-    '''
+    with enclose(fn(try_f)):
+        prints(try_f(sleep_then_maybe_fail, 'input', fail_rate=1))
+        log(try_f(sleep_then_maybe_fail, 'input', fail_rate=0))
+
+    # break_str() break a long string into list of smaller (measured by wcswidth()) strings
+    with enclose(fn(break_str)):
+        string = 'a very very very very long string'
+        log('\n'.join(break_str(string, width=12)))
+
+    # shorten() truncate a string and append "..." if len(string) > width
+    with enclose(fn(shorten)):
+        log(shorten(string, 100))
+        log(shorten(string, 20))
 
     # debug() can trace back to the original function call and print the variable names with their values
     # debug() is slow and should be used only for inspection purposes.
@@ -394,117 +228,45 @@ def main():
         debug(a, b, c)
         debug(a, b, c, mode=prints)
         debug(b, mode=print_iter)
-    '''
-    ----- [394] examples.py <main> -----
-    a:  123
-    b:  [1, 2, 3, 4]
-    c:  line1
-        line2
-        line3
-    ------------------------------------
-    
-    ----- [395] examples.py <main> -----
-    a: 123
-    b: [1,2,3,4]
-    c: "line1\n"
-       "line2\n"
-       "line3"
-    ------------------------------------
-    
-    ----- [396] examples.py <main>: b -----
-    1
-    2
-    3
-    4
-    ---------------------------------------
-    '''
 
     # load_jsonl() return an iterator of dictionary
     jsonl_file_path = jpath(this_dir(), 'data.jsonl')
     data = list(load_jsonl(jsonl_file_path))
 
     # print_iter(iterator) == [log(item) for item in iterator]
-    with enclose('print_list()'):
+    with enclose(fn(print_iter)):
         print_iter(data)
-    '''
-    ================= print_list() =================
-    {'id': 1, 'name': 'Jean', 'city': 'Mondstadt'}
-    {'id': 2, 'name': 'Xingqiu', 'city': 'Liyue'}
-    {'id': 3, 'name': 'Ganyu', 'city': 'Liyue'}
-    {'id': 4, 'name': 'Ayaka', 'city': 'Inazuma'}
-    {'id': 5, 'name': 'Nilou', 'city': 'Sumeru'}
-    ================================================
-    '''
 
     # print_table() can adjust column width automatically
     rows = [list(d.values()) for d in data]
     headers = list(data[0].keys())
-    print_table(rows, headers=headers, space=3)
-    '''
-    -------------------
-    id   name      city
-    -------------------
-    1    Jean      Mondstadt
-    2    Xingqiu   Liyue
-    3    Ganyu     Liyue
-    4    Ayaka     Inazuma
-    5    Nilou     Sumeru
-    -------------------
-    '''
+    print_table(rows, name=fn(print_table), headers=headers, space=3)
 
     # print_table() can also pad a row, and handle tables inside table (if item is a list, dict, set, or tuple)
-    incomplete_row = [6, 'Paimon']
-    complex_row = ['', 'summary', [['num characters', 6],
-                                   ['num cities', 4]]]
-    rows += [incomplete_row, complex_row]
     # print_table() calculate column width based on the longest item or use min_column_widths if applicable
-    print_table(rows, headers, min_column_widths=[None, 20])
-    '''
-    --------------------------------
-    id   name                   city
-    --------------------------------
-    1    Jean                   Mondstadt
-    2    Xingqiu                Liyue
-    3    Ganyu                  Liyue
-    4    Ayaka                  Inazuma
-    5    Nilou                  Sumeru
-    6    Paimon
-         summary                num characters 6
-                                num cities     4
-    --------------------------------
-    '''
+    rows += [[6, 'Paimon'], ['', 'summary', [['num characters', 6], ['num cities', 4]]]]
+    print_table(rows,
+                headers=headers,
+                min_column_widths=[None, 20],
+                name=fn(print_table) + ' with incomplete rows')
+
     # use max_column_width to shorten a cell with long data (str)
-    print_table([[1, 2, '3' * 100], [1, '2' * 100, 3]], headers=['a', 'b', 'c'], max_column_width=10)
-    '''
-    ------------------
-    a   b            c
-    ------------------
-    1   2            3333333...
-    1   2222222...   3
-    ------------------
-    '''
+    print_table([[1, 2, '3' * 100], [1, '2' * 100, 3]],
+                headers=['a', 'b', 'c'],
+                max_column_width=10,
+                name=fn(print_table) + " with long cell")
 
-    # break_str() break a long string into list of smaller (measured by wcswidth()) strings
-    log(break_str('a' * 20, width=5))
-
-    numbers = [1, 2, 3, 4, 5]
     # get 3 key statistics from an iterator at once
-    log(n_min_max_avg(numbers))
-    log(min_max_avg(numbers))
-    log(avg(numbers))
-    '''
-    (5, 1, 5, 3.0)
-    (1, 5, 3.0)
-    3.0
-    '''
+    with enclose(fn(n_min_max_avg, min_max_avg, avg)):
+        numbers = [1, 2, 3, 4, 5]
+        log(n_min_max_avg(numbers))
+        log(min_max_avg(numbers))
+        log(avg(numbers))
 
     # curr_time() == str(datetime.now(timezone.utc))[:19]
-    log(curr_time())
-    log(curr_time(breakdown=True))
-    '''
-    2022-09-10 20:53:53
-    ('2022', '11', '06', '23', '24', '00')
-    '''
+    with enclose(fn(curr_time)):
+        log(curr_time())
+        log(curr_time(breakdown=True))
 
 
 if __name__ == '__main__':
