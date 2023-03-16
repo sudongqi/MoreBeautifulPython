@@ -17,7 +17,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.35'
+VERSION = '1.5.36'
 
 __all__ = [
     # replacement for logging
@@ -371,12 +371,11 @@ def open_files(path, encoding='utf-8', compression=None, pattern=r".*", progress
                 log('no permission to open {} <== {}'.format(file_name, full_path))
 
 
-def load_txt(path, raw=False, encoding="utf-8", first_n=None, sample_p=1.0, sample_seed=None, report_n=None,
+def load_txt(path, encoding="utf-8", first_n=None, sample_p=1.0, sample_seed=None, report_n=None,
              compression=None):
     with open_file(path, encoding, compression) as f:
         for line in iterate(f, first_n, sample_p, sample_seed, report_n):
-            if not raw:
-                yield line.rstrip()
+            yield line
 
 
 def load_jsonl(path, encoding="utf-8", first_n=None, sample_p=1.0, sample_seed=None, report_n=None, compression=None):
