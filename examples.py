@@ -219,7 +219,6 @@ def main(log_path='./log'):
     a = 123
     b = [1, 2, 3, 4]
     c = 'line1\nline2\nline3'
-
     # nothing happen because the current LOGGER.level = INFO
     debug(a)
 

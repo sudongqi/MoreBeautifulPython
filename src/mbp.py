@@ -17,7 +17,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.36'
+VERSION = '1.5.37'
 
 __all__ = [
     # replacement for logging
@@ -162,24 +162,20 @@ def log(*messages, level=INFO, file=None, end=None, flush=False):
 
 
 class recorder(object):
-    def __init__(self, tape, raw=False, captured_level=INFO):
+    def __init__(self, tape, captured_level=INFO):
         assert tape == [], '1st argument must be an empty list'
         self.buffer = StringIO()
         self.logger = logger(file=self.buffer, level=captured_level, can_overwrite=False)
         self.tape = tape
-        self.raw = raw
 
     def __enter__(self):
         self.logger.__enter__()
 
     def __exit__(self, _type, value, _traceback):
         buffer_value = self.buffer.getvalue()
-        if self.raw:
-            self.tape.append(buffer_value)
-        else:
-            if buffer_value:
-                buffer_value = buffer_value.rstrip().split('\n')
-                self.tape.extend(buffer_value)
+        if buffer_value:
+            buffer_value = buffer_value.split('\n')
+            self.tape.extend(buffer_value)
         self.logger.__exit__(_type, value, _traceback)
 
 
@@ -871,13 +867,13 @@ class enclose(object):
             max_line_length = len(self.text)
             if self.tape:
                 # enclosed lines should be slightly longer than the longest content
-                max_line_length = max(len(msg) + 2 for msg in self.tape)
+                max_line_length = max(len(msg) + 3 for msg in self.tape)
             max_line_length = min(self.max_width, max_line_length)
             log('\n' * self.top_margin, end='', level=self.level)
             top_line = print_line(max_line_length, self.text, char=self.char, res=True)
             self.top_line_size = len(top_line)
             log(top_line, level=self.level)
-            print_iter(self.tape, level=self.level)
+            log('\n'.join(self.tape), level=self.level, end='')
         print_line(width=self.top_line_size, char=self.char, level=self.level)
 
         if self.use_timer:
