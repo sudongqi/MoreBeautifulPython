@@ -95,7 +95,7 @@ def main(log_path='./log'):
     # Workers() is more flexible than multiprocessing.Pool()
     n_task = 6
     with enclose_timer(fn(Workers)):
-        workers = Workers(f=sleep_then_maybe_fail, num_workers=3, progress=True, ignore_error=True)
+        workers = Workers(f=sleep_then_maybe_fail, num_workers=3, verbose=True, ignore_error=True)
         [workers.add_task({'x': i, 'fail_p': 0.3}) for _ in range(n_task)]
         [workers.get_res() for _ in range(n_task)]
         workers.terminate()
@@ -112,16 +112,16 @@ def main(log_path='./log'):
         vec_size = 1000000
         vec = [x for x in range(vec_size)]
         with timer('work()'):
-            a = list(work(read_from_vec, num_workers=1, ordered=True, tasks=iter((i, vec) for i in range(30))))
+            a = list(work(read_from_vec, num_workers=1, tasks=iter((i, vec) for i in range(30))))
         with timer('work() with cache_inp'):
-            b = list(work(read_from_vec, num_workers=1, ordered=True, tasks=iter({'idx': i} for i in range(30)),
+            b = list(work(read_from_vec, num_workers=1, tasks=iter({'idx': i} for i in range(30)),
                           cache_inp={'vec': vec}))
         assert a == b
 
         # for objects that can not be pickled, use built_inp
         with timer('work() with build_inp'):
             tasks = iter({'idx': i} for i in range(30))
-            list(work(read_from_vec, num_workers=1, ordered=True, tasks=tasks,
+            list(work(read_from_vec, num_workers=1, tasks=tasks,
                       build_inp={'vec': (build_vec, vec_size)}))
 
     # jpath() == os.path.join()
@@ -168,15 +168,15 @@ def main(log_path='./log'):
         if not type_of("a string", types):
             log('this type is not from the list')
 
-    # for i in range_(data)              ==   for i in range(len(data))
-    # for d in items_(data, 1, 5, 2)     ==   for d in itertools.islice(data, start=1, end=, step=2)
-    with enclose(fn(range_, items_)):
+    # for i in range_of(data)              ==   for i in range(len(data))
+    # for d in items_of(data, 1, 5, 2)     ==   for d in itertools.islice(data, start=1, end=, step=2)
+    with enclose(fn(range_of, items_of)):
         vec = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i']
         vec_iter = iter(vec)
-        log(list(range_(vec)))
-        log(list(range_(vec, 2, 4)))
-        log(list(items_(vec, 2, None, 2, reverse=True)))
-        log(list(items_(vec_iter, 0, 5)))
+        log(list(range_of(vec)))
+        log(list(range_of(vec, 2, 4)))
+        log(list(items_of(vec, 2, None, 2, reverse=True)))
+        log(list(items_of(vec_iter, 0, 5)))
 
     # prints() is a superior pprint()
     with enclose(fn(prints)):
@@ -201,8 +201,8 @@ def main(log_path='./log'):
 
     # try_f() perform try-except routine and capture the result or error messages in a dictionary
     with enclose(fn(try_f)):
-        prints(try_f(sleep_then_maybe_fail, 'input', fail_rate=1))
-        log(try_f(sleep_then_maybe_fail, 'input', fail_rate=0))
+        prints(try_f(sleep_then_maybe_fail, 'abc', fail_p=1))
+        log(try_f(sleep_then_maybe_fail, 'abc', fail_p=0))
 
     # break_str() break a long string into list of smaller (measured by wcswidth()) strings
     with enclose(fn(break_str)):

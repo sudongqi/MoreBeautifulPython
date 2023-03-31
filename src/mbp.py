@@ -17,7 +17,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.37'
+VERSION = '1.5.38'
 
 __all__ = [
     # replacement for logging
@@ -27,7 +27,7 @@ __all__ = [
     # replacement for multiprocessing
     'Workers', 'work',
     # syntax sugar for common utilities
-    'try_f', 'stop', 'type_of', 'range_', 'items_', 'jpath', 'run_dir', 'lib_path',
+    'try_f', 'stop', 'type_of', 'range_of', 'items_of', 'jpath', 'run_dir', 'lib_path',
     # handling data files
     'load_txt', 'load_jsonl', 'load_json', 'save_json', 'save_jsonl', 'iterate', 'open_file',
     # handling paths
@@ -152,8 +152,8 @@ def get_logger(name='', file=sys.stdout, level=INFO, verbose=False):
 def curr_time(breakdown=False):
     res = str(datetime.now(timezone.utc))[:19]
     if breakdown:
-        #      year      month     day        hour        minute      second
-        return res[0:4], res[5:7], res[8:10], res[11:13], res[14:16], res[17:19]
+        #      year           month          day             hour             minute           second
+        return int(res[0:4]), int(res[5:7]), int(res[8:10]), int(res[11:13]), int(res[14:16]), int(res[17:19])
     return res
 
 
@@ -188,7 +188,7 @@ def error_msg(e, verbose=False, sep='\n'):
 
 
 class Worker(Process):
-    def __init__(self, f, inp, out, worker_id=None, cache_inp=None, build_inp=None, verbose_error=True, progress=True):
+    def __init__(self, f, inp, out, worker_id=None, cache_inp=None, build_inp=None, verbose=True):
         super(Worker, self).__init__()
         self.worker_id = worker_id
         self.inp = inp
@@ -196,8 +196,7 @@ class Worker(Process):
         self.f = f
         self.cache_inp = cache_inp
         self.built_inp = build_inp
-        self.verbose_error = verbose_error
-        if progress:
+        if verbose:
             log('started worker-{}'.format('?' if worker_id is None else worker_id))
 
     def run(self):
@@ -213,24 +212,29 @@ class Worker(Process):
                     res = self.f(**kwargs)
                 else:
                     res = self.f(*kwargs)
-                self.out.put({'worker_id': self.worker_id, 'task_id': task_id, 'res': res})
+                self.out.put({'worker_id': self.worker_id,
+                              'task_id': task_id,
+                              'task': kwargs,
+                              'res': res})
             except Exception as e:
-                self.out.put({'worker_id': self.worker_id, 'task_id': task_id, 'res': None,
-                              'error': error_msg(e, self.verbose_error)})
+                self.out.put(
+                    {'worker_id': self.worker_id,
+                     'task_id': task_id,
+                     'error': error_msg(e, False),
+                     'traceback': error_msg(e, True)})
 
 
 class Workers:
-    def __init__(self, f, num_workers=CPU_COUNT, cache_inp=None, build_inp=None, progress=True, ignore_error=False,
-                 verbose_error=True):
+    def __init__(self, f, num_workers=CPU_COUNT, cache_inp=None, build_inp=None, ignore_error=False, verbose=True):
         self.inp = Queue()
         self.out = Queue()
         self.workers = []
         self.task_id = 0
-        self.progress = progress
+        self.verbose = verbose
         self.ignore_error = ignore_error
         self.f = f
         for i in range(num_workers):
-            worker = Worker(f, self.inp, self.out, i, cache_inp, build_inp, verbose_error, progress)
+            worker = Worker(f, self.inp, self.out, i, cache_inp, build_inp, verbose)
             worker.start()
             self.workers.append(worker)
 
@@ -249,25 +253,19 @@ class Workers:
             for i in range(running_task_num):
                 yield self.get_res()
 
-    def map(self, tasks, ordered=False, res_only=True):
+    def map(self, tasks, ordered=False):
         if ordered:
             saved = {}
             id_task_waiting_for = 0
             for d in self._map(tasks):
                 saved[d['task_id']] = d
                 while id_task_waiting_for in saved:
-                    if res_only:
-                        yield saved[id_task_waiting_for]['res']
-                    else:
-                        yield saved[id_task_waiting_for]
+                    yield saved[id_task_waiting_for]
                     saved.pop(id_task_waiting_for)
                     id_task_waiting_for += 1
         else:
             for d in self._map(tasks):
-                if res_only:
-                    yield d['res']
-                else:
-                    yield d
+                yield d
 
     def add_task(self, inp):
         self.inp.put((self.task_id, inp))
@@ -280,24 +278,24 @@ class Workers:
             if not self.ignore_error:
                 self.terminate()
                 assert False, err_msg
-            if self.progress:
+            if self.verbose:
                 log(err_msg)
-        elif self.progress:
+        elif self.verbose:
             log('worker-{} completed task-{}'.format(res['worker_id'], res['task_id']))
         return res
 
     def terminate(self):
         for w in self.workers:
             w.terminate()
-        if self.progress:
+        if self.verbose:
             log('terminated {} workers'.format(len(self.workers)))
 
 
 def work(f, tasks, num_workers=CPU_COUNT, cache_inp=None, build_inp=None,
-         progress=False, ordered=False, res_only=True, ignore_error=False, verbose_error=False):
-    workers = Workers(f, num_workers, cache_inp, build_inp, progress, ignore_error, verbose_error)
-    for d in workers.map(tasks, ordered, res_only):
-        yield d
+         ordered=True, ignore_error=False, res_only=True, verbose=False):
+    workers = Workers(f, num_workers, cache_inp, build_inp, ignore_error, verbose)
+    for d in workers.map(tasks, ordered):
+        yield d['res'] if res_only else d
     workers.terminate()
 
 
@@ -356,19 +354,18 @@ def iterate_files(path, pattern=r".*"):
                 yield _np(os.path.abspath(full_path)), _np(full_path[len(path):]), file_name
 
 
-def open_files(path, encoding='utf-8', compression=None, pattern=r".*", progress=True):
+def open_files(path, encoding='utf-8', compression=None, pattern=r".*", verbose=True):
     for full_path, _, file_name in iterate_files(path, pattern):
         try:
             yield open_file(full_path, encoding, compression)
-            if progress:
+            if verbose:
                 log('found {} <== {}'.format(file_name, full_path))
         except PermissionError:
-            if progress:
+            if verbose:
                 log('no permission to open {} <== {}'.format(file_name, full_path))
 
 
-def load_txt(path, encoding="utf-8", first_n=None, sample_p=1.0, sample_seed=None, report_n=None,
-             compression=None):
+def load_txt(path, encoding="utf-8", first_n=None, sample_p=1.0, sample_seed=None, report_n=None, compression=None):
     with open_file(path, encoding, compression) as f:
         for line in iterate(f, first_n, sample_p, sample_seed, report_n):
             yield line
@@ -413,7 +410,7 @@ def _range_iterate(data, start, end=sys.maxsize, step=1):
             yield idx, item
 
 
-def range_(data, start=0, end=None, step=1, reverse=False):
+def range_of(data, start=0, end=None, step=1, reverse=False):
     # replace of ==> for i in range(data)
 
     assert isinstance(data, Iterable), 'data should be an Iterable'
@@ -439,14 +436,14 @@ def range_(data, start=0, end=None, step=1, reverse=False):
                 yield i
 
 
-def items_(data, start=0, end=None, step=1, reverse=False):
+def items_of(data, start=0, end=None, step=1, reverse=False):
     assert isinstance(data, Iterable), 'input should be an Iterable'
     if isinstance(data, Iterator):
         assert not reverse, 'cannot set reverse=True when data is an Iterator'
         for _, item in _range_iterate(data, start, end, step):
             yield item
 
-    for idx in range_(data, start, end, step, reverse):
+    for idx in range_of(data, start, end, step, reverse):
         yield data[idx]
 
 
@@ -777,7 +774,7 @@ def try_f(*args, **kwargs):
         f = args[0]
         res['res'] = f(*args[1:], **kwargs)
     except Exception as e:
-        res['error'] = error_msg(e)
+        res['error'] = error_msg(e, verbose=False)
         res['error_type'] = res['error'].split('(')[0]
         res['error_msg'] = res['error'][len(res['error_type']) + 2: -2]
         res['traceback'] = error_msg(e, verbose=True)
