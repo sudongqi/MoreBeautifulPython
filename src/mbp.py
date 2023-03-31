@@ -17,7 +17,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.38'
+VERSION = '1.5.39'
 
 __all__ = [
     # replacement for logging
@@ -205,11 +205,12 @@ class Worker(Process):
             task_id, kwargs = self.inp.get()
             try:
                 if isinstance(kwargs, dict):
+                    _kwargs = {k: v for k, v in kwargs.items()}
                     if self.cache_inp is not None:
-                        kwargs.update(self.cache_inp)
+                        _kwargs.update(self.cache_inp)
                     if self.built_inp is not None:
-                        kwargs.update(self.built_inp)
-                    res = self.f(**kwargs)
+                        _kwargs.update(self.built_inp)
+                    res = self.f(**_kwargs)
                 else:
                     res = self.f(*kwargs)
                 self.out.put({'worker_id': self.worker_id,
@@ -220,6 +221,7 @@ class Worker(Process):
                 self.out.put(
                     {'worker_id': self.worker_id,
                      'task_id': task_id,
+                     'task': kwargs,
                      'error': error_msg(e, False),
                      'traceback': error_msg(e, True)})
 
