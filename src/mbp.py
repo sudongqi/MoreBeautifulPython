@@ -18,7 +18,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.40'
+VERSION = '1.5.41'
 
 __all__ = [
     # replacement for logging
@@ -392,7 +392,7 @@ def load_yaml(path, encoding='utf-8', compression=None):
 
 def save_yaml(data, path, encoding='utf-8'):
     with open(path, 'w', encoding=encoding) as file:
-        yaml.dump(data, file, allow_unicode=True)
+        yaml.dump(data, file, allow_unicode=True, sort_keys=False)
 
 
 def save_jsonl(data, path, encoding='utf-8'):
