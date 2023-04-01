@@ -4,6 +4,7 @@ import os
 import shutil
 import random
 import json
+import yaml
 import time
 import gzip
 import bz2
@@ -17,7 +18,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.39'
+VERSION = '1.5.40'
 
 __all__ = [
     # replacement for logging
@@ -29,7 +30,7 @@ __all__ = [
     # syntax sugar for common utilities
     'try_f', 'stop', 'type_of', 'range_of', 'items_of', 'jpath', 'run_dir', 'lib_path',
     # handling data files
-    'load_txt', 'load_jsonl', 'load_json', 'save_json', 'save_jsonl', 'iterate', 'open_file',
+    'load_txt', 'load_jsonl', 'load_json', 'load_yaml', 'save_json', 'save_jsonl', 'save_yaml', 'iterate', 'open_file',
     # handling paths
     'unwrap_file', 'unwrap_dir', 'file_basename', 'dir_basename',
     # tools for file system
@@ -382,6 +383,16 @@ def load_jsonl(path, encoding="utf-8", first_n=None, sample_p=1.0, sample_seed=N
 def load_json(path, encoding='utf-8', compression=None):
     with open_file(path, encoding, compression) as f:
         return json.load(f)
+
+
+def load_yaml(path, encoding='utf-8', compression=None):
+    with open_file(path, encoding, compression) as f:
+        return yaml.safe_load(f)
+
+
+def save_yaml(data, path, encoding='utf-8'):
+    with open(path, 'w', encoding=encoding) as file:
+        yaml.dump(data, file, allow_unicode=True)
 
 
 def save_jsonl(data, path, encoding='utf-8'):
