@@ -104,7 +104,7 @@ def main(log_path='./log'):
     # tasks can be iterator of tuple (need to specify all inputs) or dict
     with enclose_timer(fn(work)):
         tasks = iter([(i, 0.2, 0.5) for i in range(n_task)])
-        for r in work(f=sleep_then_maybe_fail, tasks=tasks, ordered=True, ignore_error=True, res_only=False):
+        for r in work(f=sleep_then_maybe_fail, tasks=tasks, ordered=True, ignore_error=True):
             log(r)
 
     # use cached_inp = {'fixed_input': value, ...} to avoid pickling of heavy objects

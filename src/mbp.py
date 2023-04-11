@@ -18,7 +18,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.41'
+VERSION = '1.5.42'
 
 __all__ = [
     # replacement for logging
@@ -298,7 +298,7 @@ def work(f, tasks, num_workers=CPU_COUNT, cache_inp=None, build_inp=None,
          ordered=True, ignore_error=False, res_only=True, verbose=False):
     workers = Workers(f, num_workers, cache_inp, build_inp, ignore_error, verbose)
     for d in workers.map(tasks, ordered):
-        yield d['res'] if res_only else d
+        yield d.get('res', None) if res_only else d
     workers.terminate()
 
 
