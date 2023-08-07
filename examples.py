@@ -33,14 +33,15 @@ def main(log_path='./log'):
     # from this point on, all log() will print to file at path "./log" as well as stdout
     set_global_logger(file=[log_path, sys.stdout])
 
-    # get_logger() return a local logger just like logging.getLogger
-    my_logger = get_logger(__name__, verbose=True)
+    # local_logger() return a local logger just like logging.getLogger
+    my_logger = local_logger(__name__, verbose=True)
     my_logger('this is from the local logger', level=WARNING)
 
     # logger() (as context manager) temporarily modify the global logger
     with logger(level=DEBUG, file=sys.stderr, name='__temp__', verbose=True):
         # this message will be redirected to sys.stderr
-        log('this is from the temporary logger (level={})'.format(curr_logger_level()), level=CRITICAL)
+        log('this is from the temporary logger (level={})'.format(
+            curr_logger_level()), level=CRITICAL)
 
     # suppress all logs by setting level=SILENT
     with logger(level=SILENT):
@@ -95,7 +96,8 @@ def main(log_path='./log'):
     # Workers() is more flexible than multiprocessing.Pool()
     n_task = 6
     with enclose_timer(fn(Workers)):
-        workers = Workers(f=sleep_then_maybe_fail, num_workers=3, verbose=True, ignore_error=True)
+        workers = Workers(f=sleep_then_maybe_fail,
+                          num_workers=3, verbose=True, ignore_error=True)
         [workers.add_task({'x': i, 'fail_p': 0.3}) for _ in range(n_task)]
         [workers.get_res() for _ in range(n_task)]
         workers.terminate()
@@ -112,7 +114,8 @@ def main(log_path='./log'):
         vec_size = 1000000
         vec = [x for x in range(vec_size)]
         with timer('work()'):
-            a = list(work(read_from_vec, num_workers=1, tasks=iter((i, vec) for i in range(30))))
+            a = list(work(read_from_vec, num_workers=1,
+                     tasks=iter((i, vec) for i in range(30))))
         with timer('work() with cache_inp'):
             b = list(work(read_from_vec, num_workers=1, tasks=iter({'idx': i} for i in range(30)),
                           cache_inp={'vec': vec}))
@@ -121,7 +124,8 @@ def main(log_path='./log'):
         # for objects that can not be pickled, use built_inp
         with timer('work() with build_inp'):
             tasks = iter({'idx': i} for i in range(30))
-            list(work(read_from_vec, num_workers=1, tasks=tasks, build_inp={'vec': (build_vec, vec_size)}))
+            list(work(read_from_vec, num_workers=1, tasks=tasks,
+                 build_inp={'vec': (build_vec, vec_size)}))
 
     # jpath() == os.path.join()
     # run_dir() == os.getcwd()
@@ -145,10 +149,12 @@ def main(log_path='./log'):
     # build_files() (or build_dirs()) create files (or directory) after creating paths
     with enclose(fn(build_files, build_dirs)):
         test_dir = './test_dir'
-        build_files([jpath(test_dir, file_name) for file_name in ['a.txt', 'b.txt', 'c.txt']])
+        build_files([jpath(test_dir, file_name)
+                    for file_name in ['a.txt', 'b.txt', 'c.txt']])
         log('{} files under {}'.format(len(list(open_files(test_dir))), test_dir))
         build_dirs(test_dir, overwrite=True)
-        log('{} files under {} (after overwrite)'.format(len(list(open_files(test_dir))), test_dir))
+        log('{} files under {} (after overwrite)'.format(
+            len(list(open_files(test_dir))), test_dir))
         shutil.rmtree(test_dir)
 
     # unwrap_file() (or unwrap_dir()) will unwrap all parent directories leading to a unique file (or dir)
@@ -242,7 +248,8 @@ def main(log_path='./log'):
 
     # print_table() can also pad a row, and handle tables inside table (if item is a list, dict, set, or tuple)
     # print_table() calculate column width based on the longest item or use min_column_widths if applicable
-    rows += [[6, 'Paimon'], ['', 'summary', [['num characters', 6], ['num cities', 4]]]]
+    rows += [[6, 'Paimon'], ['', 'summary',
+                             [['num characters', 6], ['num cities', 4]]]]
     print_table(rows,
                 headers=headers,
                 min_column_widths=[None, 20],
