@@ -18,11 +18,11 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.43'
+VERSION = '1.5.44'
 
 __all__ = [
     # replacement for logging
-    'log', 'logger', 'local_logger', 'set_global_logger', 'curr_logger_level', 'reset_global_logger', 'recorder',
+    'log', 'temp_logger', 'local_logger', 'set_global_logger', 'curr_logger_level', 'reset_global_logger', 'recorder',
     # logging levels
     'NOTSET', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL', 'SILENT',
     # replacement for multiprocessing
@@ -110,7 +110,7 @@ LOGGER = Logger()
 CONTEXT_LOGGER_SET = False
 
 
-class logger(object):
+class temp_logger(object):
     def __init__(self, name='', file=sys.stdout, level=INFO, verbose=False, can_overwrite=True):
         global LOGGER
         global CONTEXT_LOGGER_SET
@@ -167,8 +167,7 @@ class recorder(object):
     def __init__(self, tape, captured_level=INFO):
         assert tape == [], '1st argument must be an empty list'
         self.buffer = StringIO()
-        self.logger = logger(
-            file=self.buffer, level=captured_level, can_overwrite=False)
+        self.logger = temp_logger(file=self.buffer, level=captured_level, can_overwrite=False)
         self.tape = tape
 
     def __enter__(self):

@@ -37,26 +37,26 @@ def main(log_path='./log'):
     my_logger = local_logger(__name__, verbose=True)
     my_logger('this is from the local logger', level=WARNING)
 
-    # logger() (as context manager) temporarily modify the global logger
-    with logger(level=DEBUG, file=sys.stderr, name='__temp__', verbose=True):
+    # temp_logger() (as context manager) temporarily modify the global logger
+    with temp_logger(level=DEBUG, file=sys.stderr, name='__temp__', verbose=True):
         # this message will be redirected to sys.stderr
         log('this is from the temporary logger (level={})'.format(
             curr_logger_level()), level=CRITICAL)
 
     # suppress all logs by setting level=SILENT
-    with logger(level=SILENT):
+    with temp_logger(level=SILENT):
         for i in range(1000):
             # all loggings are suppressed
             log(i)
 
     # logger() will also overwrite all logger() within its scope
-    with logger(level=INFO):
-        with logger(level=SILENT):
+    with temp_logger(level=INFO):
+        with temp_logger(level=SILENT):
             log('==> a hidden message')
 
     # except when can_overwrite == False
-    with logger(level=INFO):
-        with logger(level=SILENT, can_overwrite=False):
+    with temp_logger(level=INFO):
+        with temp_logger(level=SILENT, can_overwrite=False):
             log('==> this will never be printed')
 
     # print_line() will draw a line with am optional message
@@ -228,7 +228,7 @@ def main(log_path='./log'):
     debug(a)
 
     # this will print to the console but not to ./log
-    with logger(level=DEBUG):
+    with temp_logger(level=DEBUG):
         debug(a, b, c)
         debug(a, b, c, mode=prints)
         debug(b, mode=print_iter)
