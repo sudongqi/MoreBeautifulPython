@@ -1,4 +1,3 @@
-import os
 import sys
 import shutil
 import time
@@ -23,7 +22,7 @@ def build_vec(size):
 
 
 def fn(*functions):
-    return ' / '.join(f.__name__ + '()' for f in functions)
+    return ', '.join(f.__name__ + '()' for f in functions)
 
 
 def main(log_path='./log'):
@@ -37,26 +36,26 @@ def main(log_path='./log'):
     my_logger = local_logger(__name__, verbose=True)
     my_logger('this is from the local logger', level=WARNING)
 
-    # temp_logger() (as context manager) temporarily modify the global logger
-    with temp_logger(level=DEBUG, file=sys.stderr, name='__temp__', verbose=True):
+    # ctx_logger() (as context manager) temporarily modify the global logger
+    with ctx_logger(level=DEBUG, file=sys.stderr, name='__temp__', verbose=True):
         # this message will be redirected to sys.stderr
         log('this is from the temporary logger (level={})'.format(
-            curr_logger_level()), level=CRITICAL)
+            global_logger_level()), level=CRITICAL)
 
     # suppress all logs by setting level=SILENT
-    with temp_logger(level=SILENT):
+    with ctx_logger(level=SILENT):
         for i in range(1000):
             # all loggings are suppressed
             log(i)
 
-    # logger() will also overwrite all logger() within its scope
-    with temp_logger(level=INFO):
-        with temp_logger(level=SILENT):
+    # ctx_logger() will also overwrite all logger() within its scope
+    with ctx_logger(level=INFO):
+        with ctx_logger(level=SILENT):
             log('==> a hidden message')
 
     # except when can_overwrite == False
-    with temp_logger(level=INFO):
-        with temp_logger(level=SILENT, can_overwrite=False):
+    with ctx_logger(level=INFO):
+        with ctx_logger(level=SILENT, can_overwrite=False):
             log('==> this will never be printed')
 
     # print_line() will draw a line with am optional message
@@ -228,7 +227,7 @@ def main(log_path='./log'):
     debug(a)
 
     # this will print to the console but not to ./log
-    with temp_logger(level=DEBUG):
+    with ctx_logger(level=DEBUG):
         debug(a, b, c)
         debug(a, b, c, mode=prints)
         debug(b, mode=print_iter)

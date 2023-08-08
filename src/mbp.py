@@ -18,11 +18,11 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.44'
+VERSION = '1.5.45'
 
 __all__ = [
     # replacement for logging
-    'log', 'temp_logger', 'local_logger', 'set_global_logger', 'curr_logger_level', 'reset_global_logger', 'recorder',
+    'log', 'ctx_logger', 'local_logger', 'set_global_logger', 'global_logger_level', 'reset_global_logger', 'recorder',
     # logging levels
     'NOTSET', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL', 'SILENT',
     # replacement for multiprocessing
@@ -110,7 +110,7 @@ LOGGER = Logger()
 CONTEXT_LOGGER_SET = False
 
 
-class temp_logger(object):
+class ctx_logger(object):
     def __init__(self, name='', file=sys.stdout, level=INFO, verbose=False, can_overwrite=True):
         global LOGGER
         global CONTEXT_LOGGER_SET
@@ -137,7 +137,7 @@ def set_global_logger(name='', file=sys.stdout, level=INFO, verbose=False):
     LOGGER = Logger(name, file, level, verbose)
 
 
-def curr_logger_level():
+def global_logger_level():
     global LOGGER
     return LOGGER.level
 
@@ -167,7 +167,8 @@ class recorder(object):
     def __init__(self, tape, captured_level=INFO):
         assert tape == [], '1st argument must be an empty list'
         self.buffer = StringIO()
-        self.logger = temp_logger(file=self.buffer, level=captured_level, can_overwrite=False)
+        self.logger = ctx_logger(
+            file=self.buffer, level=captured_level, can_overwrite=False)
         self.tape = tape
 
     def __enter__(self):
@@ -754,20 +755,20 @@ def debug(*data, mode=prints, char='-', level=DEBUG):
     if LOGGER.level <= level:
 
         stack = inspect.stack()
-        lineno = stack[1].lineno
+        lineno = ' [{}]'.format(stack[1].lineno)
         filename = file_basename(stack[1][1]).split('.')[0]
-        function_name = '{}'.format(
-            stack[1][3]) if stack[1][3] != '<module>' else '?'
+        function_name = '.{}'.format(
+            stack[1][3]) if stack[1][3] != '<module>' else ''
 
         code_str = stack[1].code_context[0].strip()
-        arguments = [a.strip()
-                     for a in code_str[6:-1].split(',') if '=' not in a]
+        arguments = code_str[code_str.index("(") + 1:-1]
+        arguments = [a.strip() for a in arguments.split(',') if '=' not in a]
         assert len(data) == len(
             arguments), '{} ==> debug() can not take arguments with "," in it'.format(code_str)
         argument_str = '' if len(
             arguments) > 1 else ': {}'.format(arguments[0])
 
-        with enclose('[{}] {}.{}{}'.format(lineno, filename, function_name, argument_str), char=char):
+        with enclose('{}{}{}{}'.format(filename, function_name, lineno, argument_str), char=char):
             if mode is None:
                 if len(data) > 1:
                     rows = []
