@@ -40,7 +40,7 @@ jobs:
       run: python -m mbp
 
     - name: Test with pytest
-      run: pytest tests
+      run: pytest -vs
 
     - name: Run examples to see if they work
       run: python examples.py
