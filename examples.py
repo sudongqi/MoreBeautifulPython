@@ -25,7 +25,7 @@ def fn(*functions):
     return ', '.join(f.__name__ + '()' for f in functions)
 
 
-def main(log_path='./log'):
+def main(log_path='./examples.log'):
     # log() include all functionality of print()
     log('this is from the global logger')
 
