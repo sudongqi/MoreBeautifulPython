@@ -18,7 +18,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.45'
+VERSION = '1.5.46'
 
 __all__ = [
     # replacement for logging
@@ -42,7 +42,9 @@ __all__ = [
     # tools for summarizations
     'prints', 'print_iter', 'print_table', 'print_line',
     # tools for simple statistics
-    'timer', 'curr_time', 'avg', 'min_max_avg', 'n_min_max_avg', 'CPU_COUNT', 'MIN', 'MAX'
+    'timer', 'curr_time', 'avg', 'min_max_avg', 'n_min_max_avg', 'CPU_COUNT', 'MIN', 'MAX',
+    # tools for environment
+    'load_env'
 ]
 
 NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, SILENT = 0, 10, 20, 30, 40, 50, 60
@@ -924,6 +926,9 @@ class enclose_timer(enclose):
         super().__init__(text, width, max_width, char,
                          top_margin, bottom_margin, True, level)
 
+def load_env(path):
+    for k, v in load_yaml(path).items():
+        os.environ[k] = str(v)
 
 def _np(path):
     return path.replace(os.sep, '/')
