@@ -18,7 +18,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.47'
+VERSION = '1.5.48'
 
 __all__ = [
     # replacement for logging
@@ -189,7 +189,7 @@ def error_msg(e, verbose=False, sep='\n'):
         return repr(e)
     else:
         res = traceback.format_exc()
-        return npath(res.replace('\n', sep))
+        return _np(res.replace('\n', sep))
 
 
 class Worker(Process):
@@ -366,7 +366,7 @@ def iterate_files(path, pattern=r".*"):
         for file_name in files:
             if matcher.fullmatch(file_name):
                 full_path = jpath(p, file_name)
-                yield npath(os.path.abspath(full_path)), npath(full_path[len(path):]), file_name
+                yield _np(os.path.abspath(full_path)), _np(full_path[len(path):]), file_name
 
 
 def open_files(path, encoding='utf-8', compression=None, pattern=r".*", verbose=True):
@@ -930,6 +930,9 @@ def load_env(path):
     for k, v in load_yaml(path).items():
         os.environ[k] = str(v)
 
+def _np(path):
+    return path.replace(os.sep, '/')
+
 def npath(path):
     if path.startswith("~"):
         path = os.path.expanduser(path)
@@ -937,15 +940,15 @@ def npath(path):
 
 
 def jpath(*args, **kwargs):
-    return npath(os.path.join(*args, **kwargs))
+    return _np(os.path.join(*args, **kwargs))
 
 
 def lib_path():
-    return npath(str(Path(__file__).absolute()))
+    return _np(str(Path(__file__).absolute()))
 
 
 def run_dir():
-    return npath(os.getcwd())
+    return _np(os.getcwd())
 
 
 def _is_file_and_exist(path):
@@ -1021,7 +1024,7 @@ def traverse(path, go_up=0, go_to=None, should_exist=False):
         res = jpath(res, go_to)
     assert not should_exist or os.path.exists(
         res), '{} ==> does not exist'.format(res)
-    return npath(res)
+    return _np(res)
 
 
 def dir_of(path):
@@ -1043,7 +1046,7 @@ def unwrap_file(path):
         assert len(
             sub_paths) == 1, 'there are more than one files/dirs in {}'.format(path)
         return unwrap_file(jpath(path, sub_paths[0]))
-    return npath(path)
+    return _np(path)
 
 
 def unwrap_dir(path):
@@ -1051,7 +1054,7 @@ def unwrap_dir(path):
         sub_paths = os.listdir(path)
         if len(sub_paths) == 1 and os.path.isdir(jpath(path, sub_paths[0])):
             return unwrap_dir(jpath(path, sub_paths[0]))
-        return npath(path)
+        return _np(path)
     assert False, '{} is not a directory'.format(path)
 
 

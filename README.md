@@ -12,7 +12,7 @@ Make Python even more beautiful :) This package includes implementations that yo
     execution_directory   C:\Users\sudon\MoreBeautifulPython
     library_path          C:\Users\sudon\MoreBeautifulPython\src\mbp.py
     cpu_count             16
-    version               1.5.47
+    version               1.5.48
     =============================================================================================
 
 ### Examples
