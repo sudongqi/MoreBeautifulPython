@@ -18,7 +18,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.49'
+VERSION = '1.5.50'
 
 __all__ = [
     # replacement for logging
@@ -87,10 +87,10 @@ class Logger:
         self.name = name
         self.verbose = True if name else verbose
 
-    def __call__(self, *data, level=INFO, file=None, end=None, flush=False):
+    def __call__(self, *data, level=INFO, file=None, end=None, flush=True):
         if self.level <= level:
-            header = f'{curr_time()} {get_msg_level(level)} {self.name}:' \
-                if self.name != '' else f'{curr_time()} {get_msg_level(level)}:'
+            header = f'{curr_time()} {get_msg_level(level)} {self.name}: ' \
+                if self.name != '' else f'{curr_time()} {get_msg_level(level)}: '
             header_empty = len(header) * ' '
             for f in (self.file if file is None else open_files_for_logger(file)):
                 for d in data:
