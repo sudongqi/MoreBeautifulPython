@@ -18,7 +18,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.48'
+VERSION = '1.5.49'
 
 __all__ = [
     # replacement for logging
@@ -161,7 +161,7 @@ def curr_time(breakdown=False):
     return res
 
 
-def log(*messages, level=INFO, file=None, end=None, flush=False):
+def log(*messages, level=INFO, file=None, end=None, flush=True):
     LOGGER(*messages, level=level, file=file, end=end, flush=flush)
 
 
