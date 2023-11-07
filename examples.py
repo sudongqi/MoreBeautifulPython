@@ -25,6 +25,11 @@ def fn(*functions):
     return ', '.join(f.__name__ + '()' for f in functions)
 
 
+def alog(res, reference):
+    log(res)
+    assert res == reference, f"{res} != {reference}"
+
+
 def main(log_path='./examples.log'):
     # log() include all functionality of print()
     log('this is from the global logger')
@@ -211,12 +216,15 @@ def main(log_path='./examples.log'):
     # break_str() break a long string into list of smaller (measured by wcswidth()) strings
     with enclose(fn(break_str)):
         string = 'a very very very very long string'
-        log('\n'.join(break_str(string, width=12)))
+        alog(break_str(string, width=12), ["a very very ", "very very lo", "ng string"])
 
     # shorten() truncate a string and append "..." if len(string) > width
     with enclose(fn(shorten_str)):
-        log(shorten_str(string, 100))
-        log(shorten_str(string, 20))
+        alog(shorten_str(string, 100), "a very very very very long string")
+        alog(shorten_str(string, 20), "a very very very ...")
+
+    with enclose(fn(fill_str)):
+        alog(fill_str("1{ok}34{ok2}", ok=2, ok2=5), "12345")
 
     # debug() can trace back to the original function call and print the variable names with their values
     # debug() is slow and should be used only for inspection purposes.
@@ -263,9 +271,9 @@ def main(log_path='./examples.log'):
     # get 3 key statistics from an iterator at once
     with enclose(fn(n_min_max_avg, min_max_avg, avg)):
         numbers = [1, 2, 3, 4, 5]
-        log(n_min_max_avg(numbers))
-        log(min_max_avg(numbers))
-        log(avg(numbers))
+        alog(n_min_max_avg(numbers), (5, 1, 5, 3.0))
+        alog(min_max_avg(numbers), (1, 5, 3.0))
+        alog(avg(numbers), 3.0)
 
     # curr_time() == str(datetime.now(timezone.utc))[:19]
     with enclose(fn(curr_time)):
