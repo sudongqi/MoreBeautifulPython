@@ -18,7 +18,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.50'
+VERSION = '1.5.51'
 
 __all__ = [
     # replacement for logging
@@ -30,13 +30,14 @@ __all__ = [
     # syntax sugar for common utilities
     'try_f', 'stop', 'type_of', 'range_of', 'items_of', 'npath', 'jpath', 'run_dir', 'lib_path',
     # handling data files
-    'load_txt', 'load_jsonl', 'load_json', 'load_yaml', 'save_json', 'save_jsonl', 'save_yaml', 'iterate', 'open_file',
+    'load_txt', 'load_jsonl', 'load_json', 'load_yaml', 'save_json', 'save_jsonl', 'save_yaml', 
+    'iterate', 'open_file', 'load_files',
     # handling paths
     'unwrap_file', 'unwrap_dir', 'file_basename', 'dir_basename',
     # tools for file system
     'traverse', 'this_dir', 'dir_of', 'build_dirs', 'build_files', 'build_dirs_for', 'iterate_files', 'open_files',
     # handling string
-    'break_str', 'shorten',
+    'break_str', 'shorten', 'fill_in'
     # tools for debug
     'enclose', 'enclose_timer', 'error_msg', 'debug',
     # tools for summarizations
@@ -378,7 +379,7 @@ def open_files(path, encoding='utf-8', compression=None, pattern=r".*", verbose=
         except PermissionError:
             if verbose:
                 log('no permission to open {} <== {}'.format(file_name, full_path))
-
+            
 
 def load_txt(path, encoding="utf-8", first_n=None, sample_p=1.0, sample_seed=None, report_n=None, compression=None):
     with open_file(path, encoding, compression) as f:
@@ -416,6 +417,19 @@ def save_jsonl(data, path, encoding='utf-8'):
 def save_json(data, path, indent=4, encoding='utf-8'):
     with open(path, 'w', encoding=encoding) as f:
         return json.dump(data, f, indent=indent)
+    
+
+def load_files(path, encoding='utf-8'):
+    res = {}
+    for abs_path, rel_path, _ in iterate_files(path):
+        tokens = rel_path[1:].split('/')
+        curr = res
+        for token in tokens[:-1]:
+            if token not in curr:
+                curr[token] = {}
+            curr = curr[token]
+        curr[tokens[-1]] = "".join(load_txt(abs_path, encoding=encoding))
+    return res
 
 
 def type_of(data, types):
@@ -1056,6 +1070,7 @@ def unwrap_dir(path):
             return unwrap_dir(jpath(path, sub_paths[0]))
         return _np(path)
     assert False, '{} is not a directory'.format(path)
+    
 
 
 def mbp_info():
