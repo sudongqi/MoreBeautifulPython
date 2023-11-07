@@ -22,3 +22,4 @@ def test_log():
 def test_str_handlings():
     assert len(shorten_str("abcdefghi", 6)) == 6
     assert fill_str("1{ok}34{ok2}", ok=2, ok2=5) == "12345"
+    assert [len(s) for s in break_str("x" * 50, width=20)] == [20, 20, 10]
