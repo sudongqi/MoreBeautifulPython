@@ -531,7 +531,7 @@ def _build_table(rows, space=3, cell_space=1, filler=' ', max_column_width=None,
     for d in data:
         for i in range(num_col):
             if max_column_width is not None and len(d[i]) > max_column_width - 3:
-                d[i] = shorten(d[i], max_column_width)
+                d[i] = shorten_str(d[i], max_column_width)
             column_width[i] = max(column_width[i], wcswidth(d[i]))
             if min_column_widths is not None and i < len(min_column_widths) and min_column_widths[i] is not None:
                 column_width[i] = max(column_width[i], min_column_widths[i])
@@ -754,11 +754,15 @@ def break_str(string, width=50, measure_f=wcswidth):
     return [''.join(r) for r in res]
 
 
-def shorten(string, width=50):
+def shorten_str(string, width=50):
     if len(string) <= width:
         return string
     return string[:(width - 3)] + '...'
 
+def fill_str(string, left_marker="{", right_marker="}", **kwargs):
+    for k, v in kwargs.items():
+        string = string.replace(left_marker + k + right_marker, str(v))
+    return string
 
 def stop(message=''):
     raise SystemExit(message)

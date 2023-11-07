@@ -214,9 +214,9 @@ def main(log_path='./examples.log'):
         log('\n'.join(break_str(string, width=12)))
 
     # shorten() truncate a string and append "..." if len(string) > width
-    with enclose(fn(shorten)):
-        log(shorten(string, 100))
-        log(shorten(string, 20))
+    with enclose(fn(shorten_str)):
+        log(shorten_str(string, 100))
+        log(shorten_str(string, 20))
 
     # debug() can trace back to the original function call and print the variable names with their values
     # debug() is slow and should be used only for inspection purposes.
