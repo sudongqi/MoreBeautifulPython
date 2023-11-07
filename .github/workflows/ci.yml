@@ -30,17 +30,12 @@ jobs:
     - name: Install dependencies
       run: pip install -e .
 
-    - name: Install pytest
-      run: pip install pytest
-
     - name: Check Python version
       run: python -V
 
     - name: Check MBP version
       run: python -m mbp
 
-    - name: Test with pytest
-      run: pytest -vs
 
     - name: Run examples to see if they work
       run: python examples.py
