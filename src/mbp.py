@@ -37,7 +37,7 @@ __all__ = [
     # tools for file system
     'traverse', 'this_dir', 'dir_of', 'build_dirs', 'build_files', 'build_dirs_for', 'iterate_files', 'open_files',
     # handling string
-    'break_str', 'shorten_str', 'fill_str'
+    'break_str', 'shorten_str', 'fill_str',
     # tools for debug
     'enclose', 'enclose_timer', 'error_msg', 'debug',
     # tools for summarizations

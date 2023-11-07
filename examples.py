@@ -274,6 +274,4 @@ def main(log_path='./examples.log'):
 
 
 if __name__ == '__main__':
-    # main()
-    d = load_files("./.github", encoding="utf-8")
-    prints(d)
+    main()
