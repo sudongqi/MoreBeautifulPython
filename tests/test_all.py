@@ -1,6 +1,6 @@
 import sys
 import subprocess
-from mbp import shorten_str
+from mbp import *
 
 
 def run_process(command):
@@ -19,5 +19,6 @@ def test_log():
     assert err.decode() == ''
 
 
-def test_shorten():
+def test_str_handlings():
     assert len(shorten_str("abcdefghi", 6)) == 6
+    assert fill_str("1{ok}34{ok2}", ok=2, ok2=5) == "12345"
