@@ -739,7 +739,7 @@ def break_str(string, width=50, measure_f=wcswidth):
     curr = 0
     for ch in string:
         item_width = measure_f(ch)
-        if curr + item_width < width:
+        if curr + item_width <= width:
             res[-1].append(ch)
             curr += item_width
         elif curr == 0:
