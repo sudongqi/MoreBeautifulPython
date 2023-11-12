@@ -11,6 +11,7 @@ import bz2
 import inspect
 import itertools
 import traceback
+import argparse
 from io import StringIO
 from collections.abc import Iterator, Iterable
 from datetime import datetime, timezone
@@ -18,7 +19,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.51'
+VERSION = '1.5.52'
 
 __all__ = [
     # replacement for logging
@@ -30,7 +31,7 @@ __all__ = [
     # syntax sugar for common utilities
     'try_f', 'stop', 'type_of', 'range_of', 'items_of', 'npath', 'jpath', 'run_dir', 'lib_path',
     # handling data files
-    'load_txt', 'load_jsonl', 'load_json', 'load_yaml', 'save_json', 'save_jsonl', 'save_yaml', 
+    'load_txt', 'load_jsonl', 'load_json', 'load_yaml', 'save_json', 'save_jsonl', 'save_yaml',
     'iterate', 'open_file', 'load_files',
     # handling paths
     'unwrap_file', 'unwrap_dir', 'file_basename', 'dir_basename',
@@ -45,7 +46,7 @@ __all__ = [
     # tools for simple statistics
     'timer', 'curr_time', 'avg', 'min_max_avg', 'n_min_max_avg', 'CPU_COUNT', 'MIN', 'MAX',
     # tools for environment
-    'load_env'
+    'load_env', 'get_args'
 ]
 
 NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, SILENT = 0, 10, 20, 30, 40, 50, 60
@@ -379,7 +380,7 @@ def open_files(path, encoding='utf-8', compression=None, pattern=r".*", verbose=
         except PermissionError:
             if verbose:
                 log('no permission to open {} <== {}'.format(file_name, full_path))
-            
+
 
 def load_txt(path, encoding="utf-8", first_n=None, sample_p=1.0, sample_seed=None, report_n=None, compression=None):
     with open_file(path, encoding, compression) as f:
@@ -417,7 +418,7 @@ def save_jsonl(data, path, encoding='utf-8'):
 def save_json(data, path, indent=4, encoding='utf-8'):
     with open(path, 'w', encoding=encoding) as f:
         return json.dump(data, f, indent=indent)
-    
+
 
 def load_files(path, encoding='utf-8'):
     res = {}
@@ -759,10 +760,12 @@ def shorten_str(string, width=50):
         return string
     return string[:(width - 3)] + '...'
 
+
 def fill_str(string, left_marker="{", right_marker="}", **kwargs):
     for k, v in kwargs.items():
         string = string.replace(left_marker + k + right_marker, str(v))
     return string
+
 
 def stop(message=''):
     raise SystemExit(message)
@@ -944,12 +947,22 @@ class enclose_timer(enclose):
         super().__init__(text, width, max_width, char,
                          top_margin, bottom_margin, True, level)
 
+
 def load_env(path):
     for k, v in load_yaml(path).items():
         os.environ[k] = str(v)
 
+
+def get_args(**kwargs):
+    parser = argparse.ArgumentParser()
+    for k, v in kwargs.items():
+        parser.add_argument(f"--{k}", default=v, type=type(v))
+    return parser.parse_args()
+
+
 def _np(path):
     return path.replace(os.sep, '/')
+
 
 def npath(path):
     if path.startswith("~"):
@@ -1074,7 +1087,6 @@ def unwrap_dir(path):
             return unwrap_dir(jpath(path, sub_paths[0]))
         return _np(path)
     assert False, '{} is not a directory'.format(path)
-    
 
 
 def mbp_info():

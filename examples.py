@@ -100,8 +100,7 @@ def main(log_path='./examples.log'):
     # Workers() is more flexible than multiprocessing.Pool()
     n_task = 6
     with enclose_timer(fn(Workers)):
-        workers = Workers(f=sleep_then_maybe_fail,
-                          num_workers=3, verbose=True, ignore_error=True)
+        workers = Workers(f=sleep_then_maybe_fail, num_workers=3, verbose=True, ignore_error=True)
         [workers.add_task({'x': i, 'fail_p': 0.3}) for _ in range(n_task)]
         [workers.get_res() for _ in range(n_task)]
         workers.terminate()
@@ -118,11 +117,9 @@ def main(log_path='./examples.log'):
         vec_size = 1000000
         vec = [x for x in range(vec_size)]
         with timer('work()'):
-            a = list(work(read_from_vec, num_workers=1,
-                     tasks=iter((i, vec) for i in range(30))))
+            a = list(work(read_from_vec, num_workers=1, tasks=iter((i, vec) for i in range(30))))
         with timer('work() with cache_inp'):
-            b = list(work(read_from_vec, num_workers=1, tasks=iter({'idx': i} for i in range(30)),
-                          cache_inp={'vec': vec}))
+            b = list(work(read_from_vec, num_workers=1, tasks=iter({'idx': i} for i in range(30)), cache_inp={'vec': vec}))
         assert a == b
 
         # for objects that can not be pickled, use built_inp
@@ -153,12 +150,10 @@ def main(log_path='./examples.log'):
     # build_files() (or build_dirs()) create files (or directory) after creating paths
     with enclose(fn(build_files, build_dirs)):
         test_dir = './test_dir'
-        build_files([jpath(test_dir, file_name)
-                    for file_name in ['a.txt', 'b.txt', 'c.txt']])
+        build_files([jpath(test_dir, file_name) for file_name in ['a.txt', 'b.txt', 'c.txt']])
         log('{} files under {}'.format(len(list(open_files(test_dir))), test_dir))
         build_dirs(test_dir, overwrite=True)
-        log('{} files under {} (after overwrite)'.format(
-            len(list(open_files(test_dir))), test_dir))
+        log('{} files under {} (after overwrite)'.format(len(list(open_files(test_dir))), test_dir))
         shutil.rmtree(test_dir)
 
     # unwrap_file() (or unwrap_dir()) will unwrap all parent directories leading to a unique file (or dir)
@@ -218,11 +213,12 @@ def main(log_path='./examples.log'):
         string = 'a very very very very long string'
         alog(break_str(string, width=12), ["a very very ", "very very lo", "ng string"])
 
-    # shorten() truncate a string and append "..." if len(string) > width
+    # shorten_str() truncate a string and append "..." if len(string) > width
     with enclose(fn(shorten_str)):
         alog(shorten_str(string, 100), "a very very very very long string")
         alog(shorten_str(string, 20), "a very very very ...")
 
+    # fill_str() replace placeholders in string with an arguments
     with enclose(fn(fill_str)):
         alog(fill_str("1{ok}34{ok2}", ok=2, ok2=5), "12345")
 
