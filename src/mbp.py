@@ -19,7 +19,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.52'
+VERSION = '1.5.53'
 
 __all__ = [
     # replacement for logging
@@ -46,7 +46,7 @@ __all__ = [
     # tools for simple statistics
     'timer', 'curr_time', 'avg', 'min_max_avg', 'n_min_max_avg', 'CPU_COUNT', 'MIN', 'MAX',
     # tools for environment
-    'load_env', 'get_args'
+    'load_env', 'get_args',
 ]
 
 NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, SILENT = 0, 10, 20, 30, 40, 50, 60
@@ -80,6 +80,7 @@ def open_files_for_logger(file):
             build_dirs_for(f)
             res[i] = open(f, 'w', encoding='utf-8')
     return res
+
 
 
 class Logger:
@@ -946,15 +947,17 @@ class enclose_timer(enclose):
     def __init__(self, text='', width=None, max_width=80, char='=', top_margin=0, bottom_margin=1, level=INFO):
         super().__init__(text, width, max_width, char,
                          top_margin, bottom_margin, True, level)
-
+    
 
 def load_env(path):
     for k, v in load_yaml(path).items():
         os.environ[k] = str(v)
 
 
-def get_args(**kwargs):
+def get_args(*args, **kwargs):
     parser = argparse.ArgumentParser()
+    for k in args:
+        parser.add_argument(k, type=str)
     for k, v in kwargs.items():
         parser.add_argument(f"--{k}", default=v, type=type(v))
     return parser.parse_args()
