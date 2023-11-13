@@ -279,6 +279,4 @@ def main(log_path='./examples.log'):
 
 
 if __name__ == '__main__':
-    # main()
-    res = build_instruction({"instruction": "this is my instruction", "examples": [{"input": "1 + 3"}, {"res": 4}, {"input": "20 + 3"}, {"res": 23}]})
-    print(res)
+    main()
