@@ -30,13 +30,6 @@ jobs:
     - name: Install dependencies
       run: pip install -e .
 
-    - name: Check Python version
-      run: python -V
-
-    - name: Check MBP version
-      run: python -m mbp
-
-
     - name: Run examples to see if they work
       run: python examples.py
 
