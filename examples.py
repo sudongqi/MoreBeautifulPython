@@ -2,9 +2,9 @@ import sys
 import shutil
 import time
 import random
-from typing import Any
 # from mbp import * (for pip install version)
-from src.mbp import *
+from src.mbp.core import *
+from src.mbp.ai import *
 
 
 # test functions for multiprocessing
@@ -66,7 +66,7 @@ def main(log_path='./examples.log'):
 
     # print_line() will draw a line with am optional message
     print_line()
-    print_line(30, text='optional message', char='=')
+    print_line(text='optional message', width=30, char='=')
     log('\n')
 
     # enclose() generate two text separators that enclose the execution
@@ -279,4 +279,6 @@ def main(log_path='./examples.log'):
 
 
 if __name__ == '__main__':
-    main()
+    # main()
+    res = build_instruction({"instruction": "this is my instruction", "examples": [{"input": "1 + 3"}, {"res": 4}, {"input": "20 + 3"}, {"res": 23}]})
+    print(res)

@@ -5,14 +5,14 @@ Make Python even more beautiful :) This package includes implementations that yo
 ### Setup
 
     python -m pip install mbp
-    
-    > python -m mbp
+
+    [optional] python -c "from mbp import *; mbp_info()"
     =================================== More Beautiful Python ===================================
     examples              https://github.com/sudongqi/MoreBeautifulPython/blob/main/examples.py
     execution_directory   C:\Users\sudon\MoreBeautifulPython
     library_path          C:\Users\sudon\MoreBeautifulPython\src\mbp.py
     cpu_count             16
-    version               1.5.53
+    version               1.5.54
     =============================================================================================
 
 ### Examples
