@@ -2,9 +2,7 @@ import json
 import functools
 from .core import *
 
-__all__ = [
-    'add_to_messages', 'encode_context', 'build_instruction', 'build_instruction_from_yaml'
-]
+__all__ = ['add_to_messages', 'encode_context', 'build_instruction', 'build_instruction_from_yaml']
 
 
 def add_to_messages(messages, role, content):
@@ -25,15 +23,20 @@ def encode_context(context, multiline=False):
     return res
 
 
-def build_instruction(instruction, examples=[]):
+def build_instruction(instruction, outputs=[], examples=[]):
     res = []
     res.append("Your response must be in json format")
     res.append(instruction)
     if examples:
-        assert len(examples) % 2 == 0, "examples must be a list of [context, response, context, response, ...]"
-        res.append("Here is an example:" if len(examples) == 2 else "Here are a few examples:")
-        for i in range(0, len(examples), 2):
-            res.append(f"{encode_context(examples[i])}\n{json.dumps(examples[i+1], ensure_ascii=False)}")
+        res.append("Here is an example:" if len(examples) == 1 else "Here are a few examples:")
+        c, o = {}, {}
+        for e in examples:
+            for k, v in e.items():
+                if k in outputs:
+                    o[k] = v
+                else:
+                    c[k] = v
+            res.append(f"{encode_context(c)}\n{json.dumps(o, ensure_ascii=False)}")
     return "\n\n".join(res)
 
 
