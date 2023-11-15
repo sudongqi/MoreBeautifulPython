@@ -4,7 +4,7 @@ import time
 import random
 # from mbp import * (for pip install version)
 from src.mbp.core import *
-from src.mbp.ai import *
+from src.mbp.llm import *
 
 
 # test functions for multiprocessing
