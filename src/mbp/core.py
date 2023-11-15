@@ -19,7 +19,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.57'
+VERSION = '1.5.58'
 
 __all__ = [
     # replacement for logging
