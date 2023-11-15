@@ -31,7 +31,7 @@ def alog(res, reference):
     assert res == reference, f"{res} != {reference}"
 
 
-def main(log_path='./examples.log'):
+def test_core(log_path='./examples.log'):
     # log() include all functionality of print()
     log('this is from the global logger')
 
@@ -278,5 +278,16 @@ def main(log_path='./examples.log'):
         log(curr_time(breakdown=True))
 
 
+def test_llm():
+    log(build_system_message(
+        "Let's think about this math problem step by step",
+        outputs=["res"],
+        examples=[
+            {"input": "5 + 5", "res": 10},
+            {"input": "2 * (3 + 2)", "res": 10}
+        ]))
+
+
 if __name__ == '__main__':
-    main()
+    test_core()
+    test_llm()

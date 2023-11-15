@@ -12,7 +12,7 @@ Make Python even more beautiful :) This package includes implementations that yo
     execution_directory   C:\Users\sudon\MoreBeautifulPython
     library_path          C:\Users\sudon\MoreBeautifulPython\src\mbp\core.py
     cpu_count             16
-    version               1.5.58
+    version               1.5.59
     =============================================================================================
 
 ### Examples
@@ -25,6 +25,7 @@ https://github.com/sudongqi/MoreBeautifulPython/blob/main/examples.py
 * tools for file system & data handling
 * tools for summarizations
 * tools for simple statistics
+* tools for llm (Large Language Model)
 
 
 
