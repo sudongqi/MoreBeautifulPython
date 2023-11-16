@@ -19,7 +19,7 @@ from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.61'
+VERSION = '1.5.62'
 
 __all__ = [
     # replacement for logging
@@ -940,7 +940,10 @@ def get_args(*args, **kwargs):
     for k in args:
         parser.add_argument(k, type=str)
     for k, v in kwargs.items():
-        parser.add_argument(f"--{k}", default=v, type=type(v))
+        if isinstance(v, list):
+            parser.add_argument(f"--{k}", nargs="+", default=v, type=type(v[0]))
+        else:
+            parser.add_argument(f"--{k}", default=v, type=type(v))
     return parser.parse_args()
 
 
