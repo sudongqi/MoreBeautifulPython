@@ -20,7 +20,7 @@ from threading import Thread
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.64'
+VERSION = '1.5.65'
 
 __all__ = [
     # replacement for logging
@@ -932,7 +932,9 @@ class enclose_timer(enclose):
                          top_margin, bottom_margin, True, level)
 
 
-def envs(key, default_value):
+def envs(key, default_value=None):
+    if default_value is None:
+        return os.environ[key]
     return os.environ.get(key, default_value)
 
 

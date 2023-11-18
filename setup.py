@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="mbp",
-    version="1.5.64",
+    version="1.5.65",
     author="Dongqi Su",
     description="Make Python even more beautiful :) This package includes implementations that you wish were in the standard library.",
     long_description=open("README.md").read(),
