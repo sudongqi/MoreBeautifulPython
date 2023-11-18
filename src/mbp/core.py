@@ -20,7 +20,7 @@ from threading import Thread
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.66'
+VERSION = '1.5.67'
 
 __all__ = [
     # replacement for logging
@@ -32,7 +32,7 @@ __all__ = [
     # syntax sugar for common utilities
     'try_f', 'stop', 'type_of', 'range_of', 'items_of', 'npath', 'jpath', 'run_dir', 'lib_path',
     # handling data files
-    'load_txt', 'load_jsonl', 'load_json', 'load_yaml', 'save_json', 'save_jsonl', 'save_yaml', 'iterate', 'open_file',
+    'load_txt', 'load_jsonl', 'load_json', 'load_yaml', 'save_txt', 'save_json', 'save_jsonl', 'save_yaml', 'iterate', 'open_file',
     # handling paths
     'unwrap_file', 'unwrap_dir', 'file_basename', 'dir_basename',
     # tools for file system
@@ -405,18 +405,23 @@ def load_yaml(path, encoding='utf-8', compression=None):
         return yaml.safe_load(f)
 
 
-def save_yaml(data, path, encoding='utf-8'):
+def save_txt(path, data, encoding='utf-8'):
+    with open(path, 'w', encoding=encoding) as file:
+        file.write(data)
+
+
+def save_yaml(path, data, encoding='utf-8'):
     with open(path, 'w', encoding=encoding) as file:
         yaml.dump(data, file, allow_unicode=True, sort_keys=False)
 
 
-def save_jsonl(data, path, encoding='utf-8'):
+def save_jsonl(path, data, encoding='utf-8'):
     with open(path, 'w', encoding=encoding) as f:
         for d in data:
             f.write(json.dumps(d, ensure_ascii=False) + '\n')
 
 
-def save_json(data, path, indent=4, encoding='utf-8'):
+def save_json(path, data, indent=4, encoding='utf-8'):
     with open(path, 'w', encoding=encoding) as f:
         return json.dump(data, f, indent=indent)
 
