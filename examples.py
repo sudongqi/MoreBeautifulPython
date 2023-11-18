@@ -42,26 +42,26 @@ def test_core(log_path='./examples.log'):
     my_logger = local_logger(__name__, verbose=True)
     my_logger('this is from the local logger', level=WARNING)
 
-    # ctx_logger() (as context manager) temporarily modify the global logger
-    with ctx_logger(level=DEBUG, file=sys.stderr, name='__temp__', verbose=True):
+    # context_logger() (as context manager) temporarily modify the global logger
+    with context_logger(level=DEBUG, file=sys.stderr, name='__temp__', verbose=True):
         # this message will be redirected to sys.stderr
         log('this is from the temporary logger (level={})'.format(
             global_logger_level()), level=CRITICAL)
 
     # suppress all logs by setting level=SILENT
-    with ctx_logger(level=SILENT):
+    with context_logger(level=SILENT):
         for i in range(1000):
             # all loggings are suppressed
             log(i)
 
-    # ctx_logger() will also overwrite all logger() within its scope
-    with ctx_logger(level=INFO):
-        with ctx_logger(level=SILENT):
+    # context_logger() will also overwrite all logger() within its scope
+    with context_logger(level=INFO):
+        with context_logger(level=SILENT):
             log('==> a hidden message')
 
     # except when can_overwrite == False
-    with ctx_logger(level=INFO):
-        with ctx_logger(level=SILENT, can_overwrite=False):
+    with context_logger(level=INFO):
+        with context_logger(level=SILENT, can_overwrite=False):
             log('==> this will never be printed')
 
     # print_line() will draw a line with am optional message
@@ -103,7 +103,7 @@ def test_core(log_path='./examples.log'):
     with enclose_timer(fn(Workers)):
         workers = Workers(f=sleep_then_maybe_fail, num_workers=3, verbose=True, ignore_error=True)
         [workers.add_task({'x': i, 'fail_p': 0.3}) for _ in range(n_task)]
-        [workers.get_res() for _ in range(n_task)]
+        [workers.get_result() for _ in range(n_task)]
         workers.terminate()
 
     # similarly, we can use work() to process tasks from an iterator
@@ -232,7 +232,7 @@ def test_core(log_path='./examples.log'):
     debug(a)
 
     # this will print to the console but not to ./log
-    with ctx_logger(level=DEBUG):
+    with context_logger(level=DEBUG):
         debug(a, b, c)
         debug(a, b, c, mode=prints)
         debug(b, mode=print_iter)
