@@ -20,7 +20,7 @@ from threading import Thread
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.65'
+VERSION = '1.5.66'
 
 __all__ = [
     # replacement for logging
@@ -46,7 +46,7 @@ __all__ = [
     # tools for simple statistics
     'timer', 'curr_time', 'avg', 'min_max_avg', 'n_min_max_avg', 'CPU_COUNT', 'MIN', 'MAX',
     # tools for environment
-    'envs', 'load_env', 'get_args', 'mbp_info'
+    'env', 'load_env', 'get_args', 'mbp_info'
 ]
 
 NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, SILENT = 0, 10, 20, 30, 40, 50, 60
@@ -932,7 +932,7 @@ class enclose_timer(enclose):
                          top_margin, bottom_margin, True, level)
 
 
-def envs(key, default_value=None):
+def env(key, default_value=None):
     if default_value is None:
         return os.environ[key]
     return os.environ.get(key, default_value)
