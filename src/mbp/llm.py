@@ -22,8 +22,9 @@ def build_system_message(instruction, outputs=[], examples=[]):
     assert isinstance(instruction, str) and isinstance(outputs, list) \
         and len(outputs) > 0 and isinstance(outputs[0], str) and isinstance(examples, list), FORMAT_HINT
     res = []
-    res.append(f"Your response must be in json format, and only allow {", ".join(
-        [f'"{k}"'for k in outputs])} as {"key" if len(outputs) == 1 else "keys"}")
+    _allow = ", ".join([f'"{k}"'for k in outputs])
+    _key = "key" if len(outputs) == 1 else "keys"
+    res.append(f"Your response must be in json format, and only allow {_allow} as {_key}")
     res.append(instruction)
     if examples:
         res.append("Here is an example:" if len(examples) == 1 else "Here are a few examples:")

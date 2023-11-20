@@ -20,7 +20,7 @@ from threading import Thread
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.68'
+VERSION = '1.5.69'
 
 __all__ = [
     # replacement for logging
