@@ -126,8 +126,7 @@ def test_core(log_path='./examples.log'):
         # for objects that can not be pickled, use built_inp
         with timer('work() with build_inp'):
             tasks = iter({'idx': i} for i in range(30))
-            list(work(read_from_vec, num_workers=1, tasks=tasks,
-                 build_inp={'vec': (build_vec, vec_size)}))
+            list(work(read_from_vec, num_workers=1, tasks=tasks, build_inp={'vec': (build_vec, vec_size)}))
 
     # jpath() == os.path.join()
     # run_dir() == os.getcwd()

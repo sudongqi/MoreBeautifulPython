@@ -12,15 +12,16 @@ import inspect
 import itertools
 import traceback
 import argparse
+import queue
 from io import StringIO
 from collections.abc import Iterator, Iterable
 from datetime import datetime, timezone
-from multiprocessing import Queue, cpu_count
+from multiprocessing import cpu_count
 from threading import Thread
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.69'
+VERSION = '1.5.70'
 
 __all__ = [
     # replacement for logging
@@ -237,8 +238,8 @@ class Worker(Thread):
 
 class Workers:
     def __init__(self, f, num_workers=CPU_COUNT, cache_inp=None, build_inp=None, ignore_error=False, verbose=True):
-        self.tasks = Queue()
-        self.results = Queue()
+        self.tasks = queue.Queue()
+        self.results = queue.Queue()
         self.workers = []
         self.task_count = 0
         self.verbose = verbose
