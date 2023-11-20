@@ -11,27 +11,19 @@ def add_to_messages(messages, role, content):
     messages.append({"role": role, "content": content})
 
 
-def encode_context(context, multiline=False):
-    assert isinstance(context, dict), "context must be a dict"
-    res = ""
-    for k, v in context.items():
-        v_res = str(v)
-        if "\n" in v_res or multiline:
-            res += f"<{k}>\n{v_res}\n</{k}>\n"
-        else:
-            res += f"<{k}> {v_res}\n"
-    return res
+def encode_context(context):
+    return json.dumps(context, ensure_ascii=False)
 
 
-FORMAT_HINT = "expecting foramt of ... instruction: str, outputs: [str], examples (optional): [dict]"
+FORMAT_HINT = "Expecting foramt of ... instruction: str, outputs: [str], examples (optional): [dict]"
 
 
 def build_system_message(instruction, outputs=[], examples=[]):
     assert isinstance(instruction, str) and isinstance(outputs, list) \
         and len(outputs) > 0 and isinstance(outputs[0], str) and isinstance(examples, list), FORMAT_HINT
-
     res = []
-    res.append("Your response must be in json format")
+    res.append(f"Your response must be in json format, and only allow {", ".join(
+        [f'"{k}"'for k in outputs])} as {"key" if len(outputs) == 1 else "keys"}")
     res.append(instruction)
     if examples:
         res.append("Here is an example:" if len(examples) == 1 else "Here are a few examples:")
@@ -42,11 +34,11 @@ def build_system_message(instruction, outputs=[], examples=[]):
                     o[k] = v
                 else:
                     c[k] = v
-            res.append(f"{encode_context(c)}\n{json.dumps(o, ensure_ascii=False)}")
+            res.append(f"{encode_context(c)}\n{encode_context(o)}")
     return "\n\n".join(res)
 
 
-@functools.lru_cache(maxsize=256)
+@functools.lru_cache(maxsize=None)
 def build_system_message_from_yaml(path):
     return build_system_message(**load_yaml(path))
 
