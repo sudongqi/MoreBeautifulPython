@@ -32,7 +32,7 @@ __all__ = [
     # syntax sugar for common utilities
     'try_f', 'stop', 'type_of', 'range_of', 'items_of', 'npath', 'jpath', 'run_dir', 'lib_path',
     # handling data files
-    'load_txt', 'load_jsonl', 'load_json', 'load_yaml', 'save_txt', 'save_json', 'save_jsonl', 'save_yaml', 'iterate', 'open_file',
+    'load_lines', 'load_txt', 'load_jsonl', 'load_json', 'load_yaml', 'save_txt', 'save_json', 'save_jsonl', 'save_yaml', 'iterate', 'open_file',
     # handling paths
     'unwrap_file', 'unwrap_dir', 'file_basename', 'dir_basename',
     # tools for file system
@@ -383,10 +383,14 @@ def open_files(path, encoding='utf-8', compression=None, pattern=r".*", verbose=
                 log('no permission to open {} <== {}'.format(file_name, full_path))
 
 
-def load_txt(path, encoding="utf-8", first_n=None, sample_p=1.0, sample_seed=None, report_n=None, compression=None):
+def load_lines(path, encoding="utf-8", first_n=None, sample_p=1.0, sample_seed=None, report_n=None, compression=None):
     with open_file(path, encoding, compression) as f:
         for line in iterate(f, first_n, sample_p, sample_seed, report_n):
             yield line
+
+
+def load_txt(path, encoding="utf-8", compression=None):
+    return "".join(load_lines(path, encoding=encoding, compression=compression))
 
 
 def load_jsonl(path, encoding="utf-8", first_n=None, sample_p=1.0, sample_seed=None, report_n=None, compression=None):
