@@ -21,7 +21,7 @@ from threading import Thread
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.70'
+VERSION = '1.5.71'
 
 __all__ = [
     # replacement for logging
@@ -47,7 +47,7 @@ __all__ = [
     # tools for simple statistics
     'timer', 'curr_time', 'avg', 'min_max_avg', 'n_min_max_avg', 'CPU_COUNT', 'MIN', 'MAX',
     # tools for environment
-    'env', 'load_env', 'get_args', 'mbp_info'
+    'env', 'load_env', 'get_args', 'parse_args', 'args_to_str', 'mbp_info'
 ]
 
 NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, SILENT = 0, 10, 20, 30, 40, 50, 60
@@ -959,6 +959,29 @@ def get_args(*args, **kwargs):
         else:
             parser.add_argument(f"--{k}", default=v, type=type(v))
     return parser.parse_args()
+
+
+def parse_args():
+    args = []
+    kwargs = {}
+    vec = sys.argv[1:][::-1]
+    while vec:
+        if vec[-1].startswith("--"):
+            k = vec.pop()[2:]
+            assert len(vec) > 0, f"--{k} is expecting a value"
+            v = vec.pop()
+            kwargs[k] = v
+        else:
+            args.append(vec.pop())
+    return args, kwargs
+
+
+def args_to_str(args=[], kwargs={}):
+    res = args[:]
+    for k, v in kwargs.items():
+        res.append(f"--{k}")
+        res.append(v)
+    return " ".join(res)
 
 
 def _np(path):
