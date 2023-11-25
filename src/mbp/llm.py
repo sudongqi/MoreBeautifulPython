@@ -24,7 +24,7 @@ def build_system_message(instruction, outputs=[], examples=[]):
     res = []
     _allow = ", ".join([f'"{k}"'for k in outputs])
     _key = "key" if len(outputs) == 1 else "keys"
-    res.append(f"Your response must be in json format, and only allow {_allow} as {_key}")
+    res.append(f"Your response must be in json format and can only allow {_allow} as {_key}")
     res.append(instruction)
     if examples:
         res.append("Here is an example:" if len(examples) == 1 else "Here are a few examples:")
