@@ -1,9 +1,8 @@
 from setuptools import setup, find_packages
-from src.mbp.info import VERSION
 
 setup(
     name="mbp",
-    version=VERSION,
+    version="1.5.73",
     author="Dongqi Su",
     description="Make Python even more beautiful :) This package includes implementations that you wish were in the standard library.",
     long_description=open("README.md").read(),
