@@ -21,7 +21,6 @@ from threading import Thread
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.72'
 
 __all__ = [
     # replacement for logging
@@ -47,7 +46,7 @@ __all__ = [
     # tools for simple statistics
     'timer', 'curr_time', 'avg', 'min_max_avg', 'n_min_max_avg', 'CPU_COUNT', 'MIN', 'MAX',
     # tools for environment
-    'env', 'load_env', 'get_args', 'parse_args', 'args_to_str', 'mbp_info'
+    'env', 'load_env', 'get_args', 'parse_args', 'args_to_cmd'
 ]
 
 NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, SILENT = 0, 10, 20, 30, 40, 50, 60
@@ -976,7 +975,7 @@ def parse_args():
     return args, kwargs
 
 
-def args_to_str(args=[], kwargs={}):
+def args_to_cmd(args=[], kwargs={}):
     res = args[:]
     for k, v in kwargs.items():
         res.append(f"--{k}")
@@ -1111,15 +1110,3 @@ def unwrap_dir(path):
             return unwrap_dir(jpath(path, sub_paths[0]))
         return _np(path)
     assert False, '{} is not a directory'.format(path)
-
-
-def mbp_info():
-    with enclose('More Beautiful Python'):
-        rows = [
-            ['examples', 'https://github.com/sudongqi/MoreBeautifulPython/blob/main/examples.py'],
-            ['execution_directory', run_dir()],
-            ['library_path', lib_path()],
-            ['cpu_count', CPU_COUNT],
-            ['version', VERSION]
-        ]
-        print_table(rows)

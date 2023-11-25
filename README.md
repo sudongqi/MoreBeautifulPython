@@ -5,30 +5,23 @@ Make Python even more beautiful :) This package includes implementations that yo
 ### Setup
 
     python -m pip install mbp
-
-    [optional] python -c "from mbp import *; mbp_info()"
+    python -m mbp.info
     =================================== More Beautiful Python ===================================
     examples              https://github.com/sudongqi/MoreBeautifulPython/blob/main/examples.py
     execution_directory   C:\Users\sudon\MoreBeautifulPython
     library_path          C:\Users\sudon\MoreBeautifulPython\src\mbp\core.py
     cpu_count             16
-    version               1.5.72
+    version               x.x.xx
     =============================================================================================
 
 ### Examples
 
 https://github.com/sudongqi/MoreBeautifulPython/blob/main/examples.py
 
-* replacement for logging
-* replacement for multiprocessing
-* syntax sugar for common utilities
-* tools for file system & data handling
-* tools for summarizations
-* tools for simple statistics
-* tools for llm (Large Language Model)
-
-
-
-
-
-
+-   replacement for logging
+-   replacement for multiprocessing
+-   syntax sugar for common utilities
+-   tools for file system & data handling
+-   tools for summarizations
+-   tools for simple statistics
+-   tools for llm (Large Language Model)

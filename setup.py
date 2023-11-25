@@ -1,8 +1,9 @@
 from setuptools import setup, find_packages
+from src.mbp.info import VERSION
 
 setup(
     name="mbp",
-    version="1.5.72",
+    version=VERSION,
     author="Dongqi Su",
     description="Make Python even more beautiful :) This package includes implementations that you wish were in the standard library.",
     long_description=open("README.md").read(),
@@ -16,7 +17,7 @@ setup(
     py_modules=["mbp"],
     package_dir={"": "src"},
     packages=find_packages(where="src"),
-    python_requires=">=3.6",
+    python_requires=">=3.12.0",
     install_requires=[
         "wcwidth>=0.2.5",
         "pyyaml>=5.1",
