@@ -21,7 +21,7 @@ from threading import Thread
 from pathlib import Path
 from wcwidth import wcswidth
 
-VERSION = '1.5.71'
+VERSION = '1.5.72'
 
 __all__ = [
     # replacement for logging
@@ -964,7 +964,7 @@ def get_args(*args, **kwargs):
 def parse_args():
     args = []
     kwargs = {}
-    vec = sys.argv[1:][::-1]
+    vec = sys.argv[2:][::-1] if sys.argv[0] == '-m' else sys.argv[1:][::-1]
     while vec:
         if vec[-1].startswith("--"):
             k = vec.pop()[2:]
