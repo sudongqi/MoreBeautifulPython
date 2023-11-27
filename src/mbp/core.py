@@ -974,8 +974,10 @@ def parse_args():
     while vec:
         if vec[-1].startswith("--"):
             k = vec.pop()[2:]
-            assert len(vec) > 0, f"--{k} is expecting a value"
-            v = vec.pop()
+            if vec and not vec[-1].startswith("--"):
+                v = vec.pop()
+            else:
+                v = True
             kwargs[k] = v
         else:
             args.append(vec.pop())
@@ -985,8 +987,12 @@ def parse_args():
 def args_to_cmd(args=[], kwargs={}):
     res = args[:]
     for k, v in kwargs.items():
-        res.append(f"--{k}")
-        res.append(v)
+        if isinstance(v, bool):
+            if v:
+                res.append(f"--{k}")
+        else:
+            res.append(f"--{k}")
+            res.append(v)
     return " ".join(res)
 
 
