@@ -948,7 +948,7 @@ def env(key, default_value=None):
 
 
 def load_env(dict_or_path):
-    d = load_yaml(dict_or_path) if isinstance(dict_or_path, dict) else dict_or_path
+    d = load_yaml(dict_or_path) if isinstance(dict_or_path, str) else dict_or_path
     for k, v in d.items():
         os.environ[k] = str(v)
 
