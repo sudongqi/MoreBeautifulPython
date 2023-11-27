@@ -959,6 +959,8 @@ def get_args(*args, **kwargs):
     for k, v in kwargs.items():
         if isinstance(v, list):
             parser.add_argument(f"--{k}", nargs="+", default=v, type=type(v[0]))
+        elif isinstance(v, bool):
+            parser.add_argument(f"--{k}", default=v, type=type(v), action=argparse.BooleanOptionalAction)
         else:
             parser.add_argument(f"--{k}", default=v, type=type(v))
     return parser.parse_args()
