@@ -1,6 +1,6 @@
 import os
 import shutil
-from src.mbp.info import VERSION
+from mbp.info import VERSION
 
 if os.path.exists('./dist'):
     shutil.rmtree('./dist')
