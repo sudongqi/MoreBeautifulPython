@@ -2,9 +2,9 @@ import sys
 import shutil
 import time
 import random
-import mbp.info
-from mbp import *
-from mbp.llm import *
+# from mbp import * (after pip install)
+from src.mbp import *
+from src.mbp.llm import *
 
 
 # test functions for multiprocessing
