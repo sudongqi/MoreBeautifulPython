@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="mbp",
-    version="1.5.82",
+    version="1.5.83",
     author="Dongqi Su",
     description="Make Python even more beautiful :) This package includes implementations that you wish were in the standard library.",
     long_description=open("README.md").read(),
@@ -14,7 +14,7 @@ setup(
         "Operating System :: OS Independent",
     ],
     py_modules=["mbp"],
-    package_dir={"": "src"},
+    package_dir={"": "mbp"},
     packages=find_packages(where="src"),
     python_requires=">=3.12.0",
     install_requires=[
