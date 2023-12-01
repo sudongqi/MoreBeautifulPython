@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import setup
 
 setup(
     name="mbp",
@@ -14,8 +14,7 @@ setup(
         "Operating System :: OS Independent",
     ],
     py_modules=["mbp"],
-    package_dir={"": "mbp"},
-    packages=find_packages(where="src"),
+    package_dir={"": "src"},
     python_requires=">=3.12.0",
     install_requires=[
         "wcwidth>=0.2.5",
