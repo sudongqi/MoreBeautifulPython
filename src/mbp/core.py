@@ -12,12 +12,10 @@ import inspect
 import itertools
 import traceback
 import argparse
-import queue
 from io import StringIO
 from collections.abc import Iterator, Iterable
 from datetime import datetime, timezone
-from multiprocessing import cpu_count
-from threading import Thread
+from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
 
@@ -194,12 +192,12 @@ def error_msg(e, verbose=False, sep='\n'):
         return _np(res.replace('\n', sep))
 
 
-class Worker(Thread):
-    def __init__(self, f, tasks, results, worker_id=None, cache_inp=None, build_inp=None, verbose=True):
-        super(Worker, self).__init__(daemon=True)
+class Worker(Process):
+    def __init__(self, f, inp, out, worker_id=None, cache_inp=None, build_inp=None, verbose=True):
+        super(Worker, self).__init__()
         self.worker_id = worker_id
-        self.tasks = tasks
-        self.results = results
+        self.inp = inp
+        self.out = out
         self.f = f
         self.cache_inp = cache_inp
         self.built_inp = build_inp
@@ -207,11 +205,10 @@ class Worker(Thread):
             log('started worker-{}'.format('?' if worker_id is None else worker_id))
 
     def run(self):
-        self.built_inp = None if self.built_inp is None else {k: v[0](*v[1:]) for k, v in self.built_inp.items()}
+        self.built_inp = None if self.built_inp is None else {
+            k: v[0](*v[1:]) for k, v in self.built_inp.items()}
         while True:
-            task_id, kwargs = self.tasks.get()
-            if task_id is None:
-                break
+            task_id, kwargs = self.inp.get()
             try:
                 if isinstance(kwargs, dict):
                     _kwargs = {k: v for k, v in kwargs.items()}
@@ -222,30 +219,30 @@ class Worker(Thread):
                     res = self.f(**_kwargs)
                 else:
                     res = self.f(*kwargs)
-                self.results.put({'worker_id': self.worker_id,
-                                  'task_id': task_id,
-                                  'inp': kwargs,
-                                  'res': res})
+                self.out.put({'worker_id': self.worker_id,
+                              'task_id': task_id,
+                              'task': kwargs,
+                              'res': res})
             except Exception as e:
-                self.results.put(
+                self.out.put(
                     {'worker_id': self.worker_id,
                      'task_id': task_id,
-                     'inp': kwargs,
+                     'task': kwargs,
                      'error': error_msg(e, False),
                      'traceback': error_msg(e, True)})
 
 
 class Workers:
     def __init__(self, f, num_workers=CPU_COUNT, cache_inp=None, build_inp=None, ignore_error=False, verbose=True):
-        self.tasks = queue.Queue()
-        self.results = queue.Queue()
+        self.inp = Queue()
+        self.out = Queue()
         self.workers = []
-        self.task_count = 0
+        self.task_id = 0
         self.verbose = verbose
         self.ignore_error = ignore_error
         self.f = f
         for i in range(num_workers):
-            worker = Worker(f, self.tasks, self.results, i, cache_inp, build_inp, verbose)
+            worker = Worker(f, self.inp, self.out, i, cache_inp, build_inp, verbose)
             worker.start()
             self.workers.append(worker)
 
@@ -278,37 +275,34 @@ class Workers:
             for d in self._map(tasks):
                 yield d
 
-    def add_task(self, task):
-        assert isinstance(task, tuple) or isinstance(task, dict), "task must be tuple of dict"
-        self.tasks.put((self.task_count, task))
-        self.task_count += 1
+    def add_task(self, inp):
+        self.inp.put((self.task_id, inp))
+        self.task_id += 1
 
     def get_result(self):
-        res = self.results.get()
+        res = self.out.get()
         if 'error' in res:
-            error_message = 'worker-{} failed task-{} : {}'.format(res['worker_id'], res['task_id'], res['error'])
+            err_msg = 'worker-{} failed task-{} : {}'.format(
+                res['worker_id'], res['task_id'], res['error'])
             if not self.ignore_error:
                 self.terminate()
-                assert False, error_message
+                assert False, err_msg
             if self.verbose:
-                log(error_message)
+                log(err_msg)
         elif self.verbose:
-            log('worker-{} completed task-{}'.format(res['worker_id'], res['task_id']))
+            log('worker-{} completed task-{}'.format(
+                res['worker_id'], res['task_id']))
         return res
 
     def terminate(self):
-        for _ in self.workers:
-            self.tasks.put((None, None))
-        for worker in self.workers:
-            worker.join()
+        for w in self.workers:
+            w.terminate()
         if self.verbose:
             log('terminated {} workers'.format(len(self.workers)))
 
 
-def work(f, tasks, num_workers=CPU_COUNT, cache_inp=None, build_inp=None,
-         ordered=True, ignore_error=False, res_only=True, verbose=False):
-    workers = Workers(f, num_workers, cache_inp,
-                      build_inp, ignore_error, verbose)
+def work(f, tasks, num_workers=CPU_COUNT, cache_inp=None, build_inp=None, ordered=True, ignore_error=False, res_only=True, verbose=False):
+    workers = Workers(f, num_workers, cache_inp, build_inp, ignore_error, verbose)
     for d in workers.map(tasks, ordered):
         yield d.get('res', None) if res_only else d
     workers.terminate()

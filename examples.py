@@ -2,7 +2,7 @@ import sys
 import shutil
 import time
 import random
-# from mbp import * (after pip install)
+# from mbp import * (for normal usage)
 from src.mbp import *
 from src.mbp.llm import *
 
@@ -278,13 +278,14 @@ def test_core(log_path='./examples.log'):
 
 
 def test_llm():
-    log(build_system_message(
-        "Let's think about this math problem step by step",
-        outputs=["res"],
-        examples=[
-            {"input": "5 + 5", "res": 10},
-            {"input": "2 * (3 + 2)", "res": 10}
-        ]))
+    with enclose(fn(build_system_message)):
+        log(build_system_message(
+            "Let's think about this math problem step by step",
+            outputs=["res"],
+            examples=[
+                {"input": "5 + 5", "res": 10},
+                {"input": "2 * (3 + 2)", "res": 10}
+            ]))
 
 
 if __name__ == '__main__':
