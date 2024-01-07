@@ -38,7 +38,7 @@ __all__ = [
     # handling string
     'break_str', 'shorten_str', 'fill_str',
     # tools for debug
-    'enclose', 'enclose_timer', 'error_msg', 'debug',
+    'enclose', 'enclose_timer', 'error_msg', 'summarize_exception', 'debug',
     # tools for summarizations
     'prints', 'print_iter', 'print_table', 'print_line',
     # tools for simple statistics
@@ -190,6 +190,14 @@ def error_msg(e, verbose=False, sep='\n'):
     else:
         res = traceback.format_exc()
         return _np(res.replace('\n', sep))
+    
+def summarize_exception(e):
+    res = {}
+    res['error'] = error_msg(e, verbose=False)
+    res['error_type'] = res['error'].split('(')[0]
+    res['error_msg'] = res['error'][len(res['error_type']) + 2: -2]
+    res['traceback'] = error_msg(e, verbose=True)
+    return res
 
 
 class Worker(Process):
@@ -818,16 +826,11 @@ def debug(*data, mode=prints, char='-', level=DEBUG):
 
 
 def try_f(*args, **kwargs):
-    res = {}
     try:
         f = args[0]
-        res['res'] = f(*args[1:], **kwargs)
+        return {"res": f(*args[1:], **kwargs)}
     except Exception as e:
-        res['error'] = error_msg(e, verbose=False)
-        res['error_type'] = res['error'].split('(')[0]
-        res['error_msg'] = res['error'][len(res['error_type']) + 2: -2]
-        res['traceback'] = error_msg(e, verbose=True)
-    return res
+        return summarize_exception(e)
 
 
 def n_min_max_avg(data, key_f=None, first_n=None, sample_p=1.0, sample_seed=None):
