@@ -408,7 +408,8 @@ def load_json(path, encoding='utf-8', compression=None):
 
 def load_yaml(path, encoding='utf-8', compression=None):
     with open_file(path, encoding, compression) as f:
-        return yaml.safe_load(f)
+        res = yaml.safe_load(f)
+        return {} if res is None else res
 
 
 def save_txt(path, data, encoding='utf-8'):
