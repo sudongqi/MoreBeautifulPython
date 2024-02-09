@@ -26,9 +26,12 @@ def fn(*functions):
     return ', '.join(f.__name__ + '()' for f in functions)
 
 
-def alog(res, reference):
+def assert_log(res, reference):
     log(res)
-    assert res == reference, f"{res} != {reference}"
+    if callable(reference):
+        assert reference(res)
+    else:
+        assert res == reference, f"{res} != {reference}"
 
 
 def test_core(log_path='./examples.log'):
@@ -70,7 +73,7 @@ def test_core(log_path='./examples.log'):
     log('\n')
 
     # enclose() generate two text separators that enclose the execution
-    with enclose('header', width=30, bottom_margin=1, char='=', use_timer=False):
+    with enclose('header', width=30, char='='):
         [log('this is line {}'.format(i)) for i in range(3)]
 
     # when width=None, the width will be calculated automatically based on the captured content
@@ -79,13 +82,13 @@ def test_core(log_path='./examples.log'):
 
     # recorder() save all logs into a (passed-in) list
     with enclose(fn(recorder)):
-        tape = []
-        with recorder(tape, captured_level=DEBUG):
+        with recorder(captured_level=DEBUG) as r:
             log('9 8 7 6 5 4 3 2 1')
             log('ok')
             log('a debug message', level=DEBUG)
-        tape[0] = tape[0][::-1]
-        print_iter(tape)
+        recording = r.flush()
+        assert(recording.startswith("9 8 7") and recording.endswith("debug message\n"))
+        log(recording, end="")
 
     # timer() as a context manager
     with timer('build_vec(100000)'):
@@ -108,6 +111,7 @@ def test_core(log_path='./examples.log'):
 
     # similarly, we can use work() to process tasks from an iterator
     # tasks can be iterator of tuple (need to specify all inputs) or dict
+    # r is None ==> task failed
     with enclose_timer(fn(work)):
         tasks = iter([(i, 0.2, 0.5) for i in range(n_task)])
         for r in work(f=sleep_then_maybe_fail, tasks=tasks, ordered=True, ignore_error=True):
@@ -134,8 +138,8 @@ def test_core(log_path='./examples.log'):
     # dir_basename() check and return the directory name of a path
     # file_basename() check and return the file name of a path
     with enclose(fn(jpath, run_dir, lib_path, this_dir, dir_basename, file_basename)):
-        log(jpath(this_dir(), 'a', 'b', 'c.file'))
-        log(run_dir())
+        assert_log(jpath(this_dir(), 'a', 'b', 'c.file'), lambda x: x.endswith("MoreBeautifulPython/a/b/c.file"))
+        assert_log(run_dir(), lambda x: x.endswith("MoreBeautifulPython"))
         log(lib_path())
         log(this_dir())
         log(this_dir(go_up=1, go_to='AnotherProject/hello.txt'))
@@ -211,16 +215,16 @@ def test_core(log_path='./examples.log'):
     # break_str() break a long string into list of smaller (measured by wcswidth()) strings
     with enclose(fn(break_str)):
         string = 'a very very very very long string'
-        alog(break_str(string, width=12), ["a very very ", "very very lo", "ng string"])
+        assert_log(break_str(string, width=12), ["a very very ", "very very lo", "ng string"])
 
     # shorten_str() truncate a string and append "..." if len(string) > width
     with enclose(fn(shorten_str)):
-        alog(shorten_str(string, 100), "a very very very very long string")
-        alog(shorten_str(string, 20), "a very very very ...")
+        assert_log(shorten_str(string, 100), "a very very very very long string")
+        assert_log(shorten_str(string, 20), "a very very very ...")
 
     # fill_str() replace placeholders in string with an arguments
     with enclose(fn(fill_str)):
-        alog(fill_str("1{ok}34{ok2}", ok=2, ok2=5), "12345")
+        assert_log(fill_str("1{ok}34{ok2}", ok=2, ok2=5), "12345")
 
     # debug() can trace back to the original function call and print the variable names with their values
     # debug() is slow and should be used only for inspection purposes.
@@ -267,9 +271,9 @@ def test_core(log_path='./examples.log'):
     # get 3 key statistics from an iterator at once
     with enclose(fn(n_min_max_avg, min_max_avg, avg)):
         numbers = [1, 2, 3, 4, 5]
-        alog(n_min_max_avg(numbers), (5, 1, 5, 3.0))
-        alog(min_max_avg(numbers), (1, 5, 3.0))
-        alog(avg(numbers), 3.0)
+        assert_log(n_min_max_avg(numbers), (5, 1, 5, 3.0))
+        assert_log(min_max_avg(numbers), (1, 5, 3.0))
+        assert_log(avg(numbers), 3.0)
 
     # curr_time() == str(datetime.now(timezone.utc))[:19]
     with enclose(fn(curr_time)):

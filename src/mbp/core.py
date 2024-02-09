@@ -89,8 +89,7 @@ class Logger:
 
     def __call__(self, *data, level=INFO, file=None, end=None, flush=True):
         if self.level <= level:
-            header = f'{curr_time()} {get_msg_level(level)} {self.name}: ' \
-                if self.name != '' else f'{curr_time()} {get_msg_level(level)}: '
+            header = f'{curr_time()} {get_msg_level(level)} {self.name}: ' if self.name != '' else f'{curr_time()} {get_msg_level(level)}: '
             header_empty = len(header) * ' '
             for f in (self.file if file is None else open_files_for_logger(file)):
                 for d in data:
@@ -112,13 +111,13 @@ LOGGER = Logger()
 CONTEXT_LOGGER_SET = False
 
 
-class context_logger(object):
+class context_logger:
     def __init__(self, name='', file=sys.stdout, level=INFO, verbose=False, can_overwrite=True):
         global LOGGER
         global CONTEXT_LOGGER_SET
         self.logger_was_changed = False
         if not CONTEXT_LOGGER_SET or not can_overwrite:
-            self.org_logger = LOGGER
+            self.original_logger = LOGGER
             LOGGER = Logger(name, file, level, verbose)
             self.logger_was_changed = True
             CONTEXT_LOGGER_SET = True
@@ -130,7 +129,7 @@ class context_logger(object):
         global LOGGER
         global CONTEXT_LOGGER_SET
         if self.logger_was_changed:
-            LOGGER = self.org_logger
+            LOGGER = self.original_logger
             CONTEXT_LOGGER_SET = False
 
 
@@ -165,23 +164,23 @@ def log(*messages, level=INFO, file=None, end=None, flush=True):
     LOGGER(*messages, level=level, file=file, end=end, flush=flush)
 
 
-class recorder(object):
-    def __init__(self, tape, captured_level=INFO):
-        assert tape == [], '1st argument must be an empty list'
+class recorder:
+    def __init__(self, captured_level=INFO):
         self.buffer = StringIO()
-        self.logger = context_logger(
-            file=self.buffer, level=captured_level, can_overwrite=False)
-        self.tape = tape
+        self.logger = context_logger(file=self.buffer, level=captured_level, can_overwrite=False)
 
     def __enter__(self):
         self.logger.__enter__()
+        return self
+    
+    def flush(self):
+        res = self.buffer.getvalue()
+        self.buffer.truncate(0)
+        self.buffer.seek(0)
+        return res
 
-    def __exit__(self, _type, value, _traceback):
-        buffer_value = self.buffer.getvalue()
-        if buffer_value:
-            buffer_value = buffer_value.split('\n')
-            self.tape.extend(buffer_value)
-        self.logger.__exit__(_type, value, _traceback)
+    def __exit__(self, *args):
+        self.logger.__exit__(*args)
 
 
 def error_msg(e, verbose=False, sep='\n'):
@@ -316,19 +315,29 @@ def work(f, tasks, num_workers=CPU_COUNT, cache_inp=None, build_inp=None, ordere
     workers.terminate()
 
 
-class timer(object):
-    def __init__(self, text='', level=INFO):
+class timer:
+    def __init__(self, msg="", level=INFO):
         self.start = None
-        self.msg = text.strip()
         self.level = level
+        self.msg = msg
+        self.checked = False
 
     def __enter__(self):
         self.start = time.time()
+        return self
 
-    def __exit__(self, _type, value, _traceback):
-        duration = (time.time() - self.start) * 1000
-        log('{}took {:.3f} ms'.format('' if self.msg ==
-            '' else self.msg + ' ==> ', duration), level=self.level)
+    def check(self, msg='', reset=True):
+        end_time = time.time()
+        self.checked = True
+        self.duration = (end_time - self.start) * 1000
+        if reset:
+            self.start = end_time
+        log('{}took {:.3f} ms'.format('' if msg == '' else f'{msg} ==> ', self.duration), level=self.level)
+        return self.duration
+
+    def __exit__(self, *args):
+        if not self.checked:
+            self.check(self.msg)
 
 
 def iterate(data, first_n=None, sample_p=1.0, sample_seed=None, report_n=None):
@@ -345,9 +354,7 @@ def iterate(data, first_n=None, sample_p=1.0, sample_seed=None, report_n=None):
             yield d
             if report_n is not None and counter % report_n == 0:
                 current_time = time.time()
-                speed = report_n / \
-                    (current_time - prev_time) if current_time - \
-                    prev_time != 0 else 'inf'
+                speed = report_n / (current_time - prev_time) if current_time - prev_time != 0 else 'inf'
                 log('{}/{} ==> {:.3f} items/s'.format(counter, total, speed))
                 prev_time = current_time
 
@@ -367,7 +374,7 @@ def iterate_files(path, pattern=r".*"):
     # return  iterator of (absolute_path, relative_path, file_name)
     _is_dir_and_exist(path)
     matcher = re.compile(pattern)
-    for p, dirs, files in os.walk(path):
+    for p, _, files in os.walk(path):
         for file_name in files:
             if matcher.fullmatch(file_name):
                 full_path = jpath(p, file_name)
@@ -553,8 +560,7 @@ def print_table(rows, headers=None, name='', sep='-', space=3, cell_space=1, fil
                 max_column_width=None, min_column_widths=None, level=INFO, res=False):
     if headers is not None:
         rows = [headers] + rows
-    _res = _build_table(rows, space, cell_space, filler,
-                        max_column_width, min_column_widths)
+    _res = _build_table(rows, space, cell_space, filler, max_column_width, min_column_widths)
     first_sep_line = print_line(text=name, width=len(_res[0]), char=sep, res=True)
     sep_line = print_line(width=max(len(first_sep_line), len(_res[0])), char=sep, res=True)
     if headers is not None:
@@ -624,7 +630,6 @@ def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep,
         log_raw(marker_l)
         # group data
         for idx, d in enumerate(data):
-            d_type = type(d)
             if is_short_data(d):
                 str_d = put_quote(d)
                 if cache_size + len(str_d) + sep_len > width:
@@ -642,8 +647,7 @@ def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep,
             if isinstance(d, list):
                 print_cache(d, shift + 1, 0 if idx == 0 else None)
             else:
-                _prints(data[d], indent, width, level, shift + 1,
-                        0 if idx == 0 else None, sep, quote, kv_sep, compact)
+                _prints(data[d], indent, width, level, shift + 1, 0 if idx == 0 else None, sep, quote, kv_sep, compact)
             if idx != len(cache) - 1:
                 log_raw('{}\n'.format(sep))
         log_raw(marker_r)
@@ -663,8 +667,7 @@ def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep,
         for idx, (k, v) in enumerate(kv):
             str_k = put_quote(k)
             if is_short_data(v):
-                log_raw('{}{}{}{}'.format(
-                    shift_str + indent_str, str_k, kv_sep, put_quote(v)))
+                log_raw('{}{}{}{}'.format(shift_str + indent_str, str_k, kv_sep, put_quote(v)))
             else:
                 log_raw('{}{}{}'.format(shift_str + indent_str, str_k, kv_sep))
                 # for non-compact
@@ -678,8 +681,7 @@ def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep,
                     else:
                         v_shift = shift + indent + len(str_k) + kv_sep_len
                         v_indent = 0
-                _prints(v, indent, width, level, v_shift,
-                        v_indent, sep, quote, kv_sep, compact)
+                _prints(v, indent, width, level, v_shift, v_indent, sep, quote, kv_sep, compact)
             if idx != len(kv) - 1:
                 log_raw(sep + '\n')
             else:
@@ -695,27 +697,22 @@ def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep,
                 continue
             elif idx != 0 or extra_indent is None:
                 log_raw('\n{}'.format(shift_str))
-            log_raw('{}{}{}{}'.format(quote, s, '\\n' if idx !=
-                    len(_data) - 1 else '', quote))
+            log_raw('{}{}{}{}'.format(quote, s, '\\n' if idx != len(_data) - 1 else '', quote))
     else:
         data = str(data)
-        _prints(data, indent, width, level, shift,
-                extra_indent, sep, quote, kv_sep, compact)
+        _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep, compact)
 
 
-def prints(*data, indent=4, width=80, shift=0, extra_indent=None, compact=False, sep=',', quote='"', kv_sep=': ',
-           level=INFO, res=False):
+def prints(*data, indent=4, width=80, shift=0, extra_indent=None, compact=False, 
+           sep=',', quote='"', kv_sep=': ', level=INFO, res=False):
     if res:
-        res = []
-        with recorder(res):
+        with recorder() as r:
             for d in data:
-                _prints(d, indent, width, level, shift,
-                        extra_indent, sep, quote, kv_sep, compact)
-        return '\n'.join(res)
+                _prints(d, indent, width, level, shift, extra_indent, sep, quote, kv_sep, compact)
+        return r.flush()
     else:
         for d in data:
-            _prints(d, indent, width, level, shift,
-                    extra_indent, sep, quote, kv_sep, compact)
+            _prints(d, indent, width, level, shift, extra_indent, sep, quote, kv_sep, compact)
             log('', level=level)
 
 
@@ -778,16 +775,13 @@ def debug(*data, mode=prints, char='-', level=DEBUG):
         stack = inspect.stack()
         lineno = ' [{}]'.format(stack[1].lineno)
         filename = file_basename(stack[1][1]).split('.')[0]
-        function_name = '.{}'.format(
-            stack[1][3]) if stack[1][3] != '<module>' else ''
+        function_name = '.{}'.format(stack[1][3]) if stack[1][3] != '<module>' else ''
 
         code_str = stack[1].code_context[0].strip()
         arguments = code_str[code_str.index("(") + 1:-1]
         arguments = [a.strip() for a in arguments.split(',') if '=' not in a]
-        assert len(data) == len(
-            arguments), '{} ==> debug() can not take arguments with "," in it'.format(code_str)
-        argument_str = '' if len(
-            arguments) > 1 else ': {}'.format(arguments[0])
+        assert len(data) == len(arguments), '{} ==> debug() can not take arguments with "," in it'.format(code_str)
+        argument_str = '' if len(arguments) > 1 else ': {}'.format(arguments[0])
 
         with enclose('{}{}{}{}'.format(filename, function_name, lineno, argument_str), char=char):
             if mode is None:
@@ -836,8 +830,7 @@ def try_f(*args, **kwargs):
 
 def n_min_max_avg(data, key_f=None, first_n=None, sample_p=1.0, sample_seed=None):
     res_min, res_max, res_sum = float('inf'), -float('inf'), 0
-    iterator = iterate(data, first_n=first_n,
-                       sample_p=sample_p, sample_seed=sample_seed)
+    iterator = iterate(data, first_n=first_n, sample_p=sample_p, sample_seed=sample_seed)
     if key_f is not None:
         iterator = map(key_f, iterator)
     counter = 0
@@ -870,73 +863,67 @@ def _strip_and_add_spaces(s):
 
 def print_line(text=None, width=20, char='-', level=INFO, min_wing_size=5, res=False):
     if text is None:
-        _res = char * width
+        chars = char * width
     else:
         text = _strip_and_add_spaces(text)
         wing_size = (width - len(text)) // 2
         wing_size = max(wing_size, min_wing_size)
         wing = char * wing_size
-        _res = wing + text + wing
-        if len(_res) < width:
-            _res += char
-    if not res:
-        log(_res, level=level)
-    else:
-        return _res
+        chars = wing + text + wing
+        if len(chars) < width:
+            chars += char
+    if res:
+        return chars
+    log(chars, level=level)
 
 
-class enclose(object):
-    def __init__(self, text='', width=None, max_width=80, char='=', top_margin=0, bottom_margin=1, use_timer=False,
-                 level=INFO, captured_level=INFO):
+class enclose:
+    def __init__(self, text='', width=None, max_width=80, char='=', end='\n\n', captured_level=INFO, level=INFO):
         self.text = _strip_and_add_spaces(text)
         self.width = width
         self.max_width = max_width
-        self.top_margin = top_margin
-        self.bottom_margin = bottom_margin
         self.char = char
-        self.start = None
-        self.use_timer = use_timer
+        self.end = end
         self.level = level
-        self.aligned = width is None
-        if self.aligned:
-            self.tape = []
-            self.recorder = recorder(self.tape, captured_level=captured_level)
+        if self.width is None:
+            self.recorder = recorder(captured_level=captured_level)
 
     def __enter__(self):
-        if not self.aligned:
-            log('\n' * self.top_margin, end='', level=self.level)
+        if self.width is not None:
             top_line = print_line(text=self.text, width=self.width, char=self.char, res=True)
             self.top_line_size = len(top_line)
             log(top_line, level=self.level)
         else:
             self.recorder.__enter__()
-        self.start = time.time()
 
-    def __exit__(self, _type, value, _traceback):
-        if self.aligned:
-            self.recorder.__exit__(_type, value, _traceback)
-            max_line_length = len(self.text)
-            if self.tape:
-                # enclosed lines should be slightly longer than the longest content
-                max_line_length = max(len(msg) + 3 for msg in self.tape)
-            max_line_length = min(self.max_width, max_line_length)
-            log('\n' * self.top_margin, end='', level=self.level)
-            top_line = print_line(text=self.text, width=max_line_length, char=self.char, res=True)
+    def __exit__(self, *args):
+        if self.width is None:
+            self.recorder.__exit__(*args)
+            content = self.recorder.flush()
+            # enclosed lines should be slightly longer than the longest content
+            content_width = 0 if not content else max(len(line) for line in content.split("\n"))
+            content_width = min(self.max_width, content_width + 3)
+            top_line = print_line(text=self.text, width=content_width, char=self.char, res=True)
             self.top_line_size = len(top_line)
             log(top_line, level=self.level)
-            log('\n'.join(self.tape), level=self.level, end='')
-        print_line(width=self.top_line_size, char=self.char, level=self.level)
-
-        if self.use_timer:
-            log('took {:.3f} ms'.format(
-                (time.time() - self.start) * 1000), level=self.level)
-        log('\n' * self.bottom_margin, end='', level=self.level)
+            log(content, level=self.level, end='')
+        log(print_line(width=self.top_line_size, char=self.char, level=self.level, res=True), end=self.end)
 
 
-class enclose_timer(enclose):
-    def __init__(self, text='', width=None, max_width=80, char='=', top_margin=0, bottom_margin=1, level=INFO):
-        super().__init__(text, width, max_width, char,
-                         top_margin, bottom_margin, True, level)
+class enclose_timer:
+    def __init__(self, text='', width=None, max_width=80, char='=', end='\n\n', captured_level=INFO, level=INFO):
+        self._enclose = enclose(text, width, max_width, char, '\n', captured_level, level)
+        self.end = end
+        self.level = level
+
+    def __enter__(self):
+        self._enclose.__enter__()
+        self.time_start = time.time()
+
+    def __exit__(self, *args):
+        time_end = time.time()
+        self._enclose.__exit__(*args)
+        log('took {:.3f} ms'.format((time_end - self.time_start) * 1000), end=self.end, level=self.level)
 
 
 def env(key, default_value=None):
@@ -1019,19 +1006,16 @@ def run_dir():
 
 def _is_file_and_exist(path):
     if os.path.exists(path):
-        assert os.path.isfile(
-            path), '{} ==> already exist but it\'s a directory'.format(path)
+        assert os.path.isfile(path), '{} ==> already exist but it\'s a directory'.format(path)
 
 
 def _is_dir_and_exist(path):
     if os.path.exists(path):
-        assert os.path.isdir(
-            path), '{} ==> already exist but it\'s a file'.format(path)
+        assert os.path.isdir(path), '{} ==> already exist but it\'s a file'.format(path)
 
 
 def build_dirs(path_or_paths, overwrite=False):
-    paths = path_or_paths if isinstance(
-        path_or_paths, list) else [path_or_paths]
+    paths = path_or_paths if isinstance(path_or_paths, list) else [path_or_paths]
     for path in paths:
         path = Path(os.path.abspath(path))
         _is_dir_and_exist(path)
@@ -1041,8 +1025,7 @@ def build_dirs(path_or_paths, overwrite=False):
 
 
 def build_files(path_or_paths, overwrite=False):
-    paths = path_or_paths if isinstance(
-        path_or_paths, list) else [path_or_paths]
+    paths = path_or_paths if isinstance(path_or_paths, list) else [path_or_paths]
     for path in paths:
         _is_file_and_exist(path)
         if overwrite and os.path.exists(path):
@@ -1052,8 +1035,7 @@ def build_files(path_or_paths, overwrite=False):
 
 
 def build_dirs_for(path_or_paths, overwrite=False):
-    paths = path_or_paths if isinstance(
-        path_or_paths, list) else [path_or_paths]
+    paths = path_or_paths if isinstance(path_or_paths, list) else [path_or_paths]
     for path in paths:
         path = Path(os.path.abspath(path))
         _is_file_and_exist(path)
@@ -1080,16 +1062,14 @@ def traverse(path, go_up=0, go_to=None, should_exist=False):
     res = Path(os.path.abspath(path))
     o_res = res
     go_up = max(go_up, 0)
-    for i in range(go_up):
+    for _ in range(go_up):
         n_res = res.parent
-        assert n_res != res, '{} (go up {} times) ==> already reach root and cannot go up further'.format(
-            o_res, go_up)
+        assert n_res != res, '{} (go up {} times) ==> already reach root and cannot go up further'.format(o_res, go_up)
         res = n_res
     res = str(res)
     if go_to is not None:
         res = jpath(res, go_to)
-    assert not should_exist or os.path.exists(
-        res), '{} ==> does not exist'.format(res)
+    assert not should_exist or os.path.exists(res), '{} ==> does not exist'.format(res)
     return _np(res)
 
 
@@ -1109,8 +1089,7 @@ def this_dir(go_up=0, go_to=None, should_exist=False):
 def unwrap_file(path):
     if os.path.isdir(path):
         sub_paths = os.listdir(path)
-        assert len(
-            sub_paths) == 1, 'there are more than one files/dirs in {}'.format(path)
+        assert len(sub_paths) == 1, 'there are more than one files/dirs in {}'.format(path)
         return unwrap_file(jpath(path, sub_paths[0]))
     return _np(path)
 
