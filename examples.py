@@ -22,11 +22,11 @@ def build_vec(size):
     return [x for x in range(size)]
 
 
-def fn(*functions):
+def fname(*functions):
     return ', '.join(f.__name__ + '()' for f in functions)
 
 
-def assert_log(res, reference):
+def log_assert(res, reference):
     log(res)
     if callable(reference):
         assert reference(res)
@@ -36,7 +36,7 @@ def assert_log(res, reference):
 
 def test_core(log_path='./examples.log'):
     # log() include all functionality of print()
-    log('this is from the global logger')
+    log('this is from the global logger', end="\n\n")
 
     # from this point on, all log() will print to file at path "./log" as well as stdout
     set_global_logger(file=[log_path, sys.stdout])
@@ -81,7 +81,7 @@ def test_core(log_path='./examples.log'):
         [log('this is line {}'.format(i)) for i in range(3)]
 
     # recorder() save all logs into a (passed-in) list
-    with enclose(fn(recorder)):
+    with enclose(fname(recorder)):
         with recorder(captured_level=DEBUG) as r:
             log('9 8 7 6 5 4 3 2 1')
             log('ok')
@@ -94,7 +94,6 @@ def test_core(log_path='./examples.log'):
     with timer('build_vec(100000)'):
         build_vec(100000)
 
-    # enclose_timer() == enclose(timer=True)
     # iterate() can customize iteration procedures
     # for example, sample 10% and report every 3 yield from the first 100 samples
     with enclose_timer():
@@ -103,7 +102,7 @@ def test_core(log_path='./examples.log'):
 
     # Workers() is more flexible than multiprocessing.Pool()
     n_task = 6
-    with enclose_timer(fn(Workers)):
+    with enclose_timer(fname(Workers)):
         workers = Workers(f=sleep_then_maybe_fail, num_workers=3, verbose=True, ignore_error=True)
         [workers.add_task({'x': i, 'fail_p': 0.3}) for _ in range(n_task)]
         [workers.get_result() for _ in range(n_task)]
@@ -112,13 +111,13 @@ def test_core(log_path='./examples.log'):
     # similarly, we can use work() to process tasks from an iterator
     # tasks can be iterator of tuple (need to specify all inputs) or dict
     # r is None ==> task failed
-    with enclose_timer(fn(work)):
+    with enclose_timer(fname(work)):
         tasks = iter([(i, 0.2, 0.5) for i in range(n_task)])
         for r in work(f=sleep_then_maybe_fail, tasks=tasks, ordered=True, ignore_error=True):
             log(r)
 
     # use cached_inp = {'fixed_input': value, ...} to avoid pickling of heavy objects
-    with enclose(fn(work) + " with cache_inp"):
+    with enclose(fname(work) + " with cache_inp"):
         vec_size = 1000000
         vec = [x for x in range(vec_size)]
         with timer('work()'):
@@ -137,22 +136,22 @@ def test_core(log_path='./examples.log'):
     # this_dir() return the directory of the current file
     # dir_basename() check and return the directory name of a path
     # file_basename() check and return the file name of a path
-    with enclose(fn(jpath, run_dir, lib_path, this_dir, dir_basename, file_basename)):
-        assert_log(jpath(this_dir(), 'a', 'b', 'c.file'), lambda x: x.endswith("MoreBeautifulPython/a/b/c.file"))
-        assert_log(run_dir(), lambda x: x.endswith("MoreBeautifulPython"))
+    with enclose(fname(jpath, run_dir, lib_path, this_dir, dir_basename, file_basename)):
+        log_assert(jpath('/my_folder', 'a', 'b', 'c.file'), "/my_folder/a/b/c.file")
+        log(run_dir())
         log(lib_path())
-        log(this_dir())
+        log_assert(this_dir(), lambda x: x.endswith("MoreBeautifulPython"))
         log(this_dir(go_up=1, go_to='AnotherProject/hello.txt'))
-        log(dir_basename(dir_of(__file__)))
-        log(file_basename(__file__))
+        log_assert(dir_basename(dir_of(__file__)), "MoreBeautifulPython")
+        log_assert(file_basename(__file__), "examples.py")
 
     # open_files() return all files under a directory
-    with enclose(fn(open_files)):
+    with enclose(fname(open_files)):
         for f in open_files(this_dir(), pattern=r'.*\.py'):
             f.readlines()
 
     # build_files() (or build_dirs()) create files (or directory) after creating paths
-    with enclose(fn(build_files, build_dirs)):
+    with enclose(fname(build_files, build_dirs)):
         test_dir = './test_dir'
         build_files([jpath(test_dir, file_name) for file_name in ['a.txt', 'b.txt', 'c.txt']])
         log('{} files under {}'.format(len(list(open_files(test_dir))), test_dir))
@@ -161,14 +160,14 @@ def test_core(log_path='./examples.log'):
         shutil.rmtree(test_dir)
 
     # unwrap_file() (or unwrap_dir()) will unwrap all parent directories leading to a unique file (or dir)
-    with enclose(fn(unwrap_file, unwrap_dir)):
+    with enclose(fname(unwrap_file, unwrap_dir)):
         build_files('./a/b/c/file')
         log(unwrap_file('./a'))
         log(unwrap_dir('./a'))
         shutil.rmtree('./a')
 
     # type_of() return the type idx of 1st argument defined by the 2nd argument
-    with enclose(fn(type_of)):
+    with enclose(fname(type_of)):
         types = [int, dict, list, set]
         # the return idx started at 1 because 0 is reserved for no match
         idx = type_of([1, 2, 3], types) - 1
@@ -178,7 +177,7 @@ def test_core(log_path='./examples.log'):
 
     # for i in range_of(data)              ==   for i in range(len(data))
     # for d in items_of(data, 1, 5, 2)     ==   for d in itertools.islice(data, start=1, end=, step=2)
-    with enclose(fn(range_of, items_of)):
+    with enclose(fname(range_of, items_of)):
         vec = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i']
         vec_iter = iter(vec)
         log(list(range_of(vec)))
@@ -187,7 +186,7 @@ def test_core(log_path='./examples.log'):
         log(list(items_of(vec_iter, 0, 5)))
 
     # prints() is a superior pprint()
-    with enclose(fn(prints)):
+    with enclose(fname(prints)):
         class TestObject:
             def __str__(self):
                 return 'this is a test object'
@@ -208,23 +207,23 @@ def test_core(log_path='./examples.log'):
         prints(hybrid_dict)
 
     # try_f() perform try-except routine and capture the result or error messages in a dictionary
-    with enclose(fn(try_f)):
+    with enclose(fname(try_f)):
         prints(try_f(sleep_then_maybe_fail, 'abc', fail_p=1))
         log(try_f(sleep_then_maybe_fail, 'abc', fail_p=0))
 
     # break_str() break a long string into list of smaller (measured by wcswidth()) strings
-    with enclose(fn(break_str)):
+    with enclose(fname(break_str)):
         string = 'a very very very very long string'
-        assert_log(break_str(string, width=12), ["a very very ", "very very lo", "ng string"])
+        log_assert(break_str(string, width=12), ["a very very ", "very very lo", "ng string"])
 
     # shorten_str() truncate a string and append "..." if len(string) > width
-    with enclose(fn(shorten_str)):
-        assert_log(shorten_str(string, 100), "a very very very very long string")
-        assert_log(shorten_str(string, 20), "a very very very ...")
+    with enclose(fname(shorten_str)):
+        log_assert(shorten_str(string, 100), "a very very very very long string")
+        log_assert(shorten_str(string, 20), "a very very very ...")
 
     # fill_str() replace placeholders in string with an arguments
-    with enclose(fn(fill_str)):
-        assert_log(fill_str("1{ok}34{ok2}", ok=2, ok2=5), "12345")
+    with enclose(fname(fill_str)):
+        log_assert(fill_str("1{ok}34{ok2}", ok=2, ok2=5), "12345")
 
     # debug() can trace back to the original function call and print the variable names with their values
     # debug() is slow and should be used only for inspection purposes.
@@ -245,13 +244,13 @@ def test_core(log_path='./examples.log'):
     data = list(load_jsonl(jsonl_file_path))
 
     # print_iter(iterator) == [log(item) for item in iterator]
-    with enclose(fn(print_iter)):
+    with enclose(fname(print_iter)):
         print_iter(data)
 
     # print_table() can adjust column width automatically
     rows = [list(d.values()) for d in data]
     headers = list(data[0].keys())
-    print_table(rows, name=fn(print_table), headers=headers, space=3)
+    print_table(rows, name=fname(print_table), headers=headers, space=3)
 
     # print_table() can also pad a row, and handle tables inside table (if item is a list, dict, set, or tuple)
     # print_table() calculate column width based on the longest item or use min_column_widths if applicable
@@ -260,29 +259,29 @@ def test_core(log_path='./examples.log'):
     print_table(rows,
                 headers=headers,
                 min_column_widths=[None, 20],
-                name=fn(print_table) + ' with incomplete rows')
+                name=fname(print_table) + ' with incomplete rows')
 
     # use max_column_width to shorten a cell with long data (str)
     print_table([[1, 2, '3' * 100], [1, '2' * 100, 3]],
                 headers=['a', 'b', 'c'],
                 max_column_width=10,
-                name=fn(print_table) + " with long cell")
+                name=fname(print_table) + " with long cell")
 
     # get 3 key statistics from an iterator at once
-    with enclose(fn(n_min_max_avg, min_max_avg, avg)):
+    with enclose(fname(n_min_max_avg, min_max_avg, avg)):
         numbers = [1, 2, 3, 4, 5]
-        assert_log(n_min_max_avg(numbers), (5, 1, 5, 3.0))
-        assert_log(min_max_avg(numbers), (1, 5, 3.0))
-        assert_log(avg(numbers), 3.0)
+        log_assert(n_min_max_avg(numbers), (5, 1, 5, 3.0))
+        log_assert(min_max_avg(numbers), (1, 5, 3.0))
+        log_assert(avg(numbers), 3.0)
 
     # curr_time() == str(datetime.now(timezone.utc))[:19]
-    with enclose(fn(curr_time)):
+    with enclose(fname(curr_time)):
         log(curr_time())
         log(curr_time(breakdown=True))
 
 
 def test_llm():
-    with enclose(fn(build_system_message)):
+    with enclose(fname(build_system_message)):
         log(build_system_message(
             "Let's think about this math problem step by step",
             outputs=["res"],
