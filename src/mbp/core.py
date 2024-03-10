@@ -44,7 +44,7 @@ __all__ = [
     # tools for simple statistics
     'timer', 'curr_time', 'avg', 'min_max_avg', 'n_min_max_avg', 'CPU_COUNT', 'MIN', 'MAX',
     # tools for environment
-    'env', 'load_env', 'get_args', 'parse_args', 'args_to_cmd'
+    'env', 'load_env', 'get_args'
 ]
 
 NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, SILENT = 0, 10, 20, 30, 40, 50, 60
@@ -952,34 +952,6 @@ def get_args(*args, **kwargs):
             parser.add_argument(f"--{k}", default=v, type=type(v))
     return parser.parse_args()
 
-
-def parse_args():
-    args = []
-    kwargs = {}
-    vec = sys.argv[2:][::-1] if sys.argv[0] == '-m' else sys.argv[1:][::-1]
-    while vec:
-        if vec[-1].startswith("--"):
-            k = vec.pop()[2:]
-            if vec and not vec[-1].startswith("--"):
-                v = vec.pop()
-            else:
-                v = True
-            kwargs[k] = v
-        else:
-            args.append(vec.pop())
-    return args, kwargs
-
-
-def args_to_cmd(args=[], kwargs={}):
-    res = args[:]
-    for k, v in kwargs.items():
-        if isinstance(v, bool):
-            if v:
-                res.append(f"--{k}")
-        else:
-            res.append(f"--{k}")
-            res.append(v)
-    return " ".join(res)
 
 
 def _np(path):
