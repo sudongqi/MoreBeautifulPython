@@ -447,7 +447,7 @@ def load_config(path, user_overwrite_key="__user__"):
         res = load_json(path)
     else:
         assert False, "path must ends with yaml, yml, or json"
-    res.update(res.get(user_overwrite_key))
+    res.update(res.get(user_overwrite_key, {}))
     res.pop(user_overwrite_key, None)
     return res
 
