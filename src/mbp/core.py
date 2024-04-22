@@ -30,7 +30,7 @@ __all__ = [
     # syntax sugar for common utilities
     'try_f', 'stop', 'type_of', 'range_of', 'items_of', 'npath', 'jpath', 'run_dir', 'lib_path',
     # handling data files
-    'load_lines', 'load_txt', 'load_jsonl', 'load_json', 'load_yaml', 'save_txt', 'save_json', 'save_jsonl', 'save_yaml', 'iterate', 'open_file',
+    'load_lines', 'load_txt', 'load_jsonl', 'load_json', 'load_yaml', 'save_txt', 'save_json', 'save_jsonl', 'save_yaml', 'iterate', 'open_file', "load_config",
     # handling paths
     'unwrap_file', 'unwrap_dir', 'file_basename', 'dir_basename',
     # tools for file system
@@ -438,6 +438,18 @@ def save_jsonl(path, data, encoding='utf-8'):
 def save_json(path, data, indent=4, encoding='utf-8'):
     with open(path, 'w', encoding=encoding) as f:
         return json.dump(data, f, indent=indent)
+    
+
+def load_config(path, user_overwrite_key="__user__"):
+    if path.endswith(".yaml") or path.endswith(".yml"):
+        res = load_yaml(path)
+    elif path.endswith(".json"):
+        res = load_json(path)
+    else:
+        assert False, "path must ends with yaml, yml, or json"
+    res.update(res.get(user_overwrite_key))
+    res.pop(user_overwrite_key, None)
+    return res
 
 
 def type_of(data, types):

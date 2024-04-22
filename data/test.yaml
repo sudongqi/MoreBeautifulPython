@@ -1,0 +1,5 @@
+numbers: [1, 2, 3]
+bool: true
+text: mbp
+__user__:
+  numbers: [1, 2]

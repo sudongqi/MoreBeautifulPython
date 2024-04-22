@@ -240,8 +240,14 @@ def test_core(log_path='./examples.log'):
         debug(b, mode=print_iter)
 
     # load_jsonl() return an iterator of dictionary
-    jsonl_file_path = jpath(this_dir(), 'data.jsonl')
+    jsonl_file_path = jpath(this_dir(), 'data/test.jsonl')
     data = list(load_jsonl(jsonl_file_path))
+
+    # load_config return a dictionay
+    with enclose(fname(load_config)):
+        config = load_config(this_dir("data/test.yaml"))
+        assert config["numbers"] == [1, 2]
+        prints(config)
 
     # print_iter(iterator) == [log(item) for item in iterator]
     with enclose(fname(print_iter)):
