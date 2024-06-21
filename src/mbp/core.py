@@ -927,8 +927,6 @@ class enclose_timer:
 
 
 def env(key, default_value=None):
-    if default_value is None:
-        return os.environ[key]
     return os.environ.get(key, default_value)
 
 
