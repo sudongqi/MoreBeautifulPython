@@ -1,7 +1,7 @@
-import re
 import sys
 import os
 import shutil
+import fnmatch
 import random
 import json
 import yaml
@@ -22,52 +22,110 @@ from wcwidth import wcswidth
 
 __all__ = [
     # replacement for logging
-    'log', 'context_logger', 'local_logger', 'set_global_logger', 'global_logger_level', 'reset_global_logger', 'recorder',
+    "log",
+    "context_logger",
+    "local_logger",
+    "set_global_logger",
+    "global_logger_level",
+    "reset_global_logger",
+    "recorder",
     # logging levels
-    'NOTSET', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL', 'SILENT',
+    "NOTSET",
+    "DEBUG",
+    "INFO",
+    "WARNING",
+    "ERROR",
+    "CRITICAL",
+    "SILENT",
     # replacement for multiprocessing
-    'Workers', 'work',
+    "Workers",
+    "work",
     # syntax sugar for common utilities
-    'try_f', 'stop', 'type_of', 'range_of', 'items_of', 'npath', 'jpath', 'run_dir', 'lib_path',
+    "try_f",
+    "stop",
+    "type_of",
+    "range_of",
+    "items_of",
+    "npath",
+    "jpath",
+    "run_dir",
+    "lib_path",
     # handling data files
-    'load_lines', 'load_txt', 'load_jsonl', 'load_json', 'load_yaml', 'save_txt', 'save_json', 'save_jsonl', 'save_yaml', 'iterate', 'open_file',
+    "load_lines",
+    "load_txt",
+    "load_jsonl",
+    "load_json",
+    "load_yaml",
+    "save_txt",
+    "save_json",
+    "save_jsonl",
+    "save_yaml",
+    "iterate",
+    "open_file",
     # handling paths
-    'unwrap_file', 'unwrap_dir', 'file_basename', 'dir_basename',
+    "unwrap_file",
+    "unwrap_dir",
+    "file_basename",
+    "dir_basename",
     # tools for file system
-    'traverse', 'this_dir', 'dir_of', 'build_dirs', 'build_files', 'build_dirs_for', 'iterate_files', 'open_files',
+    "traverse",
+    "this_dir",
+    "dir_of",
+    "build_dirs",
+    "build_files",
+    "build_dirs_for",
+    "scan_path",
     # handling string
-    'break_str', 'shorten_str', 'fill_str',
+    "break_str",
+    "shorten_str",
+    "fill_str",
     # tools for debug
-    'enclose', 'enclose_timer', 'error_msg', 'summarize_exception', 'debug',
+    "enclose",
+    "enclose_timer",
+    "error_msg",
+    "summarize_exception",
+    "debug",
     # tools for summarizations
-    'prints', 'print_iter', 'print_table', 'print_line',
+    "prints",
+    "print_iter",
+    "print_table",
+    "print_line",
     # tools for simple statistics
-    'timer', 'curr_time', 'avg', 'min_max_avg', 'n_min_max_avg', 'CPU_COUNT', 'MIN', 'MAX',
+    "timer",
+    "curr_time",
+    "avg",
+    "min_max_avg",
+    "n_min_max_avg",
+    "CPU_COUNT",
+    "MIN",
+    "MAX",
     # tools for environment
-    'env', 'load_env', 'get_args'
+    "env",
+    "load_env",
+    "get_args",
 ]
 
 NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, SILENT = 0, 10, 20, 30, 40, 50, 60
 CPU_COUNT = cpu_count()
-MIN = float('-inf')
-MAX = float('inf')
+MIN = float("-inf")
+MAX = float("inf")
 
 
 def get_msg_level(level):
     if level < 10:
-        return 'NOTSET'
+        return "NOTSET"
     elif level < 20:
-        return 'DEBUG'
+        return "DEBUG"
     elif level < 30:
-        return 'INFO'
+        return "INFO"
     elif level < 40:
-        return 'WARNING'
+        return "WARNING"
     elif level < 50:
-        return 'ERROR'
+        return "ERROR"
     elif level < 60:
-        return 'CRITICAL'
+        return "CRITICAL"
     else:
-        return 'SILENT'
+        return "SILENT"
 
 
 def open_files_for_logger(file):
@@ -76,12 +134,12 @@ def open_files_for_logger(file):
         f = res[i]
         if isinstance(f, str):
             build_dirs_for(f)
-            res[i] = open(f, 'w', encoding='utf-8')
+            res[i] = open(f, "w", encoding="utf-8")
     return res
 
 
 class Logger:
-    def __init__(self, name='', file=sys.stdout, level=INFO, verbose=False):
+    def __init__(self, name="", file=sys.stdout, level=INFO, verbose=False):
         self.level = level
         self.file = open_files_for_logger(file)
         self.name = name
@@ -89,18 +147,21 @@ class Logger:
 
     def __call__(self, *data, level=INFO, file=None, end=None, flush=True):
         if self.level <= level:
-            header = f'{curr_time()} {get_msg_level(level)} {self.name}: ' if self.name != '' else f'{curr_time()} {get_msg_level(level)}: '
-            header_empty = len(header) * ' '
-            for f in (self.file if file is None else open_files_for_logger(file)):
+            header = (
+                f"{curr_time()} {get_msg_level(level)} {self.name}: "
+                if self.name != ""
+                else f"{curr_time()} {get_msg_level(level)}: "
+            )
+            header_empty = len(header) * " "
+            for f in self.file if file is None else open_files_for_logger(file):
                 for d in data:
-                    lines = str(d).split('\n')
+                    lines = str(d).split("\n")
                     for idx, line in enumerate(lines):
                         if self.verbose:
                             if idx == 0:
-                                print(header, file=f, end='', flush=flush)
+                                print(header, file=f, end="", flush=flush)
                             else:
-                                print(header_empty, file=f,
-                                      end='', flush=flush)
+                                print(header_empty, file=f, end="", flush=flush)
                         if idx == len(lines) - 1:
                             print(line, file=f, end=end, flush=flush)
                         else:
@@ -112,7 +173,7 @@ CONTEXT_LOGGER_SET = False
 
 
 class context_logger:
-    def __init__(self, name='', file=sys.stdout, level=INFO, verbose=False, can_overwrite=True):
+    def __init__(self, name="", file=sys.stdout, level=INFO, verbose=False, can_overwrite=True):
         global LOGGER
         global CONTEXT_LOGGER_SET
         self.logger_was_changed = False
@@ -133,7 +194,7 @@ class context_logger:
             CONTEXT_LOGGER_SET = False
 
 
-def set_global_logger(name='', file=sys.stdout, level=INFO, verbose=False):
+def set_global_logger(name="", file=sys.stdout, level=INFO, verbose=False):
     global LOGGER
     LOGGER = Logger(name, file, level, verbose)
 
@@ -148,7 +209,7 @@ def reset_global_logger():
     LOGGER = Logger()
 
 
-def local_logger(name='', file=sys.stdout, level=INFO, verbose=False):
+def local_logger(name="", file=sys.stdout, level=INFO, verbose=False):
     return Logger(name, file, level, verbose)
 
 
@@ -172,7 +233,7 @@ class recorder:
     def __enter__(self):
         self.logger.__enter__()
         return self
-    
+
     def flush(self):
         res = self.buffer.getvalue()
         self.buffer.truncate(0)
@@ -183,19 +244,20 @@ class recorder:
         self.logger.__exit__(*args)
 
 
-def error_msg(e, verbose=False, sep='\n'):
+def error_msg(e, verbose=False, sep="\n"):
     if not verbose:
         return repr(e)
     else:
         res = traceback.format_exc()
-        return _np(res.replace('\n', sep))
-    
+        return _np(res.replace("\n", sep))
+
+
 def summarize_exception(e):
     res = {}
-    res['error'] = error_msg(e, verbose=False)
-    res['error_type'] = res['error'].split('(')[0]
-    res['error_msg'] = res['error'][len(res['error_type']) + 2: -2]
-    res['traceback'] = error_msg(e, verbose=True)
+    res["error"] = error_msg(e, verbose=False)
+    res["error_type"] = res["error"].split("(")[0]
+    res["error_msg"] = res["error"][len(res["error_type"]) + 2 : -2]
+    res["traceback"] = error_msg(e, verbose=True)
     return res
 
 
@@ -209,11 +271,10 @@ class Worker(Process):
         self.cache_inp = cache_inp
         self.built_inp = build_inp
         if verbose:
-            log('started worker-{}'.format('?' if worker_id is None else worker_id))
+            log("started worker-{}".format("?" if worker_id is None else worker_id))
 
     def run(self):
-        self.built_inp = None if self.built_inp is None else {
-            k: v[0](*v[1:]) for k, v in self.built_inp.items()}
+        self.built_inp = None if self.built_inp is None else {k: v[0](*v[1:]) for k, v in self.built_inp.items()}
         while True:
             task_id, kwargs = self.inp.get()
             try:
@@ -226,17 +287,17 @@ class Worker(Process):
                     res = self.f(**_kwargs)
                 else:
                     res = self.f(*kwargs)
-                self.out.put({'worker_id': self.worker_id,
-                              'task_id': task_id,
-                              'task': kwargs,
-                              'res': res})
+                self.out.put({"worker_id": self.worker_id, "task_id": task_id, "task": kwargs, "res": res})
             except Exception as e:
                 self.out.put(
-                    {'worker_id': self.worker_id,
-                     'task_id': task_id,
-                     'task': kwargs,
-                     'error': error_msg(e, False),
-                     'traceback': error_msg(e, True)})
+                    {
+                        "worker_id": self.worker_id,
+                        "task_id": task_id,
+                        "task": kwargs,
+                        "error": error_msg(e, False),
+                        "traceback": error_msg(e, True),
+                    }
+                )
 
 
 class Workers:
@@ -273,7 +334,7 @@ class Workers:
             saved = {}
             id_task_waiting_for = 0
             for d in self._map(tasks):
-                saved[d['task_id']] = d
+                saved[d["task_id"]] = d
                 while id_task_waiting_for in saved:
                     yield saved[id_task_waiting_for]
                     saved.pop(id_task_waiting_for)
@@ -288,30 +349,38 @@ class Workers:
 
     def get_result(self):
         res = self.out.get()
-        if 'error' in res:
-            err_msg = 'worker-{} failed task-{} : {}'.format(
-                res['worker_id'], res['task_id'], res['error'])
+        if "error" in res:
+            err_msg = "worker-{} failed task-{} : {}".format(res["worker_id"], res["task_id"], res["error"])
             if not self.ignore_error:
                 self.terminate()
                 assert False, err_msg
             if self.verbose:
                 log(err_msg)
         elif self.verbose:
-            log('worker-{} completed task-{}'.format(
-                res['worker_id'], res['task_id']))
+            log("worker-{} completed task-{}".format(res["worker_id"], res["task_id"]))
         return res
 
     def terminate(self):
         for w in self.workers:
             w.terminate()
         if self.verbose:
-            log('terminated {} workers'.format(len(self.workers)))
+            log("terminated {} workers".format(len(self.workers)))
 
 
-def work(f, tasks, num_workers=CPU_COUNT, cache_inp=None, build_inp=None, ordered=True, ignore_error=False, res_only=True, verbose=False):
+def work(
+    f,
+    tasks,
+    num_workers=CPU_COUNT,
+    cache_inp=None,
+    build_inp=None,
+    ordered=True,
+    ignore_error=False,
+    res_only=True,
+    verbose=False,
+):
     workers = Workers(f, num_workers, cache_inp, build_inp, ignore_error, verbose)
     for d in workers.map(tasks, ordered):
-        yield d.get('res', None) if res_only else d
+        yield d.get("res", None) if res_only else d
     workers.terminate()
 
 
@@ -326,13 +395,13 @@ class timer:
         self.start = time.time()
         return self
 
-    def check(self, msg='', reset=True):
+    def check(self, msg="", reset=True):
         end_time = time.time()
         self.checked = True
         self.duration = (end_time - self.start) * 1000
         if reset:
             self.start = end_time
-        log('{}took {:.3f} ms'.format('' if msg == '' else f'{msg} ==> ', self.duration), level=self.level)
+        log("{}took {:.3f} ms".format("" if msg == "" else f"{msg} ==> ", self.duration), level=self.level)
         return self.duration
 
     def __exit__(self, *args):
@@ -344,9 +413,9 @@ def iterate(data, first_n=None, sample_p=1.0, sample_seed=None, report_n=None):
     if sample_seed is not None:
         random.seed(sample_seed)
     if first_n is not None:
-        assert first_n >= 1, 'first_n should be >= 1'
+        assert first_n >= 1, "first_n should be >= 1"
     counter = 0
-    total = len(data) if hasattr(data, '__len__') else '?'
+    total = len(data) if hasattr(data, "__len__") else "?"
     prev_time = time.time()
     for d in itertools.islice(data, 0, first_n):
         if random.random() <= sample_p:
@@ -354,42 +423,46 @@ def iterate(data, first_n=None, sample_p=1.0, sample_seed=None, report_n=None):
             yield d
             if report_n is not None and counter % report_n == 0:
                 current_time = time.time()
-                speed = report_n / (current_time - prev_time) if current_time - prev_time != 0 else 'inf'
-                log('{}/{} ==> {:.3f} items/s'.format(counter, total, speed))
+                speed = report_n / (current_time - prev_time) if current_time - prev_time != 0 else "inf"
+                log("{}/{} ==> {:.3f} items/s".format(counter, total, speed))
                 prev_time = current_time
 
 
-def open_file(path, encoding='utf-8', compression=None):
+def open_file(path, encoding="utf-8", compression=None):
     if compression is None:
-        return open(path, 'r', encoding=encoding)
-    elif compression == 'gz':
-        return gzip.open(path, 'rt', encoding=encoding)
-    elif compression == 'bz2':
-        return bz2.open(path, 'rb')
+        return open(path, "r", encoding=encoding)
+    elif compression == "gz":
+        return gzip.open(path, "rt", encoding=encoding)
+    elif compression == "bz2":
+        return bz2.open(path, "rb")
     else:
-        assert False, '{} not supported'.format(compression)
+        assert False, "{} not supported".format(compression)
 
 
-def iterate_files(path, pattern=r".*"):
-    # return  iterator of (absolute_path, relative_path, file_name)
+# https://docs.python.org/3/library/fnmatch.html
+def scan_path(path, ignore=[], level=None, include_dirs=False, include_files=True, root=None):
     _is_dir_and_exist(path)
-    matcher = re.compile(pattern)
-    for p, _, files in os.walk(path):
-        for file_name in files:
-            if matcher.fullmatch(file_name):
-                full_path = jpath(p, file_name)
-                yield _np(os.path.abspath(full_path)), _np(full_path[len(path):]), file_name
+    is_recursive = level is None or level > 1
+    root = path if root is None else root
+    for entry in os.scandir(path):
+        fp = _np(entry.path)
+        rp = fp[len(root) :]
+        if any(fnmatch.fnmatch(rp, pattern) for pattern in ignore):
+            continue
+        is_dir = entry.is_dir()
+        n = fp.split("/")[-1]
 
+        if include_dirs and include_files:
+            yield fp, rp, n, is_dir
+        elif include_dirs and is_dir:
+            yield fp, rp, n
+        elif include_files and not is_dir:
+            yield fp, rp, n
 
-def open_files(path, encoding='utf-8', compression=None, pattern=r".*", verbose=True):
-    for full_path, _, file_name in iterate_files(path, pattern):
-        try:
-            yield open_file(full_path, encoding, compression)
-            if verbose:
-                log('found {} <== {}'.format(file_name, full_path))
-        except PermissionError:
-            if verbose:
-                log('no permission to open {} <== {}'.format(file_name, full_path))
+        if is_recursive and is_dir:
+            new_level = None if level is None else level - 1
+            for t in scan_path(fp, ignore, new_level, include_dirs, include_files, root):
+                yield t
 
 
 def load_lines(path, encoding="utf-8", first_n=None, sample_p=1.0, sample_seed=None, report_n=None, compression=None):
@@ -408,40 +481,40 @@ def load_jsonl(path, encoding="utf-8", first_n=None, sample_p=1.0, sample_seed=N
             yield json.loads(line)
 
 
-def load_json(path, encoding='utf-8', compression=None):
+def load_json(path, encoding="utf-8", compression=None):
     with open_file(path, encoding, compression) as f:
         return json.load(f)
 
 
-def load_yaml(path, encoding='utf-8', compression=None):
+def load_yaml(path, encoding="utf-8", compression=None):
     with open_file(path, encoding, compression) as f:
         res = yaml.safe_load(f)
         return {} if res is None else res
 
 
-def save_txt(path, data, encoding='utf-8'):
-    with open(path, 'w', encoding=encoding) as file:
+def save_txt(path, data, encoding="utf-8"):
+    with open(path, "w", encoding=encoding) as file:
         file.write(data)
 
 
-def save_yaml(path, data, encoding='utf-8'):
-    with open(path, 'w', encoding=encoding) as file:
+def save_yaml(path, data, encoding="utf-8"):
+    with open(path, "w", encoding=encoding) as file:
         yaml.dump(data, file, allow_unicode=True, sort_keys=False)
 
 
-def save_jsonl(path, data, encoding='utf-8'):
-    with open(path, 'w', encoding=encoding) as f:
+def save_jsonl(path, data, encoding="utf-8"):
+    with open(path, "w", encoding=encoding) as f:
         for d in data:
-            f.write(json.dumps(d, ensure_ascii=False) + '\n')
+            f.write(json.dumps(d, ensure_ascii=False) + "\n")
 
 
-def save_json(path, data, indent=4, encoding='utf-8'):
-    with open(path, 'w', encoding=encoding) as f:
+def save_json(path, data, indent=4, encoding="utf-8"):
+    with open(path, "w", encoding=encoding) as f:
         return json.dump(data, f, indent=indent)
 
 
 def type_of(data, types):
-    assert isinstance(types, list), 'types must be a list'
+    assert isinstance(types, list), "types must be a list"
     for idx, _type in enumerate(types):
         if isinstance(data, _type):
             return idx + 1
@@ -449,7 +522,7 @@ def type_of(data, types):
 
 
 def _range_iterate(data, start, end=sys.maxsize, step=1):
-    assert not end < 0, 'end cannot be negative'
+    assert not end < 0, "end cannot be negative"
     start = max(start, 0)
     step = max(step, 1)
     for idx, item in enumerate(data):
@@ -460,9 +533,9 @@ def _range_iterate(data, start, end=sys.maxsize, step=1):
 def range_of(data, start=0, end=None, step=1, reverse=False):
     # replace of ==> for i in range(data)
 
-    assert isinstance(data, Iterable), 'data should be an Iterable'
+    assert isinstance(data, Iterable), "data should be an Iterable"
     if isinstance(data, Iterator):
-        assert not reverse, 'cannot set reverse=True when data is an Iterator'
+        assert not reverse, "cannot set reverse=True when data is an Iterator"
         for idx, _ in _range_iterate(data, start, end, step):
             yield idx
     else:
@@ -484,9 +557,9 @@ def range_of(data, start=0, end=None, step=1, reverse=False):
 
 
 def items_of(data, start=0, end=None, step=1, reverse=False):
-    assert isinstance(data, Iterable), 'input should be an Iterable'
+    assert isinstance(data, Iterable), "input should be an Iterable"
     if isinstance(data, Iterator):
-        assert not reverse, 'cannot set reverse=True when data is an Iterator'
+        assert not reverse, "cannot set reverse=True when data is an Iterator"
         for _, item in _range_iterate(data, start, end, step):
             yield item
 
@@ -497,7 +570,7 @@ def items_of(data, start=0, end=None, step=1, reverse=False):
 COLLECTION_TYPES = [list, set, tuple, dict]
 
 
-def _build_table(rows, space=3, cell_space=1, filler=' ', max_column_width=None, min_column_widths=None):
+def _build_table(rows, space=3, cell_space=1, filler=" ", max_column_width=None, min_column_widths=None):
     space = max(space, 1)
 
     rows_type = type_of(rows, COLLECTION_TYPES)
@@ -524,12 +597,13 @@ def _build_table(rows, space=3, cell_space=1, filler=' ', max_column_width=None,
     data = []
     for row in rows:
         if len(row) != num_col:
-            row += [''] * (num_col - len(row))
-        row = [_build_table(item, cell_space, cell_space, filler)
-               if type_of(item, COLLECTION_TYPES) else [str(item)]
-               for item in row]
+            row += [""] * (num_col - len(row))
+        row = [
+            _build_table(item, cell_space, cell_space, filler) if type_of(item, COLLECTION_TYPES) else [str(item)]
+            for item in row
+        ]
         max_height = max(len(r) for r in row)
-        new_rows = [['' for _ in range(len(row))] for _ in range(max_height)]
+        new_rows = [["" for _ in range(len(row))] for _ in range(max_height)]
         for j, items in enumerate(row):
             for i in range(len(items)):
                 new_rows[i][j] = items[i]
@@ -552,12 +626,23 @@ def _build_table(rows, space=3, cell_space=1, filler=' ', max_column_width=None,
             row.append(item)
             row.append(filler * (space + column_width[idx] - wcswidth(item)))
         row.append(d[-1])
-        res.append(''.join(row))
+        res.append("".join(row))
     return res
 
 
-def print_table(rows, headers=None, name='', sep='-', space=3, cell_space=1, filler=' ',
-                max_column_width=None, min_column_widths=None, level=INFO, res=False):
+def print_table(
+    rows,
+    headers=None,
+    name="",
+    sep="-",
+    space=3,
+    cell_space=1,
+    filler=" ",
+    max_column_width=None,
+    min_column_widths=None,
+    level=INFO,
+    res=False,
+):
     if headers is not None:
         rows = [headers] + rows
     _res = _build_table(rows, space, cell_space, filler, max_column_width, min_column_widths)
@@ -577,7 +662,7 @@ def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep,
     extra_indent == 0,     no shift
     extra_indent > 0,      no shift + shorter line
     """
-    shift_str = shift * ' '
+    shift_str = shift * " "
     sep_len = len(sep)
     kv_sep_len = len(kv_sep)
 
@@ -587,21 +672,21 @@ def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep,
             return True
         r = type_of(_d, [int, float, str, bool])
         if r == 3:
-            return not any(True for ch in _d if ch == '\n')
+            return not any(True for ch in _d if ch == "\n")
         return r
 
     def put_quote(string):
         return quote + string + quote if isinstance(string, str) else str(string)
 
     def log_raw(*args, **kwargs):
-        kwargs['level'] = level
-        kwargs['end'] = ''
+        kwargs["level"] = level
+        kwargs["end"] = ""
         log(*args, **kwargs)
 
     def print_cache(_tokens, _shift, _extra_indent):
         line = sep.join(_tokens)
         if _extra_indent is None:
-            line = _shift * ' ' + line
+            line = _shift * " " + line
         log_raw(line)
 
     data_type = type_of(data, [list, tuple, set, dict, str])
@@ -612,11 +697,11 @@ def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep,
             log_raw(put_quote(data))
     # collection
     elif data_type in {1, 2, 3}:
-        marker_l, marker_r = '[', ']'
+        marker_l, marker_r = "[", "]"
         if data_type == 2:
-            marker_l, marker_r = '(', ')'
+            marker_l, marker_r = "(", ")"
         elif data_type == 3:
-            marker_l, marker_r = '{', '}'
+            marker_l, marker_r = "{", "}"
             data = list(data)
         if extra_indent is None:
             marker_l = shift_str + marker_l
@@ -649,27 +734,27 @@ def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep,
             else:
                 _prints(data[d], indent, width, level, shift + 1, 0 if idx == 0 else None, sep, quote, kv_sep, compact)
             if idx != len(cache) - 1:
-                log_raw('{}\n'.format(sep))
+                log_raw("{}\n".format(sep))
         log_raw(marker_r)
     # dictionary
     elif data_type == 4:
-        marker_l = '{'
-        marker_r = '}'
+        marker_l = "{"
+        marker_r = "}"
         if extra_indent is None:
             marker_l = shift_str + marker_l
 
         if not data:
             return log_raw(marker_l + marker_r)
-        log_raw(marker_l + '\n')
+        log_raw(marker_l + "\n")
 
         kv = data.items()
-        indent_str = indent * ' '
+        indent_str = indent * " "
         for idx, (k, v) in enumerate(kv):
             str_k = put_quote(k)
             if is_short_data(v):
-                log_raw('{}{}{}{}'.format(shift_str + indent_str, str_k, kv_sep, put_quote(v)))
+                log_raw("{}{}{}{}".format(shift_str + indent_str, str_k, kv_sep, put_quote(v)))
             else:
-                log_raw('{}{}{}'.format(shift_str + indent_str, str_k, kv_sep))
+                log_raw("{}{}{}".format(shift_str + indent_str, str_k, kv_sep))
                 # for non-compact
                 if isinstance(v, dict):
                     v_shift = shift + indent
@@ -683,28 +768,39 @@ def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep,
                         v_indent = 0
                 _prints(v, indent, width, level, v_shift, v_indent, sep, quote, kv_sep, compact)
             if idx != len(kv) - 1:
-                log_raw(sep + '\n')
+                log_raw(sep + "\n")
             else:
-                log_raw('\n')
+                log_raw("\n")
         log_raw(shift_str + marker_r)
     # multi-lines string
     elif data_type == 5:
-        _data = data.split('\n')
+        _data = data.split("\n")
         for idx, s in enumerate(_data):
             if idx == 0 and extra_indent is None:
-                log_raw('{}'.format(shift_str))
+                log_raw("{}".format(shift_str))
             elif idx == len(_data) - 1 and not s:
                 continue
             elif idx != 0 or extra_indent is None:
-                log_raw('\n{}'.format(shift_str))
-            log_raw('{}{}{}{}'.format(quote, s, '\\n' if idx != len(_data) - 1 else '', quote))
+                log_raw("\n{}".format(shift_str))
+            log_raw("{}{}{}{}".format(quote, s, "\\n" if idx != len(_data) - 1 else "", quote))
     else:
         data = str(data)
         _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep, compact)
 
 
-def prints(*data, indent=4, width=80, shift=0, extra_indent=None, compact=False, 
-           sep=',', quote='"', kv_sep=': ', level=INFO, res=False):
+def prints(
+    *data,
+    indent=4,
+    width=80,
+    shift=0,
+    extra_indent=None,
+    compact=False,
+    sep=",",
+    quote='"',
+    kv_sep=": ",
+    level=INFO,
+    res=False,
+):
     if res:
         with recorder() as r:
             for d in data:
@@ -713,12 +809,12 @@ def prints(*data, indent=4, width=80, shift=0, extra_indent=None, compact=False,
     else:
         for d in data:
             _prints(d, indent, width, level, shift, extra_indent, sep, quote, kv_sep, compact)
-            log('', level=level)
+            log("", level=level)
 
 
 def print_iter(data, shift=0, level=INFO):
     if not isinstance(data, Iterable):
-        log(shift * ' ', end='')
+        log(shift * " ", end="")
         log(data, level=level)
     else:
         if shift <= 0:
@@ -726,7 +822,7 @@ def print_iter(data, shift=0, level=INFO):
                 log(item, level=level)
         else:
             for item in data:
-                log(shift * ' ', end='')
+                log(shift * " ", end="")
                 log(item, level=level)
 
 
@@ -747,13 +843,13 @@ def break_str(string, width=50, measure_f=wcswidth):
             curr = item_width
     res = [r for r in res if r]
     assert sum(len(r) for r in res) == len(string)
-    return [''.join(r) for r in res]
+    return ["".join(r) for r in res]
 
 
 def shorten_str(string, width=50):
     if len(string) <= width:
         return string
-    return string[:(width - 3)] + '...'
+    return string[: (width - 3)] + "..."
 
 
 def fill_str(string, left_marker="{", right_marker="}", **kwargs):
@@ -762,33 +858,33 @@ def fill_str(string, left_marker="{", right_marker="}", **kwargs):
     return string
 
 
-def stop(message=''):
+def stop(message=""):
     raise SystemExit(message)
 
 
-VALID_REFERENCE_ARGUMENTS_PATTERN = r'\(([_a-zA-Z][_a-zA-Z0-9]*( *= *[_a-zA-Z0-9]+)?( *, *)?)+\)'
+VALID_REFERENCE_ARGUMENTS_PATTERN = r"\(([_a-zA-Z][_a-zA-Z0-9]*( *= *[_a-zA-Z0-9]+)?( *, *)?)+\)"
 
 
-def debug(*data, mode=prints, char='-', level=DEBUG):
+def debug(*data, mode=prints, char="-", level=DEBUG):
     if LOGGER.level <= level:
 
         stack = inspect.stack()
-        lineno = ' [{}]'.format(stack[1].lineno)
-        filename = file_basename(stack[1][1]).split('.')[0]
-        function_name = '.{}'.format(stack[1][3]) if stack[1][3] != '<module>' else ''
+        lineno = " [{}]".format(stack[1].lineno)
+        filename = file_basename(stack[1][1]).split(".")[0]
+        function_name = ".{}".format(stack[1][3]) if stack[1][3] != "<module>" else ""
 
         code_str = stack[1].code_context[0].strip()
-        arguments = code_str[code_str.index("(") + 1:-1]
-        arguments = [a.strip() for a in arguments.split(',') if '=' not in a]
+        arguments = code_str[code_str.index("(") + 1 : -1]
+        arguments = [a.strip() for a in arguments.split(",") if "=" not in a]
         assert len(data) == len(arguments), '{} ==> debug() can not take arguments with "," in it'.format(code_str)
-        argument_str = '' if len(arguments) > 1 else ': {}'.format(arguments[0])
+        argument_str = "" if len(arguments) > 1 else ": {}".format(arguments[0])
 
-        with enclose('{}{}{}{}'.format(filename, function_name, lineno, argument_str), char=char):
+        with enclose("{}{}{}{}".format(filename, function_name, lineno, argument_str), char=char):
             if mode is None:
                 if len(data) > 1:
                     rows = []
                     for k, v in zip(arguments, data):
-                        rows.append([k + ': ', str(v).split('\n')])
+                        rows.append([k + ": ", str(v).split("\n")])
                     print_table(rows, space=1)
                 else:
                     data = data[0]
@@ -797,27 +893,27 @@ def debug(*data, mode=prints, char='-', level=DEBUG):
                 if len(data) > 1:
                     rows = []
                     for k, v in zip(arguments, data):
-                        rows.append([k + ': ', str(v).split('\n')])
+                        rows.append([k + ": ", str(v).split("\n")])
                     print_table(rows, space=1)
                 else:
                     log(data[0])
             elif mode == print_iter:
                 if len(data) > 1:
                     for k, v in zip(arguments, data):
-                        log(k, end=': \n')
+                        log(k, end=": \n")
                         print_iter(v, shift=4)
                 else:
                     print_iter(data[0])
             elif mode == prints:
                 if len(data) > 1:
                     for k, v in zip(arguments, data):
-                        log(k, end=': ')
+                        log(k, end=": ")
                         prints(v, shift=len(k) + 2, extra_indent=0)
                 else:
                     data = data[0]
                     log(data) if isinstance(data, str) else prints(data)
             else:
-                assert False, 'mode: {} not supported'.format(mode)
+                assert False, "mode: {} not supported".format(mode)
 
 
 def try_f(*args, **kwargs):
@@ -829,7 +925,7 @@ def try_f(*args, **kwargs):
 
 
 def n_min_max_avg(data, key_f=None, first_n=None, sample_p=1.0, sample_seed=None):
-    res_min, res_max, res_sum = float('inf'), -float('inf'), 0
+    res_min, res_max, res_sum = float("inf"), -float("inf"), 0
     iterator = iterate(data, first_n=first_n, sample_p=sample_p, sample_seed=sample_seed)
     if key_f is not None:
         iterator = map(key_f, iterator)
@@ -851,17 +947,17 @@ def avg(data, key_f=None, first_n=None, sample_p=1.0, sample_seed=None):
 
 
 def _strip_and_add_spaces(s):
-    if s == '':
-        return ''
+    if s == "":
+        return ""
     s = s.strip()
-    if s[0] != ' ':
-        s = ' ' + s
-    if s[-1] != ' ':
-        s = s + ' '
+    if s[0] != " ":
+        s = " " + s
+    if s[-1] != " ":
+        s = s + " "
     return s
 
 
-def print_line(text=None, width=20, char='-', level=INFO, min_wing_size=5, res=False):
+def print_line(text=None, width=20, char="-", level=INFO, min_wing_size=5, res=False):
     if text is None:
         chars = char * width
     else:
@@ -878,7 +974,7 @@ def print_line(text=None, width=20, char='-', level=INFO, min_wing_size=5, res=F
 
 
 class enclose:
-    def __init__(self, text='', width=None, max_width=80, char='=', end='\n\n', captured_level=INFO, level=INFO):
+    def __init__(self, text="", width=None, max_width=80, char="=", end="\n\n", captured_level=INFO, level=INFO):
         self.text = _strip_and_add_spaces(text)
         self.width = width
         self.max_width = max_width
@@ -906,13 +1002,13 @@ class enclose:
             top_line = print_line(text=self.text, width=content_width, char=self.char, res=True)
             self.top_line_size = len(top_line)
             log(top_line, level=self.level)
-            log(content, level=self.level, end='')
+            log(content, level=self.level, end="")
         log(print_line(width=self.top_line_size, char=self.char, level=self.level, res=True), end=self.end)
 
 
 class enclose_timer:
-    def __init__(self, text='', width=None, max_width=80, char='=', end='\n\n', captured_level=INFO, level=INFO):
-        self._enclose = enclose(text, width, max_width, char, '\n', captured_level, level)
+    def __init__(self, text="", width=None, max_width=80, char="=", end="\n\n", captured_level=INFO, level=INFO):
+        self._enclose = enclose(text, width, max_width, char, "\n", captured_level, level)
         self.end = end
         self.level = level
 
@@ -923,7 +1019,7 @@ class enclose_timer:
     def __exit__(self, *args):
         time_end = time.time()
         self._enclose.__exit__(*args)
-        log('took {:.3f} ms'.format((time_end - self.time_start) * 1000), end=self.end, level=self.level)
+        log("took {:.3f} ms".format((time_end - self.time_start) * 1000), end=self.end, level=self.level)
 
 
 def env(key, default_value=None):
@@ -951,9 +1047,8 @@ def get_args(*args, **kwargs):
     return parser.parse_args()
 
 
-
 def _np(path):
-    return path.replace(os.sep, '/')
+    return path.replace(os.sep, "/")
 
 
 def npath(path):
@@ -976,12 +1071,12 @@ def run_dir():
 
 def _is_file_and_exist(path):
     if os.path.exists(path):
-        assert os.path.isfile(path), '{} ==> already exist but it\'s a directory'.format(path)
+        assert os.path.isfile(path), "{} ==> already exist but it's a directory".format(path)
 
 
 def _is_dir_and_exist(path):
     if os.path.exists(path):
-        assert os.path.isdir(path), '{} ==> already exist but it\'s a file'.format(path)
+        assert os.path.isdir(path), "{} ==> already exist but it's a file".format(path)
 
 
 def build_dirs(path_or_paths, overwrite=False):
@@ -1001,7 +1096,7 @@ def build_files(path_or_paths, overwrite=False):
         if overwrite and os.path.exists(path):
             os.remove(path)
         build_dirs_for(path)
-        open(path, 'a').close()
+        open(path, "a").close()
 
 
 def build_dirs_for(path_or_paths, overwrite=False):
@@ -1034,12 +1129,12 @@ def traverse(path, go_up=0, go_to=None, should_exist=False):
     go_up = max(go_up, 0)
     for _ in range(go_up):
         n_res = res.parent
-        assert n_res != res, '{} (go up {} times) ==> already reach root and cannot go up further'.format(o_res, go_up)
+        assert n_res != res, "{} (go up {} times) ==> already reach root and cannot go up further".format(o_res, go_up)
         res = n_res
     res = str(res)
     if go_to is not None:
         res = jpath(res, go_to)
-    assert not should_exist or os.path.exists(res), '{} ==> does not exist'.format(res)
+    assert not should_exist or os.path.exists(res), "{} ==> does not exist".format(res)
     return _np(res)
 
 
@@ -1059,7 +1154,7 @@ def this_dir(go_up=0, go_to=None, should_exist=False):
 def unwrap_file(path):
     if os.path.isdir(path):
         sub_paths = os.listdir(path)
-        assert len(sub_paths) == 1, 'there are more than one files/dirs in {}'.format(path)
+        assert len(sub_paths) == 1, "there are more than one files/dirs in {}".format(path)
         return unwrap_file(jpath(path, sub_paths[0]))
     return _np(path)
 
@@ -1070,4 +1165,4 @@ def unwrap_dir(path):
         if len(sub_paths) == 1 and os.path.isdir(jpath(path, sub_paths[0])):
             return unwrap_dir(jpath(path, sub_paths[0]))
         return _np(path)
-    assert False, '{} is not a directory'.format(path)
+    assert False, "{} is not a directory".format(path)
