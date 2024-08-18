@@ -446,7 +446,7 @@ def scan_path(path, ignore=[], level=None, include_dirs=False, include_files=Tru
     root = path if root is None else root
     for entry in os.scandir(path):
         fp = _np(entry.path)
-        rp = fp[len(root) :]
+        rp = fp[len(root)+1:]
         if any(fnmatch.fnmatch(rp, pattern) for pattern in ignore):
             continue
         is_dir = entry.is_dir()
