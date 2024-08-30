@@ -510,7 +510,7 @@ def save_jsonl(path, data, encoding="utf-8"):
 
 def save_json(path, data, indent=4, encoding="utf-8"):
     with open(path, "w", encoding=encoding) as f:
-        return json.dump(data, f, indent=indent)
+        return json.dump(data, f, indent=indent, ensure_ascii=False)
 
 
 def type_of(data, types):
