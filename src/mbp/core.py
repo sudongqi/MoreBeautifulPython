@@ -161,7 +161,8 @@ class Logger:
                             if idx == 0:
                                 print(header, file=f, end="", flush=flush)
                             else:
-                                print(header_empty, file=f, end="", flush=flush)
+                                print(header_empty, file=f,
+                                      end="", flush=flush)
                         if idx == len(lines) - 1:
                             print(line, file=f, end=end, flush=flush)
                         else:
@@ -228,7 +229,8 @@ def log(*messages, level=INFO, file=None, end=None, flush=True):
 class recorder:
     def __init__(self, captured_level=INFO):
         self.buffer = StringIO()
-        self.logger = context_logger(file=self.buffer, level=captured_level, can_overwrite=False)
+        self.logger = context_logger(
+            file=self.buffer, level=captured_level, can_overwrite=False)
 
     def __enter__(self):
         self.logger.__enter__()
@@ -256,7 +258,7 @@ def summarize_exception(e):
     res = {}
     res["error"] = error_msg(e, verbose=False)
     res["error_type"] = res["error"].split("(")[0]
-    res["error_msg"] = res["error"][len(res["error_type"]) + 2 : -2]
+    res["error_msg"] = res["error"][len(res["error_type"]) + 2: -2]
     res["traceback"] = error_msg(e, verbose=True)
     return res
 
@@ -274,7 +276,8 @@ class Worker(Process):
             log("started worker-{}".format("?" if worker_id is None else worker_id))
 
     def run(self):
-        self.built_inp = None if self.built_inp is None else {k: v[0](*v[1:]) for k, v in self.built_inp.items()}
+        self.built_inp = None if self.built_inp is None else {
+            k: v[0](*v[1:]) for k, v in self.built_inp.items()}
         while True:
             task_id, kwargs = self.inp.get()
             try:
@@ -287,7 +290,8 @@ class Worker(Process):
                     res = self.f(**_kwargs)
                 else:
                     res = self.f(*kwargs)
-                self.out.put({"worker_id": self.worker_id, "task_id": task_id, "task": kwargs, "res": res})
+                self.out.put({"worker_id": self.worker_id,
+                             "task_id": task_id, "task": kwargs, "res": res})
             except Exception as e:
                 self.out.put(
                     {
@@ -310,7 +314,8 @@ class Workers:
         self.ignore_error = ignore_error
         self.f = f
         for i in range(num_workers):
-            worker = Worker(f, self.inp, self.out, i, cache_inp, build_inp, verbose)
+            worker = Worker(f, self.inp, self.out, i,
+                            cache_inp, build_inp, verbose)
             worker.start()
             self.workers.append(worker)
 
@@ -350,14 +355,16 @@ class Workers:
     def get_result(self):
         res = self.out.get()
         if "error" in res:
-            err_msg = "worker-{} failed task-{} : {}".format(res["worker_id"], res["task_id"], res["error"])
+            err_msg = "worker-{} failed task-{} : {}".format(
+                res["worker_id"], res["task_id"], res["error"])
             if not self.ignore_error:
                 self.terminate()
                 assert False, err_msg
             if self.verbose:
                 log(err_msg)
         elif self.verbose:
-            log("worker-{} completed task-{}".format(res["worker_id"], res["task_id"]))
+            log("worker-{} completed task-{}".format(
+                res["worker_id"], res["task_id"]))
         return res
 
     def terminate(self):
@@ -378,7 +385,8 @@ def work(
     res_only=True,
     verbose=False,
 ):
-    workers = Workers(f, num_workers, cache_inp, build_inp, ignore_error, verbose)
+    workers = Workers(f, num_workers, cache_inp,
+                      build_inp, ignore_error, verbose)
     for d in workers.map(tasks, ordered):
         yield d.get("res", None) if res_only else d
     workers.terminate()
@@ -401,7 +409,8 @@ class timer:
         self.duration = (end_time - self.start) * 1000
         if reset:
             self.start = end_time
-        log("{}took {:.3f} ms".format("" if msg == "" else f"{msg} ==> ", self.duration), level=self.level)
+        log("{}took {:.3f} ms".format("" if msg == "" else f"{
+            msg} ==> ", self.duration), level=self.level)
         return self.duration
 
     def __exit__(self, *args):
@@ -423,7 +432,9 @@ def iterate(data, first_n=None, sample_p=1.0, sample_seed=None, report_n=None):
             yield d
             if report_n is not None and counter % report_n == 0:
                 current_time = time.time()
-                speed = report_n / (current_time - prev_time) if current_time - prev_time != 0 else "inf"
+                speed = report_n / \
+                    (current_time - prev_time) if current_time - \
+                    prev_time != 0 else "inf"
                 log("{}/{} ==> {:.3f} items/s".format(counter, total, speed))
                 prev_time = current_time
 
@@ -599,7 +610,8 @@ def _build_table(rows, space=3, cell_space=1, filler=" ", max_column_width=None,
         if len(row) != num_col:
             row += [""] * (num_col - len(row))
         row = [
-            _build_table(item, cell_space, cell_space, filler) if type_of(item, COLLECTION_TYPES) else [str(item)]
+            _build_table(item, cell_space, cell_space, filler) if type_of(
+                item, COLLECTION_TYPES) else [str(item)]
             for item in row
         ]
         max_height = max(len(r) for r in row)
@@ -645,9 +657,12 @@ def print_table(
 ):
     if headers is not None:
         rows = [headers] + rows
-    _res = _build_table(rows, space, cell_space, filler, max_column_width, min_column_widths)
-    first_sep_line = print_line(text=name, width=len(_res[0]), char=sep, res=True)
-    sep_line = print_line(width=max(len(first_sep_line), len(_res[0])), char=sep, res=True)
+    _res = _build_table(rows, space, cell_space, filler,
+                        max_column_width, min_column_widths)
+    first_sep_line = print_line(
+        text=name, width=len(_res[0]), char=sep, res=True)
+    sep_line = print_line(width=max(len(first_sep_line),
+                          len(_res[0])), char=sep, res=True)
     if headers is not None:
         _res = [first_sep_line, _res[0], sep_line] + _res[1:] + [sep_line]
     if not res:
@@ -732,7 +747,8 @@ def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep,
             if isinstance(d, list):
                 print_cache(d, shift + 1, 0 if idx == 0 else None)
             else:
-                _prints(data[d], indent, width, level, shift + 1, 0 if idx == 0 else None, sep, quote, kv_sep, compact)
+                _prints(data[d], indent, width, level, shift + 1,
+                        0 if idx == 0 else None, sep, quote, kv_sep, compact)
             if idx != len(cache) - 1:
                 log_raw("{}\n".format(sep))
         log_raw(marker_r)
@@ -752,7 +768,8 @@ def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep,
         for idx, (k, v) in enumerate(kv):
             str_k = put_quote(k)
             if is_short_data(v):
-                log_raw("{}{}{}{}".format(shift_str + indent_str, str_k, kv_sep, put_quote(v)))
+                log_raw("{}{}{}{}".format(
+                    shift_str + indent_str, str_k, kv_sep, put_quote(v)))
             else:
                 log_raw("{}{}{}".format(shift_str + indent_str, str_k, kv_sep))
                 # for non-compact
@@ -766,7 +783,8 @@ def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep,
                     else:
                         v_shift = shift + indent + len(str_k) + kv_sep_len
                         v_indent = 0
-                _prints(v, indent, width, level, v_shift, v_indent, sep, quote, kv_sep, compact)
+                _prints(v, indent, width, level, v_shift,
+                        v_indent, sep, quote, kv_sep, compact)
             if idx != len(kv) - 1:
                 log_raw(sep + "\n")
             else:
@@ -782,10 +800,12 @@ def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep,
                 continue
             elif idx != 0 or extra_indent is None:
                 log_raw("\n{}".format(shift_str))
-            log_raw("{}{}{}{}".format(quote, s, "\\n" if idx != len(_data) - 1 else "", quote))
+            log_raw("{}{}{}{}".format(quote, s, "\\n" if idx !=
+                    len(_data) - 1 else "", quote))
     else:
         data = str(data)
-        _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep, compact)
+        _prints(data, indent, width, level, shift,
+                extra_indent, sep, quote, kv_sep, compact)
 
 
 def prints(
@@ -804,11 +824,13 @@ def prints(
     if res:
         with recorder() as r:
             for d in data:
-                _prints(d, indent, width, level, shift, extra_indent, sep, quote, kv_sep, compact)
+                _prints(d, indent, width, level, shift,
+                        extra_indent, sep, quote, kv_sep, compact)
         return r.flush()
     else:
         for d in data:
-            _prints(d, indent, width, level, shift, extra_indent, sep, quote, kv_sep, compact)
+            _prints(d, indent, width, level, shift,
+                    extra_indent, sep, quote, kv_sep, compact)
             log("", level=level)
 
 
@@ -871,13 +893,16 @@ def debug(*data, mode=prints, char="-", level=DEBUG):
         stack = inspect.stack()
         lineno = " [{}]".format(stack[1].lineno)
         filename = file_basename(stack[1][1]).split(".")[0]
-        function_name = ".{}".format(stack[1][3]) if stack[1][3] != "<module>" else ""
+        function_name = ".{}".format(
+            stack[1][3]) if stack[1][3] != "<module>" else ""
 
         code_str = stack[1].code_context[0].strip()
-        arguments = code_str[code_str.index("(") + 1 : -1]
+        arguments = code_str[code_str.index("(") + 1: -1]
         arguments = [a.strip() for a in arguments.split(",") if "=" not in a]
-        assert len(data) == len(arguments), '{} ==> debug() can not take arguments with "," in it'.format(code_str)
-        argument_str = "" if len(arguments) > 1 else ": {}".format(arguments[0])
+        assert len(data) == len(
+            arguments), '{} ==> debug() can not take arguments with "," in it'.format(code_str)
+        argument_str = "" if len(
+            arguments) > 1 else ": {}".format(arguments[0])
 
         with enclose("{}{}{}{}".format(filename, function_name, lineno, argument_str), char=char):
             if mode is None:
@@ -926,7 +951,8 @@ def try_f(*args, **kwargs):
 
 def n_min_max_avg(data, key_f=None, first_n=None, sample_p=1.0, sample_seed=None):
     res_min, res_max, res_sum = float("inf"), -float("inf"), 0
-    iterator = iterate(data, first_n=first_n, sample_p=sample_p, sample_seed=sample_seed)
+    iterator = iterate(data, first_n=first_n,
+                       sample_p=sample_p, sample_seed=sample_seed)
     if key_f is not None:
         iterator = map(key_f, iterator)
     counter = 0
@@ -986,7 +1012,8 @@ class enclose:
 
     def __enter__(self):
         if self.width is not None:
-            top_line = print_line(text=self.text, width=self.width, char=self.char, res=True)
+            top_line = print_line(
+                text=self.text, width=self.width, char=self.char, res=True)
             self.top_line_size = len(top_line)
             log(top_line, level=self.level)
         else:
@@ -997,18 +1024,22 @@ class enclose:
             self.recorder.__exit__(*args)
             content = self.recorder.flush()
             # enclosed lines should be slightly longer than the longest content
-            content_width = 0 if not content else max(len(line) for line in content.split("\n"))
+            content_width = 0 if not content else max(
+                len(line) for line in content.split("\n"))
             content_width = min(self.max_width, content_width + 3)
-            top_line = print_line(text=self.text, width=content_width, char=self.char, res=True)
+            top_line = print_line(
+                text=self.text, width=content_width, char=self.char, res=True)
             self.top_line_size = len(top_line)
             log(top_line, level=self.level)
             log(content, level=self.level, end="")
-        log(print_line(width=self.top_line_size, char=self.char, level=self.level, res=True), end=self.end)
+        log(print_line(width=self.top_line_size, char=self.char,
+            level=self.level, res=True), end=self.end)
 
 
 class enclose_timer:
     def __init__(self, text="", width=None, max_width=80, char="=", end="\n\n", captured_level=INFO, level=INFO):
-        self._enclose = enclose(text, width, max_width, char, "\n", captured_level, level)
+        self._enclose = enclose(text, width, max_width,
+                                char, "\n", captured_level, level)
         self.end = end
         self.level = level
 
@@ -1019,7 +1050,8 @@ class enclose_timer:
     def __exit__(self, *args):
         time_end = time.time()
         self._enclose.__exit__(*args)
-        log("took {:.3f} ms".format((time_end - self.time_start) * 1000), end=self.end, level=self.level)
+        log("took {:.3f} ms".format((time_end - self.time_start)
+            * 1000), end=self.end, level=self.level)
 
 
 def env(key, default_value=None):
@@ -1027,7 +1059,8 @@ def env(key, default_value=None):
 
 
 def load_env(dict_or_path):
-    d = load_yaml(dict_or_path) if isinstance(dict_or_path, str) else dict_or_path
+    d = load_yaml(dict_or_path) if isinstance(
+        dict_or_path, str) else dict_or_path
     if d is not None:
         for k, v in d.items():
             os.environ[k] = str(v)
@@ -1036,12 +1069,21 @@ def load_env(dict_or_path):
 def get_args(*args, **kwargs):
     parser = argparse.ArgumentParser()
     for k in args:
-        parser.add_argument(k, type=str)
+        if "?" not in k:
+            parser.add_argument(k, type=str)
+        else:
+            tokens = k.split("?")
+            assert len(tokens) == 2, f'position argument "{
+                k}" is in wrong format (should be "key?default_value")'
+            parser.add_argument(tokens[0], nargs="?",
+                                default=tokens[1], type=str)
     for k, v in kwargs.items():
         if isinstance(v, list):
-            parser.add_argument(f"--{k}", nargs="+", default=v, type=type(v[0]))
+            parser.add_argument(f"--{k}", nargs="+",
+                                default=v, type=type(v[0]))
         elif isinstance(v, bool):
-            parser.add_argument(f"--{k}", default=v, type=type(v), action=argparse.BooleanOptionalAction)
+            parser.add_argument(
+                f"--{k}", default=v, type=type(v), action=argparse.BooleanOptionalAction)
         else:
             parser.add_argument(f"--{k}", default=v, type=type(v))
     return parser.parse_args()
@@ -1071,16 +1113,19 @@ def run_dir():
 
 def _is_file_and_exist(path):
     if os.path.exists(path):
-        assert os.path.isfile(path), "{} ==> already exist but it's a directory".format(path)
+        assert os.path.isfile(
+            path), "{} ==> already exist but it's a directory".format(path)
 
 
 def _is_dir_and_exist(path):
     if os.path.exists(path):
-        assert os.path.isdir(path), "{} ==> already exist but it's a file".format(path)
+        assert os.path.isdir(
+            path), "{} ==> already exist but it's a file".format(path)
 
 
 def build_dirs(path_or_paths, overwrite=False):
-    paths = path_or_paths if isinstance(path_or_paths, list) else [path_or_paths]
+    paths = path_or_paths if isinstance(
+        path_or_paths, list) else [path_or_paths]
     for path in paths:
         path = Path(os.path.abspath(path))
         _is_dir_and_exist(path)
@@ -1090,7 +1135,8 @@ def build_dirs(path_or_paths, overwrite=False):
 
 
 def build_files(path_or_paths, overwrite=False):
-    paths = path_or_paths if isinstance(path_or_paths, list) else [path_or_paths]
+    paths = path_or_paths if isinstance(
+        path_or_paths, list) else [path_or_paths]
     for path in paths:
         _is_file_and_exist(path)
         if overwrite and os.path.exists(path):
@@ -1100,7 +1146,8 @@ def build_files(path_or_paths, overwrite=False):
 
 
 def build_dirs_for(path_or_paths, overwrite=False):
-    paths = path_or_paths if isinstance(path_or_paths, list) else [path_or_paths]
+    paths = path_or_paths if isinstance(
+        path_or_paths, list) else [path_or_paths]
     for path in paths:
         path = Path(os.path.abspath(path))
         _is_file_and_exist(path)
@@ -1129,12 +1176,14 @@ def traverse(path, go_up=0, go_to=None, should_exist=False):
     go_up = max(go_up, 0)
     for _ in range(go_up):
         n_res = res.parent
-        assert n_res != res, "{} (go up {} times) ==> already reach root and cannot go up further".format(o_res, go_up)
+        assert n_res != res, "{} (go up {} times) ==> already reach root and cannot go up further".format(
+            o_res, go_up)
         res = n_res
     res = str(res)
     if go_to is not None:
         res = jpath(res, go_to)
-    assert not should_exist or os.path.exists(res), "{} ==> does not exist".format(res)
+    assert not should_exist or os.path.exists(
+        res), "{} ==> does not exist".format(res)
     return _np(res)
 
 
@@ -1154,7 +1203,8 @@ def this_dir(go_up=0, go_to=None, should_exist=False):
 def unwrap_file(path):
     if os.path.isdir(path):
         sub_paths = os.listdir(path)
-        assert len(sub_paths) == 1, "there are more than one files/dirs in {}".format(path)
+        assert len(
+            sub_paths) == 1, "there are more than one files/dirs in {}".format(path)
         return unwrap_file(jpath(path, sub_paths[0]))
     return _np(path)
 
