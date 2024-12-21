@@ -16,7 +16,7 @@ setup(
     py_modules=["mbp"],
     package_dir={"": "src"},
     packages=find_packages(where="src"),
-    python_requires=">=3.13.0",
+    python_requires=">=3.11.0",
     install_requires=[
         "wcwidth>=0.2.5",
         "pyyaml>=5.1",
