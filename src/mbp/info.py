@@ -1,6 +1,6 @@
 from .core import *
 
-VERSION = '1.6.00'
+VERSION = '1.6.01'
 
 with enclose('More Beautiful Python'):
     rows = [
