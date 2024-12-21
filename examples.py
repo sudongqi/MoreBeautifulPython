@@ -142,7 +142,7 @@ def test_core(log_path="./examples.log"):
         log(run_dir())
         log(lib_path())
         assert_log(this_dir(), lambda x: x.endswith("MoreBeautifulPython"))
-        log(this_dir(go_up=1, go_to="AnotherProject/hello.txt"))
+        log(this_dir(up=1, to="AnotherProject/hello.txt"))
         assert_log(dir_basename(dir_of(__file__)), "MoreBeautifulPython")
         assert_log(file_basename(__file__), "examples.py")
 
@@ -213,22 +213,8 @@ def test_core(log_path="./examples.log"):
         long_list = [i for i in range(70)]
         nested_list = [[[1, 2, 3], [4, 5, 6]]]
         multi_lines = "line1\n\t\t- line2\n\t\t- line3\n"
-        hybrid_list = [
-            _set,
-            _tuple,
-            long_list,
-            short_list,
-            {},
-            [],
-            (),
-            "string",
-            None,
-            True,
-            False,
-            (1, 2, 3),
-            nested_list,
-            multi_lines,
-        ]
+        hybrid_list = [_set, _tuple, long_list, short_list, {}, [], (), "string", None, True, False,
+                       (1, 2, 3), nested_list, multi_lines]
         hybrid_dict = {
             "hybrid_dict": hybrid_list,
             "": "empty key",
@@ -237,6 +223,13 @@ def test_core(log_path="./examples.log"):
             "nested_dict": {"a": nested_list, "b": list_of_long_strings, "c": {"a longer key": long_list}},
         }
         prints(hybrid_dict)
+
+    # merge() is a recursive dict.update()
+    a = {"a": {"a": 100, "b": [0]}}
+    b = {"a": {"b": 201, "c": 301}}
+    c = {"a": {"c": 303}, "c": [1, 2]}
+    assert_log(merge(a, b, c), {"a": {"a": 100, "b": 201, "c": 303}, "c": [1, 2]})
+    assert_log(merge(c, b, a), {"a": {"a": 100, "b": [0], "c": 301}, "c": [1, 2]})
 
     # try_f() perform try-except routine and capture the result or error messages in a dictionary
     with enclose(fname(try_f)):
