@@ -2,7 +2,7 @@ import json
 import functools
 from .core import *
 
-__all__ = ['add_to_messages', 'encode_context', 'build_system_message', 'build_system_message_from_yaml', "build_messages"]
+__all__ = ['add_to_messages', 'encode_context', 'build_system_message','build_system_message_from_yaml', "build_messages"]
 
 
 def add_to_messages(messages, role, content):
@@ -15,7 +15,10 @@ def encode_context(context):
     return json.dumps(context, ensure_ascii=False)
 
 
-FORMAT_HINT = "Expecting foramt of ... instruction: str, outputs: [str], examples (optional): [dict]"
+FORMAT_HINT = '''Expecting format of
+- instruction: str,
+- outputs: [str], 
+- examples: [dict]'''
 
 
 def build_system_message(instruction, outputs=[], examples=[]):
