@@ -18,7 +18,7 @@ setup(
     packages=find_packages(where="src"),
     python_requires=">=3.11.0",
     install_requires=[
-        "wcwidth>=0.2.5",
-        "pyyaml>=5.1",
+        "wcwidth>=0.2.13",
+        "pyyaml>=6.0.2",
     ],
 )

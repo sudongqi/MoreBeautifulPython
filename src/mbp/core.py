@@ -4,7 +4,6 @@ import shutil
 import fnmatch
 import random
 import json
-import yaml
 import time
 import gzip
 import bz2
@@ -19,6 +18,7 @@ from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
 from wcwidth import wcswidth
+from yaml import safe_load, dump
 
 
 __all__ = [
@@ -403,7 +403,7 @@ def load_json(path, encoding="utf-8", compression=None):
 
 def load_yaml(path, encoding="utf-8", compression=None):
     with open_file(path, encoding, compression) as f:
-        res = yaml.safe_load(f)
+        res = safe_load(f)
         return {} if res is None else res
 
 
@@ -414,7 +414,7 @@ def save_txt(path, data, encoding="utf-8"):
 
 def save_yaml(path, data, encoding="utf-8"):
     with open(path, "w", encoding=encoding) as file:
-        yaml.dump(data, file, allow_unicode=True, sort_keys=False)
+        dump(data, file, allow_unicode=True, sort_keys=False)
 
 
 def save_jsonl(path, data, encoding="utf-8"):
