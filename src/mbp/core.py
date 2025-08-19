@@ -971,6 +971,26 @@ def run_with_args():
         asyncio.run(res)
 
 
+def run_with_args():
+    m = inspect.getmodule(inspect.stack()[1].frame) or sys.modules.get("__main__")
+    funcs = {n: f for n, f in inspect.getmembers(m, inspect.isfunction)
+             if f.__module__ == m.__name__ and not n.startswith("_")}
+    argv = sys.argv
+    if len(argv) < 2:
+        raise SystemExit(f'Need function name ==> options: {", ".join(funcs.keys())}')
+    fn_name, *fn_argv = argv[1:]
+    if fn_name not in funcs:
+        raise SystemExit(f'No such function: {fn_name} ==> options: {", ".join(funcs.keys())}')
+    fn = funcs[fn_name]
+    sig = inspect.signature(fn)
+    kwargs = {k: v.default for k, v in sig.parameters.items() if v.default is not inspect._empty}
+    args = [k for k, v in sig.parameters.items() if v.default is inspect._empty]
+    sys.argv = [argv[0]] + fn_argv
+    res = fn(**vars(get_args(*args, **kwargs)))
+    if inspect.isawaitable(res):
+        asyncio.run(res)
+
+
 def _np(path):
     return path.replace(os.sep, "/")
 
