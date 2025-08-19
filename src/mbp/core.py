@@ -960,7 +960,7 @@ def run_with_args():
         raise SystemExit(f'Need function name ==> options: {", ".join(funcs.keys())}')
     fn_name, *fn_argv = sys.argv[1:]
     if fn_name not in funcs:
-        raise SystemExit(f"No such function: {fn_name} ==> options: {", ".join(funcs.keys())}")
+        raise SystemExit(f'No such function: {fn_name} ==> options: {", ".join(funcs.keys())}')
     fn = funcs[fn_name]
     sig = inspect.signature(fn)
     defaults = {k: v.default for k, v in sig.parameters.items() if v.default is not inspect._empty}
