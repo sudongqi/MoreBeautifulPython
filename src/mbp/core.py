@@ -12,6 +12,7 @@ import itertools
 import traceback
 import argparse
 import bisect
+import asyncio
 from io import StringIO
 from collections.abc import Iterator, Iterable
 from datetime import datetime, timezone
@@ -29,7 +30,7 @@ __all__ = [
     # replacement for multiprocessing
     "Workers", "work",
     # syntax sugar for common utilities
-    "merge", "try_f", "stop", "type_of", "range_of", "items_of", "npath", "jpath", "run_dir", "lib_path",
+    "merge", "try_f", "type_of", "range_of", "items_of", "npath", "jpath", "run_dir", "lib_path",
     # handling data files
     "load_lines", "load_txt", "load_jsonl", "load_json", "load_yaml", "save_txt", "save_json", "save_jsonl", "save_yaml", "iterate", "open_file",
     # handling paths
@@ -45,7 +46,7 @@ __all__ = [
     # tools for simple statistics
     "timer", "curr_time", "avg", "min_max_avg", "n_min_max_avg", "CPU_COUNT", "MIN", "MAX",
     # tools for environment
-    "env", "load_env", "get_args",
+    "env", "load_env", "get_args", "run_with_args"
 ]
 
 NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, SILENT = 0, 10, 20, 30, 40, 50, 60
@@ -739,10 +740,6 @@ def fill_str(string, left_marker="{", right_marker="}", **kwargs):
     return string
 
 
-def stop(message=""):
-    raise SystemExit(message)
-
-
 VALID_REFERENCE_ARGUMENTS_PATTERN = r"\(([_a-zA-Z][_a-zA-Z0-9]*( *= *[_a-zA-Z0-9]+)?( *, *)?)+\)"
 
 
@@ -918,23 +915,60 @@ def load_env(dict_or_path):
             os.environ[k] = str(v)
 
 
+def _str2bool(x):
+    return x if isinstance(x, bool) else \
+        {"1": True, "true": True, "yes": True, "y": True,
+            "0": False, "false": False, "no": False, "n": False}[x.lower()]
+
+
 def get_args(*args, **kwargs):
-    parser = argparse.ArgumentParser()
+    p = argparse.ArgumentParser()
+    seen = set()
+
+    def check_arg(k):
+        if k in seen:
+            raise ValueError(f"Duplicated arg: {k}")
+        elif k.startswith("-"):
+            raise ValueError(f"Invalid arg: {k}")
+        seen.add(k)
+
     for k in args:
-        if "?" not in k:
-            parser.add_argument(k, type=str)
-        else:
-            tokens = k.split("?")
-            assert len(tokens) == 2, f'position argument "{k}" is in wrong format (should be "key?default_value")'
-            parser.add_argument(tokens[0], nargs="?", default=tokens[1], type=str)
+        if not isinstance(k, str):
+            raise TypeError(f"Required arg must be str, got {type(k).__name__}")
+        check_arg(k)
+        p.add_argument(k, type=str)
     for k, v in kwargs.items():
-        if isinstance(v, list):
-            parser.add_argument(f"--{k}", nargs="+", default=v, type=type(v[0]))
-        elif isinstance(v, bool):
-            parser.add_argument(f"--{k}", default=v, type=type(v), action=argparse.BooleanOptionalAction)
+        check_arg(k)
+        if isinstance(v, bool):
+            p.add_argument(f"--{k}", dest=k, nargs="?", type=_str2bool, const=True, default=v)
+            p.add_argument(f"--no-{k}", dest=k, action="store_false")
+            p.add_argument(k, nargs="?", type=_str2bool, default=argparse.SUPPRESS)
+        elif isinstance(v, list):
+            t = type(v[0]) if v else str
+            p.add_argument(f"--{k}", dest=k, nargs="+", type=t, default=v)
+            p.add_argument(k, nargs="*", type=t, default=argparse.SUPPRESS)
         else:
-            parser.add_argument(f"--{k}", default=v, type=type(v))
-    return parser.parse_args()
+            t = type(v)
+            p.add_argument(f"--{k}", dest=k, type=t, default=v)
+            p.add_argument(k, nargs="?", type=t, default=argparse.SUPPRESS)
+    return p.parse_args()
+
+
+def run_with_args():
+    funcs = {n: f for n, f in inspect.getmembers(sys.modules[__name__], inspect.isfunction)}
+    if len(sys.argv) < 2:
+        raise SystemExit(f'Need function name ==> options: {", ".join(funcs.keys())}')
+    fn_name, *fn_argv = sys.argv[1:]
+    if fn_name not in funcs:
+        raise SystemExit(f"No such function: {fn_name} ==> options: {", ".join(funcs.keys())}")
+    fn = funcs[fn_name]
+    sig = inspect.signature(fn)
+    defaults = {k: v.default for k, v in sig.parameters.items() if v.default is not inspect._empty}
+    reqs = [k for k, v in sig.parameters.items() if v.default is inspect._empty]
+    sys.argv = [sys.argv[0]] + fn_argv
+    res = fn(**vars(get_args(*reqs, **defaults)))
+    if inspect.isawaitable(res):
+        asyncio.run(res)
 
 
 def _np(path):
