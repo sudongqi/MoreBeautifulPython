@@ -30,6 +30,6 @@ jobs:
     - name: Install dependencies
       run: pip install -e .
 
-    - name: Run examples to see if they work
-      run: python examples.py
+    - name: Run test
+      run: python run.py test
 
