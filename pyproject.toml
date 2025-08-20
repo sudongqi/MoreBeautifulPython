@@ -34,8 +34,3 @@ line-length = 144
 
 [tool.ruff.lint]
 select = []
-
-[tool.ruff.format]
-quote-style = "double"
-indent-style = "space"
-skip-magic-trailing-comma = true
