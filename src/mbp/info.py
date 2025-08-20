@@ -1,13 +1,13 @@
 from .core import *
 
-VERSION = '1.6.5'
+VERSION = "1.6.5"
 
-with enclose('More Beautiful Python'):
+with enclose("More Beautiful Python"):
     rows = [
-        ['examples', 'https://github.com/sudongqi/MoreBeautifulPython/blob/main/examples.py'],
-        ['execution_directory', run_dir()],
-        ['library_path', lib_path()],
-        ['cpu_count', CPU_COUNT],
-        ['version', VERSION]
+        ["examples", "https://github.com/sudongqi/MoreBeautifulPython/blob/main/examples.py"],
+        ["execution_directory", run_dir()],
+        ["library_path", lib_path()],
+        ["cpu_count", CPU_COUNT],
+        ["version", VERSION],
     ]
     print_table(rows)

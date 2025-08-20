@@ -21,7 +21,7 @@ from pathlib import Path
 from wcwidth import wcswidth
 from yaml import safe_load, dump
 
-
+# fmt: off
 __all__ = [
     # replacement for logging
     "log", "context_logger", "local_logger", "set_global_logger", "global_logger_level", "reset_global_logger", "recorder",
@@ -48,6 +48,7 @@ __all__ = [
     # tools for environment
     "env", "load_env", "get_args", "run_with_args"
 ]
+# fmt: on
 
 NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, SILENT = 0, 10, 20, 30, 40, 50, 60
 CPU_COUNT = cpu_count()
@@ -181,7 +182,7 @@ def summarize_exception(e):
     res = {}
     res["error"] = error_msg(e, verbose=False)
     res["error_type"] = res["error"].split("(")[0]
-    res["error_msg"] = res["error"][len(res["error_type"]) + 2: -2]
+    res["error_msg"] = res["error"][len(res["error_type"]) + 2 : -2]
     res["traceback"] = error_msg(e, verbose=True)
     return res
 
@@ -362,7 +363,7 @@ def scan_path(path, ignore=[], level=None, include_dirs=False, include_files=Tru
     root = path if root is None else root
     for entry in os.scandir(path):
         fp = _np(entry.path)
-        rp = fp[len(root)+1:]
+        rp = fp[len(root) + 1 :]
         if any(fnmatch.fnmatch(rp, pattern) for pattern in ignore):
             continue
         is_dir = entry.is_dir()
@@ -538,7 +539,19 @@ def _build_table(rows, space=3, cell_space=1, filler=" ", max_column_width=None,
     return res
 
 
-def print_table(rows, headers=None, name="", sep="-", space=3, cell_space=1, filler=" ", max_column_width=None, min_column_widths=None, level=INFO, res=False):
+def print_table(
+    rows,
+    headers=None,
+    name="",
+    sep="-",
+    space=3,
+    cell_space=1,
+    filler=" ",
+    max_column_width=None,
+    min_column_widths=None,
+    level=INFO,
+    res=False,
+):
     if headers is not None:
         rows = [headers] + rows
     _res = _build_table(rows, space, cell_space, filler, max_column_width, min_column_widths)
@@ -745,14 +758,13 @@ VALID_REFERENCE_ARGUMENTS_PATTERN = r"\(([_a-zA-Z][_a-zA-Z0-9]*( *= *[_a-zA-Z0-9
 
 def debug(*data, mode=prints, char="-", level=DEBUG):
     if LOGGER.level <= level:
-
         stack = inspect.stack()
         lineno = " [{}]".format(stack[1].lineno)
         filename = file_basename(stack[1][1]).split(".")[0]
         function_name = ".{}".format(stack[1][3]) if stack[1][3] != "<module>" else ""
 
         code_str = stack[1].code_context[0].strip()
-        arguments = code_str[code_str.index("(") + 1: -1]
+        arguments = code_str[code_str.index("(") + 1 : -1]
         arguments = [a.strip() for a in arguments.split(",") if "=" not in a]
         assert len(data) == len(arguments), '{} ==> debug() can not take arguments with "," in it'.format(code_str)
         argument_str = "" if len(arguments) > 1 else ": {}".format(arguments[0])
@@ -916,9 +928,11 @@ def load_env(dict_or_path):
 
 
 def _str2bool(x):
-    return x if isinstance(x, bool) else \
-        {"1": True, "true": True, "yes": True, "y": True,
-            "0": False, "false": False, "no": False, "n": False}[x.lower()]
+    return (
+        x
+        if isinstance(x, bool)
+        else {"1": True, "true": True, "yes": True, "y": True, "0": False, "false": False, "no": False, "n": False}[x.lower()]
+    )
 
 
 def get_args(*args, **kwargs):
@@ -957,10 +971,10 @@ def get_args(*args, **kwargs):
 def run_with_args():
     funcs = {n: f for n, f in inspect.getmembers(sys.modules[__name__], inspect.isfunction)}
     if len(sys.argv) < 2:
-        raise SystemExit(f'Need function name ==> options: {", ".join(funcs.keys())}')
+        raise SystemExit(f"Need function name ==> options: {', '.join(funcs.keys())}")
     fn_name, *fn_argv = sys.argv[1:]
     if fn_name not in funcs:
-        raise SystemExit(f'No such function: {fn_name} ==> options: {", ".join(funcs.keys())}')
+        raise SystemExit(f"No such function: {fn_name} ==> options: {', '.join(funcs.keys())}")
     fn = funcs[fn_name]
     sig = inspect.signature(fn)
     defaults = {k: v.default for k, v in sig.parameters.items() if v.default is not inspect._empty}
@@ -973,14 +987,13 @@ def run_with_args():
 
 def run_with_args():
     m = inspect.getmodule(inspect.stack()[1].frame) or sys.modules.get("__main__")
-    funcs = {n: f for n, f in inspect.getmembers(m, inspect.isfunction)
-             if f.__module__ == m.__name__ and not n.startswith("_")}
+    funcs = {n: f for n, f in inspect.getmembers(m, inspect.isfunction) if f.__module__ == m.__name__ and not n.startswith("_")}
     argv = sys.argv
     if len(argv) < 2:
-        raise SystemExit(f'Need function name ==> options: {", ".join(funcs.keys())}')
+        raise SystemExit(f"Need function name ==> options: {', '.join(funcs.keys())}")
     fn_name, *fn_argv = argv[1:]
     if fn_name not in funcs:
-        raise SystemExit(f'No such function: {fn_name} ==> options: {", ".join(funcs.keys())}')
+        raise SystemExit(f"No such function: {fn_name} ==> options: {', '.join(funcs.keys())}")
     fn = funcs[fn_name]
     sig = inspect.signature(fn)
     kwargs = {k: v.default for k, v in sig.parameters.items() if v.default is not inspect._empty}

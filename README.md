@@ -11,17 +11,17 @@ Make Python even more beautiful :) This package includes implementations that yo
     execution_directory   C:\Users\usr\MoreBeautifulPython
     library_path          C:\Users\usr\MoreBeautifulPython\src\mbp\core.py
     cpu_count             16
-    version               1.6.5
+    version               1.x.x
     =============================================================================================
 
 ### Examples
 
 https://github.com/sudongqi/MoreBeautifulPython/blob/main/examples.py
 
--   replacement for logging
--   replacement for multiprocessing
--   syntax sugar for common utilities
--   tools for file system & data handling
--   tools for summarizations
--   tools for simple statistics
--   tools for llm (Large Language Model)
+- replacement for logging
+- replacement for multiprocessing
+- syntax sugar for common utilities
+- tools for file system & data handling
+- tools for summarizations
+- tools for simple statistics
+- tools for llm (Large Language Model)

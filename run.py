@@ -35,7 +35,7 @@ def assert_log(res, reference):
         assert res == reference, f"{res} != {reference}"
 
 
-def test_core(log_path="./examples.log"):
+def test_core(log_path="./test.log"):
     # log() include all functionality of print()
     log("this is from the global logger", end="\n\n")
 
@@ -144,7 +144,7 @@ def test_core(log_path="./examples.log"):
         assert_log(this_dir(), lambda x: x.endswith("MoreBeautifulPython"))
         log(this_dir(up=1, to="AnotherProject/hello.txt"))
         assert_log(dir_basename(dir_of(__file__)), "MoreBeautifulPython")
-        assert_log(file_basename(__file__), "examples.py")
+        assert_log(file_basename(__file__), "run.py")
 
     # scan_path is a wrapper of os.scandir
     with enclose(fname(scan_path)):
@@ -152,14 +152,7 @@ def test_core(log_path="./examples.log"):
         num_folders = len(list(scan_path(this_dir(), include_dirs=True, include_files=False)))
         num_total = len(list(scan_path(this_dir(), include_dirs=True)))
         num_files_exclude_py = len(list(t[1] for t in scan_path(this_dir(), ignore=["*.py"])))
-        prints(
-            {
-                "num_files": num_files,
-                "num_files_exclude_py": num_files_exclude_py,
-                "num_folders": num_folders,
-                "num_total": num_total,
-            }
-        )
+        prints({"num_files": num_files, "num_files_exclude_py": num_files_exclude_py, "num_folders": num_folders, "num_total": num_total})
         assert num_files + num_folders == num_total
         assert num_files_exclude_py < num_files
 
@@ -213,8 +206,7 @@ def test_core(log_path="./examples.log"):
         long_list = [i for i in range(70)]
         nested_list = [[[1, 2, 3], [4, 5, 6]]]
         multi_lines = "line1\n\t\t- line2\n\t\t- line3\n"
-        hybrid_list = [_set, _tuple, long_list, short_list, {}, [], (), "string", None, True, False,
-                       (1, 2, 3), nested_list, multi_lines]
+        hybrid_list = [_set, _tuple, long_list, short_list, {}, [], (), "string", None, True, False, (1, 2, 3), nested_list, multi_lines]
         hybrid_dict = {
             "hybrid_dict": hybrid_list,
             "": "empty key",
@@ -276,19 +268,19 @@ def test_core(log_path="./examples.log"):
     rows = [list(d.values()) for d in data]
     headers = list(data[0].keys())
     print_table(rows, name=fname(print_table), headers=headers, space=3)
+    print()
 
     # print_table() can also pad a row, and handle tables inside table (if item is a list, dict, set, or tuple)
     # print_table() calculate column width based on the longest item or use min_column_widths if applicable
     rows += [[6, "Paimon"], ["", "summary", [["num characters", 6], ["num cities", 4]]]]
     print_table(rows, headers=headers, min_column_widths=[None, 20], name=fname(print_table) + " with incomplete rows")
+    print()
 
     # use max_column_width to shorten a cell with long data (str)
     print_table(
-        [[1, 2, "3" * 100], [1, "2" * 100, 3]],
-        headers=["a", "b", "c"],
-        max_column_width=10,
-        name=fname(print_table) + " with long cell",
+        [[1, 2, "3" * 100], [1, "2" * 100, 3]], headers=["a", "b", "c"], max_column_width=10, name=fname(print_table) + " with long cell"
     )
+    print()
 
     # get 3 key statistics from an iterator at once
     with enclose(fname(n_min_max_avg, min_max_avg, avg)):
@@ -314,6 +306,29 @@ def test_llm():
         )
 
 
-if __name__ == "__main__":
+def test():
     test_core()
     test_llm()
+
+
+def sync():
+    import os
+    from src.mbp.info import VERSION
+
+    if os.path.exists("./dist"):
+        shutil.rmtree("./dist")
+
+    os.system("python -m build")
+    os.system("python -m twine upload --repository pypi dist/* --verbose")
+
+    os.system("git rm --cached -r *")
+    os.system("git add .")
+    os.system('git commit -a -m "update"')
+    os.system("git push origin main")
+
+    for i in range(2):
+        os.system("python -m pip install mbp=={}".format(VERSION))
+
+
+if __name__ == "__main__":
+    run_with_args()
