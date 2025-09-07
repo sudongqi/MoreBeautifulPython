@@ -24,9 +24,9 @@ from yaml import safe_load, dump
 # fmt: off
 __all__ = [
     # replacement for logging
-    "log", "context_logger", "local_logger", "set_global_logger", "global_logger_level", "reset_global_logger", "recorder",
+    "log", "logger", "context_logger", "set_global_logger", "get_global_logger", "recorder",
     # logging levels
-    "NOTSET", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL", "SILENT",
+    "SILENT", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL",
     # replacement for multiprocessing
     "Workers", "work",
     # syntax sugar for common utilities
@@ -50,16 +50,15 @@ __all__ = [
 ]
 # fmt: on
 
-NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, SILENT = 0, 10, 20, 30, 40, 50, 60
+SILENT, DEBUG, INFO, WARNING, ERROR, CRITICAL = 0, 10, 20, 30, 40, 50
 CPU_COUNT = cpu_count()
 MIN = float("-inf")
 MAX = float("inf")
 
 
 def _get_msg_level(level):
-    thresholds = [NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, SILENT]
-    labels = ["NOTSET", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL", "SILENT"]
-    return labels[bisect.bisect_left(thresholds, level)]
+    labels = ["SILENT", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+    return labels[bisect.bisect_left([SILENT, DEBUG, INFO, WARNING, ERROR, CRITICAL], level)]
 
 
 def _open_files_for_logger(file):
@@ -72,7 +71,7 @@ def _open_files_for_logger(file):
     return res
 
 
-class Logger:
+class logger:
     def __init__(self, name="", file=sys.stdout, level=INFO, verbose=False):
         self.level = level
         self.file = _open_files_for_logger(file)
@@ -98,7 +97,7 @@ class Logger:
                             print(line, file=f, end=None, flush=flush)
 
 
-LOGGER = Logger()
+LOGGER = logger()
 CONTEXT_LOGGER_SET = False
 
 
@@ -109,7 +108,7 @@ class context_logger:
         self.logger_was_changed = False
         if not CONTEXT_LOGGER_SET or not can_overwrite:
             self.original_logger = LOGGER
-            LOGGER = Logger(name, file, level, verbose)
+            LOGGER = logger(name, file, level, verbose)
             self.logger_was_changed = True
             CONTEXT_LOGGER_SET = True
 
@@ -126,21 +125,12 @@ class context_logger:
 
 def set_global_logger(name="", file=sys.stdout, level=INFO, verbose=False):
     global LOGGER
-    LOGGER = Logger(name, file, level, verbose)
+    LOGGER = logger(name, file, level, verbose)
 
 
-def global_logger_level():
+def get_global_logger():
     global LOGGER
-    return LOGGER.level
-
-
-def reset_global_logger():
-    global LOGGER
-    LOGGER = Logger()
-
-
-def local_logger(name="", file=sys.stdout, level=INFO, verbose=False):
-    return Logger(name, file, level, verbose)
+    return LOGGER
 
 
 def curr_time(breakdown=False):
@@ -851,8 +841,13 @@ def _strip_and_add_spaces(s):
     return f" {s.strip()} " if s else ""
 
 
-def print_line(text=None, width=20, char="-", level=INFO, min_margin=5, res=False):
-    if text is None:
+def print_line(text="", width=20, char="-", level=INFO, min_margin=5, res=False):
+    if isinstance(text, int):
+        if isinstance(width, str):
+            width, text = text, width
+        else:
+            width, text = text, ""
+    if text == "":
         chars = char * width
     else:
         text = _strip_and_add_spaces(text)
@@ -968,30 +963,14 @@ def get_args(*args, **kwargs):
     return p.parse_args()
 
 
-def run_with_args():
-    funcs = {n: f for n, f in inspect.getmembers(sys.modules[__name__], inspect.isfunction)}
-    if len(sys.argv) < 2:
-        raise SystemExit(f"Need function name ==> options: {', '.join(funcs.keys())}")
-    fn_name, *fn_argv = sys.argv[1:]
-    if fn_name not in funcs:
-        raise SystemExit(f"No such function: {fn_name} ==> options: {', '.join(funcs.keys())}")
-    fn = funcs[fn_name]
-    sig = inspect.signature(fn)
-    defaults = {k: v.default for k, v in sig.parameters.items() if v.default is not inspect._empty}
-    reqs = [k for k, v in sig.parameters.items() if v.default is inspect._empty]
-    sys.argv = [sys.argv[0]] + fn_argv
-    res = fn(**vars(get_args(*reqs, **defaults)))
-    if inspect.isawaitable(res):
-        asyncio.run(res)
-
-
-def run_with_args():
+def run_with_args(default_entrypoint="main"):
     m = inspect.getmodule(inspect.stack()[1].frame) or sys.modules.get("__main__")
     funcs = {n: f for n, f in inspect.getmembers(m, inspect.isfunction) if f.__module__ == m.__name__ and not n.startswith("_")}
     argv = sys.argv
     if len(argv) < 2:
-        raise SystemExit(f"Need function name ==> options: {', '.join(funcs.keys())}")
-    fn_name, *fn_argv = argv[1:]
+        fn_name, fn_argv = default_entrypoint, []
+    else:
+        fn_name, *fn_argv = argv[1:]
     if fn_name not in funcs:
         raise SystemExit(f"No such function: {fn_name} ==> options: {', '.join(funcs.keys())}")
     fn = funcs[fn_name]

@@ -43,13 +43,13 @@ def test_core(log_path="./test.log"):
     set_global_logger(file=[log_path, sys.stdout])
 
     # local_logger() return a local logger just like logging.getLogger
-    my_logger = local_logger(__name__, verbose=True)
-    my_logger("this is from the local logger", level=WARNING)
+    local_logger = logger(__name__, verbose=True)
+    local_logger("this is from the local logger", level=WARNING)
 
     # context_logger() (as context manager) temporarily modify the global logger
     with context_logger(level=DEBUG, file=sys.stderr, name="__temp__", verbose=True):
         # this message will be redirected to sys.stderr
-        log("this is from the temporary logger (level={})".format(global_logger_level()), level=CRITICAL)
+        log(f"this is from the temporary logger (level={get_global_logger().level})", level=CRITICAL)
 
     # suppress all logs by setting level=SILENT
     with context_logger(level=SILENT):
@@ -69,7 +69,11 @@ def test_core(log_path="./test.log"):
 
     # print_line() will draw a line with am optional message
     print_line()
-    print_line(text="optional message", width=30, char="=")
+    print_line("line")
+    print_line(40)
+    print_line("line", 40)
+    print_line("line", width=40)
+    print_line(text="line", width=40, char="=")
     log("\n")
 
     # enclose() generate two text separators that enclose the execution
