@@ -79,7 +79,7 @@ class logger:
         self.verbose = True if name else verbose
 
     def __call__(self, *data, level=INFO, file=None, end=None, flush=True):
-        if self.level <= level:
+        if self.level >= level:
             header = f"{curr_time()} {_get_msg_level(level)}{'' + self.name if self.name != '' else ''}: "
             header_empty = len(header) * " "
             for f in self.file if file is None else _open_files_for_logger(file):
