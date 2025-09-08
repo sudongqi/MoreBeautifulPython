@@ -26,7 +26,7 @@ __all__ = [
     # replacement for logging
     "log", "logger", "context_logger", "set_global_logger", "get_global_logger", "recorder",
     # logging levels
-    "SILENT", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL",
+    "NOTSET", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL",
     # replacement for multiprocessing
     "Workers", "work",
     # syntax sugar for common utilities
@@ -50,15 +50,15 @@ __all__ = [
 ]
 # fmt: on
 
-SILENT, DEBUG, INFO, WARNING, ERROR, CRITICAL = 0, 10, 20, 30, 40, 50
+NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL = 0, 10, 20, 30, 40, 50
 CPU_COUNT = cpu_count()
 MIN = float("-inf")
 MAX = float("inf")
 
 
 def _get_msg_level(level):
-    labels = ["SILENT", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
-    return labels[bisect.bisect_left([SILENT, DEBUG, INFO, WARNING, ERROR, CRITICAL], level)]
+    labels = ["NOTSET", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+    return labels[bisect.bisect_left([NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL], level)]
 
 
 def _open_files_for_logger(file):
@@ -79,7 +79,7 @@ class logger:
         self.verbose = True if name else verbose
 
     def __call__(self, *data, level=INFO, file=None, end=None, flush=True):
-        if self.level >= level:
+        if self.level <= level:
             header = f"{curr_time()} {_get_msg_level(level)}{'' + self.name if self.name != '' else ''}: "
             header_empty = len(header) * " "
             for f in self.file if file is None else _open_files_for_logger(file):

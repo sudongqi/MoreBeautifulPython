@@ -51,20 +51,20 @@ def test_core(log_path="./test.log"):
         # this message will be redirected to sys.stderr
         log(f"this is from the temporary logger (level={get_global_logger().level})", level=CRITICAL)
 
-    # suppress all logs by setting level=SILENT
-    with context_logger(level=SILENT):
+    # suppress all logs by setting level=ERROR
+    with context_logger(level=ERROR):
         for i in range(1000):
             # all loggings are suppressed
             log(i)
 
     # context_logger() will also overwrite all logger() within its scope
     with context_logger(level=INFO):
-        with context_logger(level=SILENT):
+        with context_logger(level=WARNING):
             log("==> a hidden message")
 
     # except when can_overwrite == False
     with context_logger(level=INFO):
-        with context_logger(level=SILENT, can_overwrite=False):
+        with context_logger(level=WARNING, can_overwrite=False):
             log("==> this will never be printed")
 
     # print_line() will draw a line with am optional message
