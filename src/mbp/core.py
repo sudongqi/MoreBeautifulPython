@@ -963,14 +963,18 @@ def get_args(*args, **kwargs):
     return p.parse_args()
 
 
-def run_with_args(default_entrypoint="main"):
+def run_with_args(entrypoint="main"):
     m = inspect.getmodule(inspect.stack()[1].frame) or sys.modules.get("__main__")
     funcs = {n: f for n, f in inspect.getmembers(m, inspect.isfunction) if f.__module__ == m.__name__ and not n.startswith("_")}
     argv = sys.argv
     if len(argv) < 2:
-        fn_name, fn_argv = default_entrypoint, []
+        fn_name, fn_argv = entrypoint, []
     else:
-        fn_name, *fn_argv = argv[1:]
+        if argv[1].startswith("-"):
+            fn_name, fn_argv = entrypoint, argv[2:]
+        else:
+            fn_name, *fn_argv = argv[1:]
+
     if fn_name not in funcs:
         raise SystemExit(f"No such function: {fn_name} ==> options: {', '.join(funcs.keys())}")
     fn = funcs[fn_name]

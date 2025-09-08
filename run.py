@@ -335,4 +335,4 @@ def sync():
 
 
 if __name__ == "__main__":
-    run_with_args()
+    run_with_args("test")
