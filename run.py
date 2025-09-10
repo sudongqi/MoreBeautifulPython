@@ -301,13 +301,14 @@ def test_core(log_path="./test.log"):
 
 def test_llm():
     with enclose(fname(build_system_message)):
-        log(
-            build_system_message(
-                "Let's think about this math problem step by step",
-                outputs=["res"],
-                examples=[{"input": "5 + 5", "res": 10}, {"input": "2 * (3 + 2)", "res": 10}],
-            )
+        sys_msg, resp_format = build_system_message(
+            "Let's think about this math problem step by step",
+            format={"res": "string"},
+            examples=[{"input": "5 + 5", "res": 10}, {"input": "2 * (3 + 2)", "res": 10}],
         )
+        log(resp_format)
+        print_line()
+        log(sys_msg)
 
 
 def test():

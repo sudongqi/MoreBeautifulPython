@@ -2,54 +2,42 @@ import json
 import functools
 from .core import *
 
-__all__ = ["add_to_messages", "encode_context", "build_system_message", "build_system_message_from_yaml", "build_messages"]
+__all__ = ["encode_content", "build_system_message", "load_system_message", "add_to_messages", "build_messages"]
+
+
+def encode_content(context):
+    return json.dumps(context, ensure_ascii=False)
+
+
+FORMAT_HINT = "Expecting format of => instruction: str, format: dict, examples: [dict]"
+
+
+def build_system_message(instruction, format={}, examples=[]):
+    assert isinstance(instruction, str) and isinstance(format, dict) and len(format) > 0 and isinstance(examples, list), FORMAT_HINT
+    format = {k: {"type": v} if isinstance(v, str) else v for k, v in format.items()}
+    res = [instruction]
+    if examples:
+        res.append("Example:" if len(examples) == 1 else "Examples:")
+        c, o = {}, {}
+        for e in examples:
+            for k, v in e.items():
+                if k in format:
+                    o[k] = v
+                else:
+                    c[k] = v
+            res.append(f"user: {encode_content(c)}\nresp: {encode_content(o)}")
+    return "\n\n".join(res), format
+
+
+@functools.lru_cache(maxsize=None)
+def load_system_message(path):
+    return build_system_message(**load_yaml(path))
 
 
 def add_to_messages(messages, role, content):
     if isinstance(content, dict):
-        content = encode_context(content)
+        content = encode_content(content)
     messages.append({"role": role, "content": content})
-
-
-def encode_context(context):
-    return json.dumps(context, ensure_ascii=False)
-
-
-FORMAT_HINT = """Expecting format of
-- instruction: str,
-- outputs: [str], 
-- examples: [dict]"""
-
-
-def build_system_message(instruction, outputs=[], examples=[]):
-    assert (
-        isinstance(instruction, str)
-        and isinstance(outputs, list)
-        and len(outputs) > 0
-        and isinstance(outputs[0], str)
-        and isinstance(examples, list)
-    ), FORMAT_HINT
-    res = []
-    _allow = ", ".join([f'"{k}"' for k in outputs])
-    _key = "key" if len(outputs) == 1 else "keys"
-    res.append(f"Your response must be in json format and can only allow {_allow} as {_key}")
-    res.append(instruction)
-    if examples:
-        res.append("Here is an example:" if len(examples) == 1 else "Here are a few examples:")
-        c, o = {}, {}
-        for e in examples:
-            for k, v in e.items():
-                if k in outputs:
-                    o[k] = v
-                else:
-                    c[k] = v
-            res.append(f"{encode_context(c)}\n{encode_context(o)}")
-    return "\n\n".join(res)
-
-
-@functools.lru_cache(maxsize=None)
-def build_system_message_from_yaml(path):
-    return build_system_message(**load_yaml(path))
 
 
 def build_messages(system_message, context):
