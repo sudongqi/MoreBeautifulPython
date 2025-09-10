@@ -971,7 +971,7 @@ def run_with_args(entrypoint="main"):
         fn_name, fn_argv = entrypoint, []
     else:
         if argv[1].startswith("-"):
-            fn_name, fn_argv = entrypoint, argv[2:]
+            fn_name, fn_argv = entrypoint, argv[1:]
         else:
             fn_name, *fn_argv = argv[1:]
 
