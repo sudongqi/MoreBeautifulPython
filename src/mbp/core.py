@@ -311,7 +311,7 @@ async def async_work(f, tasks, concurrency=None, f_step=_count_and_show, ordered
     res = []
     acc = 0
     total = len(tasks)
-    async for co in asyncio.as_completed([_f(idx, **inp) for idx, inp in enumerate(tasks)]):
+    for co in asyncio.as_completed([_f(idx, **inp) for idx, inp in enumerate(tasks)]):
         acc += 1
         try:
             resp = await co
