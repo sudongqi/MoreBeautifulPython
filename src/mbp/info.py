@@ -1,8 +1,8 @@
 from .core import *
 
-VERSION = "1.7.1"
+VERSION = "1.7.2"
 
-with enclose("More Beautiful Python"):
+with block("More Beautiful Python"):
     rows = [
         ["examples", "https://github.com/sudongqi/MoreBeautifulPython/blob/main/examples.py"],
         ["execution_directory", run_dir()],

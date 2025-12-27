@@ -14,25 +14,28 @@ import argparse
 import bisect
 import asyncio
 from io import StringIO
-from collections.abc import Iterator, Iterable
+from collections.abc import Iterable
 from datetime import datetime, timezone
 from multiprocessing import Process, Queue, cpu_count
 from pathlib import Path
+from termcolor import colored
 from wcwidth import wcswidth
 from yaml import safe_load, dump
 
 # fmt: off
 __all__ = [
     # replacement for logging
-    "log", "logger", "context_logger", "set_global_logger", "get_global_logger", "recorder",
+    "log", "logger", "block_logger", "set_logger", "get_logger", "recorder",
     # logging levels
     "NOTSET", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL",
     # replacement for multiprocessing
-    "Workers", "work",
+    "Workers", "work", "async_work",
     # syntax sugar for common utilities
-    "merge", "try_f", "type_of", "range_of", "items_of", "npath", "jpath", "run_dir", "lib_path",
+    "dmerge", "dsel", "ddrop", "drename", 
+    # syntax sugar for common utilities
+    "try_f", "type_of", "npath", "jpath", "run_dir", "lib_path",
     # handling data files
-    "load_lines", "load_txt", "load_jsonl", "load_json", "load_yaml", "save_txt", "save_json", "save_jsonl", "save_yaml", "iterate", "open_file",
+    "iterate", "iter_txt", "load_txt", "iter_jsonl", "load_jsonl", "load_json", "load_yaml", "save_txt", "save_json", "save_jsonl", "save_yaml",
     # handling paths
     "unwrap_file", "unwrap_dir", "file_basename", "dir_basename",
     # tools for file system
@@ -40,13 +43,13 @@ __all__ = [
     # handling string
     "break_str", "shorten_str", "fill_str",
     # tools for debug
-    "enclose", "enclose_timer", "error_msg", "summarize_exception", "debug",
+    "block", "block_timer", "error_msg", "summarize_exception", "debug",
     # tools for summarizations
     "prints", "print_iter", "print_table", "print_line",
     # tools for simple statistics
-    "timer", "curr_time", "avg", "min_max_avg", "n_min_max_avg", "CPU_COUNT", "MIN", "MAX",
+    "timer", "curr_time", "stats_of", "CPU_COUNT", "MIN", "MAX",
     # tools for environment
-    "env", "load_env", "get_args", "run_with_args"
+    "get_args", "run_with_args"
 ]
 # fmt: on
 
@@ -78,14 +81,16 @@ class logger:
         self.name = name
         self.verbose = True if name else verbose
 
-    def __call__(self, *data, level=INFO, file=None, end=None, flush=True):
+    def __call__(self, *data, level=INFO, file=None, end=None, flush=True, color=None):
         if self.level <= level:
-            header = f"{curr_time()} {_get_msg_level(level)}{'' + self.name if self.name != '' else ''}: "
+            header = f"{curr_time()} {_get_msg_level(level)}{' ' + self.name if self.name != '' else ''}: "
             header_empty = len(header) * " "
             for f in self.file if file is None else _open_files_for_logger(file):
                 for d in data:
                     lines = str(d).split("\n")
                     for idx, line in enumerate(lines):
+                        if color is not None:
+                            line = colored(line, color)
                         if self.verbose:
                             if idx == 0:
                                 print(header, file=f, end="", flush=flush)
@@ -98,57 +103,49 @@ class logger:
 
 
 LOGGER = logger()
-CONTEXT_LOGGER_SET = False
+BLOCK_LOGGER_SET = False
 
 
-class context_logger:
+class block_logger:
     def __init__(self, name="", file=sys.stdout, level=INFO, verbose=False, can_overwrite=True):
         global LOGGER
-        global CONTEXT_LOGGER_SET
+        global BLOCK_LOGGER_SET
         self.logger_was_changed = False
-        if not CONTEXT_LOGGER_SET or not can_overwrite:
+        if not BLOCK_LOGGER_SET or not can_overwrite:
             self.original_logger = LOGGER
             LOGGER = logger(name, file, level, verbose)
             self.logger_was_changed = True
-            CONTEXT_LOGGER_SET = True
+            BLOCK_LOGGER_SET = True
 
     def __enter__(self):
         pass
 
     def __exit__(self, *args):
         global LOGGER
-        global CONTEXT_LOGGER_SET
+        global BLOCK_LOGGER_SET
         if self.logger_was_changed:
             LOGGER = self.original_logger
-            CONTEXT_LOGGER_SET = False
+            BLOCK_LOGGER_SET = False
 
 
-def set_global_logger(name="", file=sys.stdout, level=INFO, verbose=False):
+def set_logger(name="", file=sys.stdout, level=INFO, verbose=False):
     global LOGGER
     LOGGER = logger(name, file, level, verbose)
 
 
-def get_global_logger():
+def get_logger():
     global LOGGER
     return LOGGER
 
 
-def curr_time(breakdown=False):
-    res = str(datetime.now(timezone.utc))[:19]
-    if breakdown:
-        #      year           month          day             hour             minute           second
-        return int(res[0:4]), int(res[5:7]), int(res[8:10]), int(res[11:13]), int(res[14:16]), int(res[17:19])
-    return res
-
-
-def log(*messages, level=INFO, file=None, end=None, flush=True):
-    LOGGER(*messages, level=level, file=file, end=end, flush=flush)
+def log(*messages, level=INFO, file=None, end=None, flush=True, color=None):
+    LOGGER(*messages, level=level, file=file, end=end, flush=flush, color=color)
 
 
 class recorder:
     def __init__(self, captured_level=INFO):
         self.buffer = StringIO()
-        self.logger = context_logger(file=self.buffer, level=captured_level, can_overwrite=False)
+        self.logger = block_logger(file=self.buffer, level=captured_level, can_overwrite=False)
 
     def __enter__(self):
         self.logger.__enter__()
@@ -291,6 +288,45 @@ def work(f, tasks, num_workers=CPU_COUNT, cache_inp=None, build_inp=None, ordere
     workers.terminate()
 
 
+def _count_and_show(kwargs):
+    print_line(text=f"{kwargs['acc']}/{kwargs['total']}", width=60)
+    if kwargs["metadata"]:
+        print(prints(kwargs["metadata"], res=True)[:2000])
+    prints(kwargs["res"], color="green")
+
+
+async def async_work(f, tasks, concurrency=None, f_step=_count_and_show, ordered=True):
+    sem = asyncio.Semaphore(concurrency) if concurrency is not None else None
+
+    async def _f(idx, **kwargs):
+        if sem is not None:
+            async with sem:
+                metadata = kwargs.pop("metadata", {})
+                res = await f(**kwargs)
+        else:
+            metadata = kwargs.pop("metadata", {})
+            res = await f(**kwargs)
+        return {"idx": idx, "res": res, "metadata": metadata}
+
+    res = []
+    acc = 0
+    total = len(tasks)
+    async for co in asyncio.as_completed([_f(idx, **inp) for idx, inp in enumerate(tasks)]):
+        acc += 1
+        try:
+            resp = await co
+            if f_step is not None:
+                f_step({**resp, "acc": acc, "total": total})
+            res.append(resp)
+        except:
+            continue
+
+    if ordered:
+        res.sort(key=lambda x: x["idx"])
+
+    return [{**r["metadata"], **r["res"]} if isinstance(r["res"], dict) else {"res": r["res"]} for r in res]
+
+
 class timer:
     def __init__(self, msg="", level=INFO):
         self.start = None
@@ -316,6 +352,14 @@ class timer:
             self.check(self.msg)
 
 
+def curr_time(breakdown=False):
+    res = str(datetime.now(timezone.utc))[:19]
+    if breakdown:
+        #      year           month          day             hour             minute           second
+        return int(res[0:4]), int(res[5:7]), int(res[8:10]), int(res[11:13]), int(res[14:16]), int(res[17:19])
+    return res
+
+
 def iterate(data, first_n=None, sample_p=1.0, sample_seed=None, report_n=None):
     if sample_seed is not None:
         random.seed(sample_seed)
@@ -335,7 +379,7 @@ def iterate(data, first_n=None, sample_p=1.0, sample_seed=None, report_n=None):
                 prev_time = current_time
 
 
-def open_file(path, encoding="utf-8", compression=None):
+def _open(path, encoding="utf-8", compression=None):
     if compression is None:
         return open(path, "r", encoding=encoding)
     elif compression == "gz":
@@ -372,29 +416,33 @@ def scan_path(path, ignore=[], level=None, include_dirs=False, include_files=Tru
                 yield t
 
 
-def load_lines(path, encoding="utf-8", first_n=None, sample_p=1.0, sample_seed=None, report_n=None, compression=None):
-    with open_file(path, encoding, compression) as f:
+def iter_txt(path, encoding="utf-8", first_n=None, sample_p=1.0, sample_seed=None, report_n=None, compression=None):
+    with _open(path, encoding, compression) as f:
         for line in iterate(f, first_n, sample_p, sample_seed, report_n):
             yield line
 
 
 def load_txt(path, encoding="utf-8", compression=None):
-    return "".join(load_lines(path, encoding=encoding, compression=compression))
+    return "".join(iter_txt(path, encoding=encoding, compression=compression))
 
 
-def load_jsonl(path, encoding="utf-8", first_n=None, sample_p=1.0, sample_seed=None, report_n=None, compression=None):
-    with open_file(path, encoding, compression) as f:
+def iter_jsonl(path, encoding="utf-8", first_n=None, sample_p=1.0, sample_seed=None, report_n=None, compression=None):
+    with _open(path, encoding, compression) as f:
         for line in iterate(f, first_n, sample_p, sample_seed, report_n):
             yield json.loads(line)
 
 
+def load_jsonl(path, encoding="utf-8", first_n=None, sample_p=1.0, sample_seed=None, report_n=None, compression=None):
+    return list(iter_jsonl(path, encoding, first_n, sample_p, sample_seed, report_n, compression))
+
+
 def load_json(path, encoding="utf-8", compression=None):
-    with open_file(path, encoding, compression) as f:
+    with _open(path, encoding, compression) as f:
         return json.load(f)
 
 
 def load_yaml(path, encoding="utf-8", compression=None):
-    with open_file(path, encoding, compression) as f:
+    with _open(path, encoding, compression) as f:
         res = safe_load(f)
         return {} if res is None else res
 
@@ -428,55 +476,13 @@ def type_of(data, types):
     return 0
 
 
-def _range_iterate(data, start, end=sys.maxsize, step=1):
-    assert not end < 0, "end cannot be negative"
-    start = max(start, 0)
-    step = max(step, 1)
-    for idx, item in enumerate(data):
-        if start <= idx < end and (idx - start) % step == 0:
-            yield idx, item
-
-
-def range_of(data, start=0, end=None, step=1, reverse=False):
-    # replace of ==> for i in range(data)
-    assert isinstance(data, Iterable), "data should be an Iterable"
-    if isinstance(data, Iterator):
-        assert not reverse, "cannot set reverse=True when data is an Iterator"
-        for idx, _ in _range_iterate(data, start, end, step):
-            yield idx
-    else:
-        step = max(step, 1)
-        start = max(start, 0)
-        data_len = len(data)
-        if end is None:
-            end = data_len
-        else:
-            end = min(end, data_len) if end > 0 else max(0, data_len + end)
-        if reverse:
-            start, end, step = end - 1, start - 1, -step
-        for i in range(start, end, step):
-            yield i
-
-
-def items_of(data, start=0, end=None, step=1, reverse=False):
-    assert isinstance(data, Iterable), "input should be an Iterable"
-    if isinstance(data, Iterator):
-        assert not reverse, "cannot set reverse=True when data is an Iterator"
-        for _, item in _range_iterate(data, start, end, step):
-            yield item
-
-    for idx in range_of(data, start, end, step, reverse):
-        yield data[idx]
-
-
-def _collection_type(x):
-    return type_of(x, [list, set, tuple, dict])
+COLLECTION_TYPE = [list, set, tuple, dict]
 
 
 def _build_table(rows, space=3, cell_space=1, filler=" ", max_column_width=None, min_column_widths=None):
     space = max(space, 1)
 
-    t = _collection_type(rows)
+    t = type_of(rows, COLLECTION_TYPE)
     if not t:
         return [str(rows)]
     elif t == 4:
@@ -490,7 +496,7 @@ def _build_table(rows, space=3, cell_space=1, filler=" ", max_column_width=None,
     num_col = -1
     temp = []
     for r in rows:
-        if not _collection_type(r):
+        if not type_of(r, COLLECTION_TYPE):
             r = [r]
         num_col = max(num_col, len(r))
         temp.append(r)
@@ -500,7 +506,7 @@ def _build_table(rows, space=3, cell_space=1, filler=" ", max_column_width=None,
     for r in rows:
         if len(r) != num_col:
             r += [""] * (num_col - len(r))
-        r = [_build_table(x, cell_space, cell_space, filler) if _collection_type(x) else [str(x)] for x in r]
+        r = [_build_table(x, cell_space, cell_space, filler) if type_of(x, COLLECTION_TYPE) else [str(x)] for x in r]
         max_height = max(len(r) for r in r)
         temp = [["" for _ in range(len(r))] for _ in range(max_height)]
         for j, items in enumerate(r):
@@ -541,6 +547,7 @@ def print_table(
     min_column_widths=None,
     level=INFO,
     res=False,
+    color=None,
 ):
     if headers is not None:
         rows = [headers] + rows
@@ -550,12 +557,12 @@ def print_table(
     if headers is not None:
         _res = [first_sep_line, _res[0], sep_line] + _res[1:] + [sep_line]
     if not res:
-        print_iter(_res, level=level)
+        print_iter(_res, level=level, color=color)
     else:
         return _res
 
 
-def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep, compact):
+def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep, compact, color):
     """
     extra_indent == None,  shift
     extra_indent == 0,     no shift
@@ -580,6 +587,7 @@ def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep,
     def log_raw(*args, **kwargs):
         kwargs["level"] = level
         kwargs["end"] = ""
+        kwargs["color"] = color
         log(*args, **kwargs)
 
     def print_cache(_tokens, _shift, _extra_indent):
@@ -631,7 +639,7 @@ def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep,
             if isinstance(d, list):
                 print_cache(d, shift + 1, 0 if idx == 0 else None)
             else:
-                _prints(data[d], indent, width, level, shift + 1, 0 if idx == 0 else None, sep, quote, kv_sep, compact)
+                _prints(data[d], indent, width, level, shift + 1, 0 if idx == 0 else None, sep, quote, kv_sep, compact, color)
             if idx != len(cache) - 1:
                 log_raw("{}\n".format(sep))
         log_raw(right)
@@ -663,7 +671,7 @@ def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep,
                     else:
                         v_shift = shift + indent + len(str_k) + kv_sep_len
                         v_indent = 0
-                _prints(v, indent, width, level, v_shift, v_indent, sep, quote, kv_sep, compact)
+                _prints(v, indent, width, level, v_shift, v_indent, sep, quote, kv_sep, compact, color)
             if idx != len(kv) - 1:
                 log_raw(sep + "\n")
             else:
@@ -682,33 +690,35 @@ def _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep,
             log_raw("{}{}{}{}".format(quote, line, "\\n" if idx != len(lines) - 1 else "", quote))
     else:
         data = str(data)
-        _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep, compact)
+        _prints(data, indent, width, level, shift, extra_indent, sep, quote, kv_sep, compact, color)
 
 
-def prints(*data, indent=4, width=80, shift=0, extra_indent=None, compact=False, sep=",", quote='"', kv_sep=": ", level=INFO, res=False):
+def prints(
+    *data, indent=4, width=80, shift=0, extra_indent=None, compact=False, sep=",", quote='"', kv_sep=": ", level=INFO, res=False, color=None
+):
     if res:
         with recorder() as r:
             for d in data:
-                _prints(d, indent, width, level, shift, extra_indent, sep, quote, kv_sep, compact)
+                _prints(d, indent, width, level, shift, extra_indent, sep, quote, kv_sep, compact, color)
         return r.flush()
     else:
         for d in data:
-            _prints(d, indent, width, level, shift, extra_indent, sep, quote, kv_sep, compact)
+            _prints(d, indent, width, level, shift, extra_indent, sep, quote, kv_sep, compact, color)
             log("", level=level)
 
 
-def print_iter(data, shift=0, level=INFO):
+def print_iter(data, shift=0, level=INFO, color=None):
     if not isinstance(data, Iterable):
-        log(shift * " ", end="")
-        log(data, level=level)
+        log(shift * " ", end="", color=color)
+        log(data, level=level, color=color)
     else:
         if shift <= 0:
             for item in data:
-                log(item, level=level)
+                log(item, level=level, color=color)
         else:
             for item in data:
-                log(shift * " ", end="")
-                log(item, level=level)
+                log(shift * " ", end="", color=color)
+                log(item, level=level, color=color)
 
 
 def break_str(string, width=50, measure_f=wcswidth):
@@ -746,7 +756,7 @@ def fill_str(string, left_marker="{", right_marker="}", **kwargs):
 VALID_REFERENCE_ARGUMENTS_PATTERN = r"\(([_a-zA-Z][_a-zA-Z0-9]*( *= *[_a-zA-Z0-9]+)?( *, *)?)+\)"
 
 
-def debug(*data, mode=prints, char="-", level=DEBUG):
+def debug(*data, mode=prints, char="-", level=DEBUG, color="red"):
     if LOGGER.level <= level:
         stack = inspect.stack()
         lineno = " [{}]".format(stack[1].lineno)
@@ -759,7 +769,7 @@ def debug(*data, mode=prints, char="-", level=DEBUG):
         assert len(data) == len(arguments), '{} ==> debug() can not take arguments with "," in it'.format(code_str)
         argument_str = "" if len(arguments) > 1 else ": {}".format(arguments[0])
 
-        with enclose("{}{}{}{}".format(filename, function_name, lineno, argument_str), char=char):
+        with block("{}{}{}{}".format(filename, function_name, lineno, argument_str), char=char, color=color):
             if mode is None:
                 if len(data) > 1:
                     rows = []
@@ -796,15 +806,27 @@ def debug(*data, mode=prints, char="-", level=DEBUG):
                 assert False, "mode: {} not supported".format(mode)
 
 
-def merge(*dicts):
+def dmerge(*dicts):
     res = {}
     for d in dicts:
         for k, v in d.items():
             if k in res and isinstance(res[k], dict) and isinstance(v, dict):
-                res[k] = merge(res[k], v)
+                res[k] = dmerge(res[k], v)
             else:
                 res[k] = v
     return res
+
+
+def dsel(d, *args):
+    return {k: d[k] for k in args if k in d}
+
+
+def ddrop(d, *args):
+    return {k: v for k, v in d.items() if k not in args}
+
+
+def drename(d, k1, k2):
+    return {(k2 if k == k1 else k): v for k, v in d.items()}
 
 
 def try_f(*args, **kwargs):
@@ -815,33 +837,37 @@ def try_f(*args, **kwargs):
         return summarize_exception(e)
 
 
-def n_min_max_avg(data, key_f=None, first_n=None, sample_p=1.0, sample_seed=None):
-    res_min, res_max, res_sum = float("inf"), -float("inf"), 0
+def stats_of(data, key_f=None, first_n=None, sample_p=1.0, sample_seed=None):
+    _min, _max, _sum = float("inf"), -float("inf"), 0.0
+    mean = 0.0
+    sum_squared_deviations = 0.0
     iterator = iterate(data, first_n=first_n, sample_p=sample_p, sample_seed=sample_seed)
     if key_f is not None:
         iterator = map(key_f, iterator)
+
     counter = 0
-    for num in iterator:
-        res_min = min(res_min, num)
-        res_max = max(res_max, num)
-        res_sum += num
+    for x in iterator:
         counter += 1
-    return counter, res_min, res_max, res_sum / counter
+        _min = min(_min, x)
+        _max = max(_max, x)
+        _sum += x
 
+        delta = x - mean
+        mean += delta / counter
+        delta2 = x - mean
+        sum_squared_deviations += delta * delta2
 
-def min_max_avg(data, key_f=None, first_n=None, sample_p=1.0, sample_seed=None):
-    return tuple(n_min_max_avg(data, key_f, first_n, sample_p, sample_seed)[1:])
+    var = sum_squared_deviations / counter if counter > 0 else 0.0
+    std = var**0.5
 
-
-def avg(data, key_f=None, first_n=None, sample_p=1.0, sample_seed=None):
-    return n_min_max_avg(data, key_f, first_n, sample_p, sample_seed)[3]
+    return {"count": counter, "sum": _sum, "mean": mean, "min": _min, "max": _max, "var": var, "std": std}
 
 
 def _strip_and_add_spaces(s):
     return f" {s.strip()} " if s else ""
 
 
-def print_line(text="", width=20, char="-", level=INFO, min_margin=5, res=False):
+def print_line(text="", width=20, char="-", level=INFO, min_margin=5, res=False, color=None):
     if isinstance(text, int):
         if isinstance(width, str):
             width, text = text, width
@@ -859,17 +885,18 @@ def print_line(text="", width=20, char="-", level=INFO, min_margin=5, res=False)
             chars += char
     if res:
         return chars
-    log(chars, level=level)
+    log(chars, level=level, color=color)
 
 
-class enclose:
-    def __init__(self, text="", width=None, max_width=80, char="=", end="\n\n", captured_level=INFO, level=INFO):
+class block:
+    def __init__(self, text="", width=None, max_width=80, char="=", end="\n\n", captured_level=INFO, level=INFO, color=None):
         self.text = _strip_and_add_spaces(text)
         self.width = width
         self.max_width = max_width
         self.char = char
         self.end = end
         self.level = level
+        self.color = color
         if self.width is None:
             self.recorder = recorder(captured_level=captured_level)
 
@@ -877,7 +904,7 @@ class enclose:
         if self.width is not None:
             top_line = print_line(text=self.text, width=self.width, char=self.char, res=True)
             self.top_line_size = len(top_line)
-            log(top_line, level=self.level)
+            log(top_line, level=self.level, color=self.color)
         else:
             self.recorder.__enter__()
 
@@ -890,44 +917,25 @@ class enclose:
             content_width = min(self.max_width, content_width + 3)
             top_line = print_line(text=self.text, width=content_width, char=self.char, res=True)
             self.top_line_size = len(top_line)
-            log(top_line, level=self.level)
-            log(content, level=self.level, end="")
-        log(print_line(width=self.top_line_size, char=self.char, level=self.level, res=True), end=self.end)
+            log(top_line, level=self.level, color=self.color)
+            log(content, level=self.level, end="", color=self.color)
+        log(print_line(width=self.top_line_size, char=self.char, level=self.level, res=True), end=self.end, color=self.color)
 
 
-class enclose_timer:
-    def __init__(self, text="", width=None, max_width=80, char="=", end="\n\n", captured_level=INFO, level=INFO):
-        self._enclose = enclose(text, width, max_width, char, "\n", captured_level, level)
+class block_timer:
+    def __init__(self, text="", width=None, max_width=80, char="=", end="\n\n", captured_level=INFO, level=INFO, color=None):
+        self._block = block(text, width, max_width, char, "\n", captured_level, level, color)
         self.end = end
         self.level = level
 
     def __enter__(self):
-        self._enclose.__enter__()
+        self._block.__enter__()
         self.time_start = time.time()
 
     def __exit__(self, *args):
         time_end = time.time()
-        self._enclose.__exit__(*args)
+        self._block.__exit__(*args)
         log("took {:.3f} ms".format((time_end - self.time_start) * 1000), end=self.end, level=self.level)
-
-
-def env(key, default_value=None):
-    return os.environ.get(key, default_value)
-
-
-def load_env(dict_or_path):
-    d = load_yaml(dict_or_path) if isinstance(dict_or_path, str) else dict_or_path
-    if d is not None:
-        for k, v in d.items():
-            os.environ[k] = str(v)
-
-
-def _str2bool(x):
-    return (
-        x
-        if isinstance(x, bool)
-        else {"1": True, "true": True, "yes": True, "y": True, "0": False, "false": False, "no": False, "n": False}[x.lower()]
-    )
 
 
 def get_args(*args, **kwargs):
@@ -941,6 +949,13 @@ def get_args(*args, **kwargs):
             raise ValueError(f"Invalid arg: {k}")
         seen.add(k)
 
+    def str2bool(x):
+        return (
+            x
+            if isinstance(x, bool)
+            else {"1": True, "true": True, "yes": True, "y": True, "0": False, "false": False, "no": False, "n": False}[x.lower()]
+        )
+
     for k in args:
         if not isinstance(k, str):
             raise TypeError(f"Required arg must be str, got {type(k).__name__}")
@@ -949,9 +964,9 @@ def get_args(*args, **kwargs):
     for k, v in kwargs.items():
         check_arg(k)
         if isinstance(v, bool):
-            p.add_argument(f"--{k}", dest=k, nargs="?", type=_str2bool, const=True, default=v)
+            p.add_argument(f"--{k}", dest=k, nargs="?", type=str2bool, const=True, default=v)
             p.add_argument(f"--no-{k}", dest=k, action="store_false")
-            p.add_argument(k, nargs="?", type=_str2bool, default=argparse.SUPPRESS)
+            p.add_argument(k, nargs="?", type=str2bool, default=argparse.SUPPRESS)
         elif isinstance(v, list):
             t = type(v[0]) if v else str
             p.add_argument(f"--{k}", dest=k, nargs="+", type=t, default=v)
