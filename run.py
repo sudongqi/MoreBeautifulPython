@@ -312,7 +312,7 @@ async def test():
     test_llm()
 
 
-def sync():
+def build_and_publish():
     import os
 
     if os.path.exists("./dist"):
@@ -320,11 +320,6 @@ def sync():
 
     os.system("uv build")
     os.system("uv publish --directory dist")
-
-    os.system("git rm --cached -r *")
-    os.system("git add .")
-    os.system('git commit -a -m "update"')
-    os.system("git push origin main")
 
 
 if __name__ == "__main__":
