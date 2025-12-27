@@ -11,7 +11,7 @@ Make Python even more beautiful :) This package includes implementations that yo
     execution_directory   C:\Users\usr\MoreBeautifulPython
     library_path          C:\Users\usr\MoreBeautifulPython\src\mbp\core.py
     cpu_count             16
-    version               1.7.2
+    version               1.7.3
     =============================================================================================
 
 ### Examples

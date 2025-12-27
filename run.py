@@ -312,14 +312,19 @@ async def test():
     test_llm()
 
 
-def build_and_publish():
+def publish():
     import os
 
     if os.path.exists("./dist"):
         shutil.rmtree("./dist")
 
-    os.system("uv build")
-    os.system("uv publish --directory dist")
+    os.system("python3 -m build")
+    os.system("python3 -m twine upload --repository pypi dist/* --verbose")
+
+    os.system("git rm --cached -r *")
+    os.system("git add .")
+    os.system('git commit -a -m "update"')
+    os.system("git push origin main")
 
 
 if __name__ == "__main__":
