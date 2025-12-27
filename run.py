@@ -318,6 +318,7 @@ def publish():
     if os.path.exists("./dist"):
         shutil.rmtree("./dist")
 
+    os.system("python3 -m pip install build twine")
     os.system("python3 -m build")
     os.system("python3 -m twine upload --repository pypi dist/* --verbose")
 
