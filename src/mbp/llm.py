@@ -2,7 +2,7 @@ import json
 import functools
 from .core import *
 
-__all__ = ["build_icl_inputs", "load_icl_inputs"]
+__all__ = ["update_messages", "build_messages", "build_icl_inputs", "load_icl_inputs"]
 
 
 def encode_message(context):
@@ -32,3 +32,16 @@ def build_icl_inputs(instruction, format={}, examples=[]):
 @functools.lru_cache(maxsize=None)
 def load_icl_inputs(path):
     return build_icl_inputs(**load_yaml(path))
+
+
+def update_messages(messages, role, content):
+    if isinstance(content, dict):
+        content = encode_message(content)
+    messages.append({"role": role, "content": content})
+
+
+def build_messages(system_message, context):
+    res = []
+    update_messages(res, "system", system_message)
+    update_messages(res, "user", context)
+    return res
