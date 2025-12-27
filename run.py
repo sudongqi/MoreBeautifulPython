@@ -319,8 +319,8 @@ def sync():
     if os.path.exists("./dist"):
         shutil.rmtree("./dist")
 
-    os.system("uv build")
-    os.system("uv twine upload --repository pypi dist/* --verbose")
+    os.system("python3 -m build")
+    os.system("python3 -m twine upload --repository pypi dist/* --verbose")
 
     os.system("git rm --cached -r *")
     os.system("git add .")
@@ -328,7 +328,7 @@ def sync():
     os.system("git push origin main")
 
     for i in range(2):
-        os.system("uv pip install mbp=={}".format(VERSION))
+        os.system("python3 -m pip install mbp=={}".format(VERSION))
 
 
 if __name__ == "__main__":
