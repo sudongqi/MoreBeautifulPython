@@ -319,7 +319,7 @@ def sync():
         shutil.rmtree("./dist")
 
     os.system("uv build")
-    os.system("uv publish --repository pypi --verbose")
+    os.system("uv publish --directory dist")
 
     os.system("git rm --cached -r *")
     os.system("git add .")
