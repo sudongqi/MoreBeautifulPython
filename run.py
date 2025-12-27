@@ -314,21 +314,17 @@ async def test():
 
 def sync():
     import os
-    from src.mbp.info import VERSION
 
     if os.path.exists("./dist"):
         shutil.rmtree("./dist")
 
-    os.system("python3 -m build")
-    os.system("python3 -m twine upload --repository pypi dist/* --verbose")
+    os.system("uv build")
+    os.system("uv publish --repository pypi --verbose")
 
     os.system("git rm --cached -r *")
     os.system("git add .")
     os.system('git commit -a -m "update"')
     os.system("git push origin main")
-
-    for i in range(2):
-        os.system("python3 -m pip install mbp=={}".format(VERSION))
 
 
 if __name__ == "__main__":
